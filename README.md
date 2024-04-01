@@ -9,9 +9,10 @@ The integration uses [aioaquarea](https://github.com/cjaliaga/aioaquarea) to com
 
 This integration is currently in beta. Please report any issues you find and any feedback you may have. Thanks!
 
-## ⚠️ As of March 18th, 2024 Panasonic changed the way to log into Aquarea Smart Cloud and the Integration is in a broken state
-* The investigation is being peformed in the [aioaquarea](https://github.com/cjaliaga/aioaquarea) repository: https://github.com/cjaliaga/aioaquarea/issues/44
-* Pinned issue on this repo: https://github.com/cjaliaga/home-assistant-aquarea/issues/105
+## ⚠️ As of March 18th, 2024 Panasonic changed the way to log into Aquarea Smart Cloud
+* Changes has been merged and released with version > 0.7.0 thanks to priceless [bimusiek](https://github.com/bimusiek) help.
+* Please report any issue regarding the new auth changes in the pinned issue: https://github.com/cjaliaga/home-assistant-aquarea/issues/105
+* The investigation was peformed in the [aioaquarea](https://github.com/cjaliaga/aioaquarea) repository: https://github.com/cjaliaga/aioaquarea/issues/44
 
 ## Features
 * Climate entity per device zone that allows you to control the operation mode, read the current temperature of the water in the device/zone and (if the zone supports it), change the target temperature.
@@ -88,4 +89,5 @@ THIS PROJECT IS NOT IN ANY WAY ASSOCIATED WITH OR RELATED TO PANASONIC. The info
 
 ## Acknowledgements and alternatives
 
-Big thanks to [ronhks](https://github.com/ronhks) for his awesome work on the [Panasonic Aquaera Smart Cloud integration with MQTT](https://github.com/ronhks/panasonic-aquarea-smart-cloud-mqtt). You can use his integration if you want to use MQTT instead.
+- Big thanks to [ronhks](https://github.com/ronhks) for his awesome work on the [Panasonic Aquaera Smart Cloud integration with MQTT](https://github.com/ronhks/panasonic-aquarea-smart-cloud-mqtt). You can use his integration if you want to use MQTT instead.
+- Panasonic introduced authentication breaking changes on March 18th 2024. A heartfelt thank you to [bimusiek](https://github.com/bimusiek) for generously sharing their implementation in the [Homebridge plugin](https://github.com/Hernas/homebridge-panasonic-heat-pump). Their contribution played a crucial role in having the integration working back, and I am truly grateful for their remarkable help.
