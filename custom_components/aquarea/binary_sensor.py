@@ -1,7 +1,8 @@
 """Binary sensors for the Aquarea integration."""
 import logging
 
-import aioaquarea
+import sys
+import os
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -15,6 +16,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import AquareaBaseEntity
 from .const import DEVICES, DOMAIN
 from .coordinator import AquareaDataUpdateCoordinator
+from aioaquarea import DeviceModeStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,4 +76,4 @@ class AquareaDefrostBinarySensor(AquareaBaseEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if the binary sensor is on."""
-        return self.coordinator.device.device_mode_status is aioaquarea.DeviceModeStatus.DEFROST
+        return self.coordinator.device.device_mode_status is DeviceModeStatus.DEFROST

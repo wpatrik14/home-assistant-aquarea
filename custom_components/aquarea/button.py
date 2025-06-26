@@ -1,8 +1,7 @@
 """Buttons for Aquarea integration."""
 import logging
 
-import aioaquarea
-
+from aioaquarea.data import DeviceModeStatus
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -46,7 +45,7 @@ class AquareaDefrostButton(AquareaBaseEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Request to start the defrost process."""
-        if self.coordinator.device.device_mode_status is not aioaquarea.DeviceModeStatus.DEFROST:
+        if self.coordinator.device.device_mode_status is not DeviceModeStatus.DEFROST:
             _LOGGER.debug(
                 "Requesting defrost for device %s",
                 self.coordinator.device.device_id,
