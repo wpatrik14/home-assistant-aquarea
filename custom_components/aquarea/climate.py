@@ -42,6 +42,25 @@ SPECIAL_STATUS_LOOKUP: dict[str, SpecialStatus | None] = {
 SPECIAL_STATUS_REVERSE_LOOKUP = {v: k for k, v in SPECIAL_STATUS_LOOKUP.items()}
 
 
+def _compare_states(state1, state2) -> bool:
+    """Compare two states, handling different types of enums."""
+    if state1 is None or state2 is None:
+        return state1 is state2
+
+    # If both are enums, compare their values
+    if hasattr(state1, "value") and hasattr(state2, "value"):
+        return state1.value == state2.value
+    
+    # If one is an enum and the other is not, try comparing value to the other state
+    if hasattr(state1, "value"):
+        return state1.value == state2
+    if hasattr(state2, "value"):
+        return state1 == state2.value
+
+    # Otherwise, direct comparison
+    return state1 == state2
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -136,7 +155,7 @@ async def _optimistic_update_and_poll(
             f"Polling attempt {i+1}/{max_retries}. Current {expected_state_attr}: {current_state}, Expected: {expected_state_value}"
         )
 
-        if current_state == expected_state_value:
+        if _compare_states(current_state, expected_state_value):
             _LOGGER.debug(f"{log_prefix} matched after {i+1} retries. Exiting polling loop.")
             break
 
@@ -238,7 +257,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             "_attr_hvac_mode",
             hvac_mode,
             "Target HVAC mode",
-            get_update_operation_mode_from_hvac_mode(hvac_mode),
+            get_update_operation_mode_from_hvac_mode(hvac_mode).value,
             self._zone_id,
         )
 
