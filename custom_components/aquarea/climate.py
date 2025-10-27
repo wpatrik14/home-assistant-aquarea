@@ -120,6 +120,12 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_name = self.coordinator.device.zones.get(zone_id).name
         self._attr_unique_id = f"{super().unique_id}_climate_{zone_id}"
+        self._attr_hvac_mode = HVACMode.OFF  # Initialize with a default value
+        self._attr_hvac_action = HVACAction.IDLE  # Initialize with a default value
+        self._attr_current_temperature = None  # Initialize with a default value
+        self._attr_max_temp = None  # Initialize with a default value
+        self._attr_min_temp = None  # Initialize with a default value
+        self._attr_target_temperature = None  # Initialize with a default value
         self._attr_supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
         )
