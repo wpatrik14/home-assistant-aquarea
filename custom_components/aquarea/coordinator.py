@@ -53,6 +53,11 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
         """Return the device."""
         return self._device
 
+    @property
+    def device_info(self) -> aioaquarea.data.DeviceInfo:
+        """Return the device info."""
+        return self._device_info
+
     async def _async_update_data(self) -> None:
         """Fetch data from Aquarea Smart Cloud Service."""
         try:
