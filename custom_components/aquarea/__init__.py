@@ -96,7 +96,7 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
             manufacturer=self.coordinator.device.manufacturer,
             model=self.coordinator.device_info.model,
             name=self.coordinator.device_info.name,
-            sw_version=self.coordinator.device_info.version,
+            sw_version=self.coordinator.device_info.firmware_version,
         )
 
     async def async_added_to_hass(self) -> None:
