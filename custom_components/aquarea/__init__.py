@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any
+import logging
 
 import aioaquarea
 
@@ -15,6 +16,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTRIBUTION, CLIENT, DEVICES, DOMAIN
 from .coordinator import AquareaDataUpdateCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [
     Platform.BUTTON,
