@@ -309,7 +309,7 @@ class EnergyAccumulatedConsumptionSensor(
         _LOGGER.debug(
             "Updating sensor '%s' of %s",
             self.unique_id,
-            self.coordinator.device.name,
+            self.coordinator.device_info.name,
         )
 
         # we need to check the value for the current hour. If the device returns None means that we don't have yet data for the current hour. However the device might still update the previous hour data.
@@ -424,7 +424,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
         _LOGGER.debug(
             "Updating sensor '%s' of %s",
             self.unique_id,
-            self.coordinator.device.name,
+            self.coordinator.device_info.name,
         )
 
         # we need to check the value for the current hour. If the device returns None means that we don't have yet data for the current hour. However the device might still update the previous hour data.
