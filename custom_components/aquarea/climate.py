@@ -215,7 +215,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         )
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(5.0))
+        self.hass.async_create_task(self._schedule_refresh(10.0))
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature if supported by the zone.
@@ -260,7 +260,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         )
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(5.0))
+        self.hass.async_create_task(self._schedule_refresh(10.0))
 
     async def async_turn_on(self) -> None:
         """Turn the entity on and schedule a delayed refresh."""
@@ -271,7 +271,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         await self.coordinator.device.turn_on()
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(5.0))
+        self.hass.async_create_task(self._schedule_refresh(10.0))
 
     async def async_turn_off(self) -> None:
         """Turn the entity off and schedule a delayed refresh."""
@@ -282,4 +282,4 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         await self.coordinator.device.turn_off()
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(5.0))
+        self.hass.async_create_task(self._schedule_refresh(10.0))
