@@ -61,7 +61,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
                 self._device = await self._client.get_device(
                     device_info=self._device_info,
                     consumption_refresh_interval=CONSUMPTION_REFRESH_INTERVAL,
-                    timezone=dt_util.DEFAULT_TIME_ZONE,
+                    timezone=dt_util.get_time_zone(self.hass.config.time_zone),
                 )
             else:
                 await self.device.refresh_data()

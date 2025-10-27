@@ -46,7 +46,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         await client.login()
         # Get all the devices, we will filter the disabled ones later
-        devices = await client.get_devices(include_long_id=True)
+        devices = await client.get_devices()
 
         # We create a Coordinator per Device and store it in the hass.data[DOMAIN] dict to be able to access it from the platform
         for device in devices:
