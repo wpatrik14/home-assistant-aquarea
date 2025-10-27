@@ -109,6 +109,47 @@ def get_update_operation_mode_from_hvac_mode(mode: HVACMode) -> UpdateOperationM
     return UpdateOperationMode.OFF
 
 
+async def _optimistic_update_and_poll(
+    self,
+    set_func,
+    expected_state_attr: str,
+    expected_state_value,
+    log_prefix: str,
+    state_check_func=None,
+    *args,
+    **kwargs,
+):
+    """Optimistically update and poll for state change."""
+    _LOGGER.debug(f"Optimistically setting {expected_state_attr} to {expected_state_value}")
+    setattr(self, expected_state_attr, expected_state_value)
+    self.async_write_ha_state()  # Push optimistic update immediately
+
+    await set_func(*args, **kwargs)
+
+    max_retries = 10
+    retry_delay = 1  # seconds
+
+    for i in range(max_retries):
+        await self.coordinator.async_refresh()  # Trigger a refresh
+        current_state = state_check_func(self) if state_check_func else getattr(self, expected_state_attr)
+        _LOGGER.debug(
+            f"Polling attempt {i+1}/{max_retries}. Current {expected_state_attr}: {current_state}, Expected: {expected_state_value}"
+        )
+
+        if current_state == expected_state_value:
+            _LOGGER.debug(f"{log_prefix} matched after {i+1} retries. Exiting polling loop.")
+            break
+
+        if i < max_retries - 1:
+            await asyncio.sleep(retry_delay)
+    else:
+        _LOGGER.warning(
+            f"{log_prefix} did not match expected {expected_state_value} after {max_retries} retries. Final {expected_state_attr}: {current_state}"
+        )
+
+    _LOGGER.debug(f"{log_prefix} completed. Final {expected_state_attr}: {current_state}")
+
+
 class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
     """The ClimateEntity that controls one zone of the Aquarea heat pump. Some settings are shared between zones. The entity, the library and the API will keep a consistent state between zones. """
     zone_id: int
@@ -191,15 +232,15 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             self.coordinator.device.device_id,
             hvac_mode,
         )
-        await self.coordinator.device.set_mode(
-            get_update_operation_mode_from_hvac_mode(hvac_mode), self._zone_id
-        )
-        _LOGGER.debug(
-            "Requesting refresh after setting HVAC mode for device %s, zone %s",
-            self.coordinator.device.device_id,
+        await _optimistic_update_and_poll(
+            self,
+            self.coordinator.device.set_mode,
+            "_attr_hvac_mode",
+            hvac_mode,
+            "Target HVAC mode",
+            get_update_operation_mode_from_hvac_mode(hvac_mode),
             self._zone_id,
         )
-        self.hass.async_create_task(self.coordinator.async_request_refresh())
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature if supported by the zone."""
@@ -215,16 +256,15 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
                 zone.name,
                 str(temperature),
             )
-            _LOGGER.debug(f"Attempting to set temperature for zone {zone.zone_id} to {temperature}")
-            await self.coordinator.device.set_temperature(
-                int(temperature), zone.zone_id
+            await _optimistic_update_and_poll(
+                self,
+                self.coordinator.device.set_temperature,
+                "_attr_target_temperature",
+                temperature,
+                "Target temperature",
+                int(temperature),
+                zone.zone_id,
             )
-            _LOGGER.debug(
-                "Requesting refresh after setting temperature for device %s, zone %s",
-                self.coordinator.device.device_id,
-                self._zone_id,
-            )
-            self.hass.async_create_task(self.coordinator.async_request_refresh())
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new target preset mode."""
@@ -235,14 +275,14 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             self.coordinator.device.device_id,
             preset_mode,
         )
-        await self.coordinator.device.set_special_status(
-            SPECIAL_STATUS_LOOKUP[preset_mode]
+        await _optimistic_update_and_poll(
+            self,
+            self.coordinator.device.set_special_status,
+            "_attr_preset_mode",
+            preset_mode,
+            "Target preset mode",
+            SPECIAL_STATUS_LOOKUP[preset_mode],
         )
-        _LOGGER.debug(
-            "Requesting refresh after setting preset mode for device %s",
-            self.coordinator.device.device_id,
-        )
-        self.hass.async_create_task(self.coordinator.async_request_refresh())
 
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
@@ -251,6 +291,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             self.coordinator.device.device_id,
         )
         await self.coordinator.device.turn_on()
+        self.hass.async_create_task(self.coordinator.async_request_refresh())
 
     async def async_turn_off(self) -> None:
         """Turn the entity off."""
@@ -259,3 +300,4 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             self.coordinator.device.device_id,
         )
         await self.coordinator.device.turn_off()
+        self.hass.async_create_task(self.coordinator.async_request_refresh())
