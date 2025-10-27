@@ -46,9 +46,9 @@ class AquareaDefrostButton(AquareaBaseEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Request to start the defrost process."""
-        if self.coordinator.device.device_mode_status is not aioaquarea.DeviceModeStatus.DEFROST:
+        if self.coordinator.device_info.device_mode_status is not aioaquarea.DeviceModeStatus.DEFROST:
             _LOGGER.debug(
                 "Requesting defrost for device %s",
-                self.coordinator.device.device_id,
+                self.coordinator.device_info.device_id,
             )
-            await self.coordinator.device.request_defrost()
+            await self.coordinator.device_info.request_defrost()

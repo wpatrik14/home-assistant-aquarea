@@ -82,12 +82,12 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
         super()._handle_coordinator_update()
 
     def _update_operation_state(self) -> None:
-        if self.coordinator.device.tank.operation_status == OperationStatus.OFF:
+        if self.coordinator.device_info.tank.operation_status == OperationStatus.OFF:
             self._attr_state = STATE_OFF
             self._attr_current_operation = STATE_OFF
             self._attr_icon = (
                 "mdi:water-boiler-alert"
-                if self.coordinator.device.is_on_error
+                if self.coordinator.device_info.is_on_error
                 else "mdi:water-boiler-off"
             )
         else:
@@ -95,15 +95,15 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
             self._attr_state = STATE_HEAT_PUMP
             self._attr_current_operation = (
                 HEATING
-                if self.coordinator.device.current_action == DeviceAction.HEATING_WATER
+                if self.coordinator.device_info.current_action == DeviceAction.HEATING_WATER
                 else IDLE
             )
 
     def _update_temperature(self) -> None:
-        self._attr_min_temp = self.coordinator.device.tank.heat_min
-        self._attr_max_temp = self.coordinator.device.tank.heat_max
-        self._attr_target_temperature = self.coordinator.device.tank.target_temperature
-        self._attr_current_temperature = self.coordinator.device.tank.temperature
+        self._attr_min_temp = self.coordinator.device_info.tank.heat_min
+        self._attr_max_temp = self.coordinator.device_info.tank.heat_max
+        self._attr_target_temperature = self.coordinator.device_info.tank.target_temperature
+        self._attr_current_temperature = self.coordinator.device_info.tank.temperature
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
@@ -111,18 +111,18 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
         if temperature is not None:
             _LOGGER.debug(
                 "Setting %s water tank temperature to %s",
-                self.coordinator.device.device_id,
+                self.coordinator.device_info.device_id,
                 str(temperature),
             )
-            await self.coordinator.device.tank.set_target_temperature(int(temperature))
+            await self.coordinator.device_info.tank.set_target_temperature(int(temperature))
 
     async def async_set_operation_mode(self, operation_mode):
         _LOGGER.debug(
             "Turning %s water tank %s",
-            self.coordinator.device.device_id,
+            self.coordinator.device_info.device_id,
             operation_mode,
         )
         if operation_mode == HEATING:
-            await self.coordinator.device.tank.turn_on()
+            await self.coordinator.device_info.tank.turn_on()
         elif operation_mode == STATE_OFF:
-            await self.coordinator.device.tank.turn_off()
+            await self.coordinator.device_info.tank.turn_off()
