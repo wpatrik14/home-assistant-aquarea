@@ -131,6 +131,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             )
         self._attr_precision = PRECISION_WHOLE
         self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF, HVACMode.COOL, HVACMode.AUTO]
+        self._attr_hvac_mode = HVACMode.OFF
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -169,11 +170,20 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             ) else zone.heat_target_temperature
         )
         self._attr_target_temperature_step = 1
+        _LOGGER.debug(
+            "Zone %s: Temp: %s, Cool Max: %s, Heat Max: %s, Cool Target: %s, Heat Target: %s",
+            self._zone_id,
+            zone.temperature,
+            zone.cool_max,
+            zone.heat_max,
+            zone.cool_target_temperature,
+            zone.heat_target_temperature,
+        )
         super()._handle_coordinator_update()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
-        if hvac_mode not in self.hvac_modes:
+        if hvac_mode not in self.hvac_modes: # Use self.hvac_modes instead of self._attr_hvac_modes
             raise ValueError(f"Unsupported HVAC mode: {hvac_mode}")
         _LOGGER.debug(
             "Setting operation mode of %s to %s",
