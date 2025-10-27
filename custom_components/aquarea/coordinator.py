@@ -48,9 +48,11 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
             update_interval=SCAN_INTERVAL,
         )
 
-    async def async_request_refresh(self) -> None:
+    async def async_request_refresh(self, force_fetch: bool = False) -> None:
         """Request a refresh of the data."""
         _LOGGER.debug("async_request_refresh called for device %s", self.device.device_id)
+        if force_fetch:
+            self._device = None
         await self._async_update_data()
         self.async_update_listeners()
 

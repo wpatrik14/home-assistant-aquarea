@@ -193,7 +193,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         await self.coordinator.device.set_mode(
             get_update_operation_mode_from_hvac_mode(hvac_mode), self._zone_id
         )
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_request_refresh(force_fetch=True)
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature if supported by the zone."""
@@ -213,7 +213,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             await self.coordinator.device.set_temperature(
                 int(temperature), zone.zone_id
             )
-            await self.coordinator.async_request_refresh()
+            await self.coordinator.async_request_refresh(force_fetch=True)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new target preset mode."""
@@ -227,7 +227,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         await self.coordinator.device.set_special_status(
             SPECIAL_STATUS_LOOKUP[preset_mode]
         )
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_request_refresh(force_fetch=True)
 
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
@@ -236,6 +236,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             self.coordinator.device.device_id,
         )
         await self.coordinator.device.turn_on()
+        await self.coordinator.async_request_refresh(force_fetch=True)
 
     async def async_turn_off(self) -> None:
         """Turn the entity off."""
@@ -244,3 +245,4 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             self.coordinator.device.device_id,
         )
         await self.coordinator.device.turn_off()
+        await self.coordinator.async_request_refresh(force_fetch=True)
