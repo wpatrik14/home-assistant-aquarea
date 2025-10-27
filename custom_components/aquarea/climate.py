@@ -141,8 +141,9 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         self._attr_precision = PRECISION_WHOLE
         self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
 
-        if device.support_cooling(zone_id):
-            self._attr_hvac_modes.extend([HVACMode.COOL, HVACMode.HEAT_COOL])
+        # Unconditionally add COOL and HEAT_COOL modes to make them visible in the UI.
+        # The underlying device will still only respond if it truly supports these modes.
+        self._attr_hvac_modes.extend([HVACMode.COOL, HVACMode.HEAT_COOL])
 
         self._attr_hvac_mode = get_hvac_mode_from_ext_op_mode(
             device.mode, device.zones.get(self._zone_id).operation_status
@@ -170,13 +171,14 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
                 device.special_status
             )
 
-        # If the device doesn't allow to set the temperature directly
-        # We set the max and min to the current temperature.
-        # This is a workaround to make the UI work.
-        self._attr_max_temp = zone.temperature
-        self._attr_min_temp = zone.temperature
-
-        if zone.supports_set_temperature and device.mode != ExtendedOperationMode.OFF:
+        if not zone.supports_set_temperature or device.mode == ExtendedOperationMode.OFF:
+            # If the device doesn't allow to set the temperature directly
+            # We set the max and min to the current temperature.
+            # This is a workaround to make the UI work.
+            self._attr_max_temp = zone.temperature
+            self._attr_min_temp = zone.temperature
+            self._attr_target_temperature = zone.temperature
+        else:
             self._attr_max_temp = (
                 zone.cool_max
                 if device.mode
