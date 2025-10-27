@@ -219,7 +219,12 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         await self.coordinator.device.set_mode(
             get_update_operation_mode_from_hvac_mode(hvac_mode), self._zone_id
         )
+        # Request a refresh of the coordinator data
         self.hass.async_create_task(self.coordinator.async_request_refresh())
+        # Wait for 10 seconds to allow the device to process the command and the coordinator to fetch new data
+        await asyncio.sleep(10)
+        # Force an update of the entity's state in Home Assistant
+        self.async_write_ha_state()
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature if supported by the zone."""
@@ -241,7 +246,12 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             await self.coordinator.device.set_temperature(
                 int(temperature), zone.zone_id
             )
+        # Request a refresh of the coordinator data
         self.hass.async_create_task(self.coordinator.async_request_refresh())
+        # Wait for 10 seconds to allow the device to process the command and the coordinator to fetch new data
+        await asyncio.sleep(10)
+        # Force an update of the entity's state in Home Assistant
+        self.async_write_ha_state()
 
     async def async_set_preset_mode(self, preset_mode):
         """Set new target preset mode."""
