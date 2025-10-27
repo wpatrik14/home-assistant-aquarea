@@ -144,6 +144,10 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         if device.support_cooling(zone_id):
             self._attr_hvac_modes.extend([HVACMode.COOL, HVACMode.HEAT_COOL])
 
+        self._attr_hvac_mode = get_hvac_mode_from_ext_op_mode(
+            device.mode, device.zones.get(self._zone_id).operation_status
+        )
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
