@@ -205,17 +205,17 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
 
         _LOGGER.debug(
             "Setting operation mode of %s to %s",
-            self.coordinator.device_info.device_id,
+            self.coordinator.device.device_id,
             hvac_mode,
         )
 
-        await self.coordinator.device_info.set_mode(
+        await self.coordinator.device.set_mode(
             get_update_operation_mode_from_hvac_mode(hvac_mode), self._zone_id
         )
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature if supported by the zone."""
-        zone = self.coordinator.device_info.zones.get(self._zone_id)
+        zone = self.coordinator.device.zones.get(self._zone_id)
         temperature: float | None = kwargs.get(ATTR_TEMPERATURE)
         hvac_mode: HVACMode | None = kwargs.get(ATTR_HVAC_MODE)
 
@@ -225,12 +225,12 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         if temperature is not None and zone.supports_set_temperature:
             _LOGGER.debug(
                 "Setting temperature of device:zone == %s:%s to %s",
-                self.coordinator.device_info.device_id,
+                self.coordinator.device.device_id,
                 zone.name,
                 str(temperature),
             )
 
-            await self.coordinator.device_info.set_temperature(
+            await self.coordinator.device.set_temperature(
                 int(temperature), zone.zone_id
             )
 
@@ -241,11 +241,11 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
 
         _LOGGER.debug(
             "Setting preset mode of device %s to %s",
-            self.coordinator.device_info.device_id,
+            self.coordinator.device.device_id,
             preset_mode,
         )
 
-        await self.coordinator.device_info.set_special_status(
+        await self.coordinator.device.set_special_status(
             SPECIAL_STATUS_LOOKUP[preset_mode]
         )
 
@@ -253,16 +253,16 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         """Turn the entity on."""
         _LOGGER.debug(
             "Turning on device %s",
-            self.coordinator.device_info.device_id,
+            self.coordinator.device.device_id,
         )
 
-        await self.coordinator.device_info.turn_on()
+        await self.coordinator.device.turn_on()
 
     async def async_turn_off(self) -> None:
         """Turn the entity off."""
         _LOGGER.debug(
             "Turning off device %s",
-            self.coordinator.device_info.device_id,
+            self.coordinator.device.device_id,
         )
 
-        await self.coordinator.device_info.turn_off()
+        await self.coordinator.device.turn_off()

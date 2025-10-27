@@ -241,7 +241,7 @@ class OutdoorTemperatureSensor(AquareaBaseEntity, SensorEntity):
             self.coordinator.device_info.name,
         )
 
-        self._attr_native_value = self.coordinator.device_info.temperature_outdoor
+        self._attr_native_value = self.coordinator.device.temperature_outdoor
         super()._handle_coordinator_update()
 
 class EnergyAccumulatedConsumptionSensor(

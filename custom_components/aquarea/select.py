@@ -65,7 +65,7 @@ class AquareaQuietModeSelect(AquareaBaseEntity, SelectEntity):
     @property
     def current_option(self) -> str:
         """The current select option."""
-        return QUIET_MODE_REVERSE_LOOKUP.get(self.coordinator.device_info.quiet_mode)
+        return QUIET_MODE_REVERSE_LOOKUP.get(self.coordinator.device.quiet_mode)
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
@@ -77,11 +77,11 @@ class AquareaQuietModeSelect(AquareaBaseEntity, SelectEntity):
 
         _LOGGER.debug(
             "Setting Quiet Mode of device %s, from %s to %s",
-            self.coordinator.device_info.device_id,
-            str(self.coordinator.device_info.quiet_mode),
+            self.coordinator.device.device_id,
+            str(self.coordinator.device.quiet_mode),
             str(quiet_mode)
         )
-        await self.coordinator.device_info.set_quiet_mode(quiet_mode)
+        await self.coordinator.device.set_quiet_mode(quiet_mode)
 
 class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
     """Representation of an Aquarea select entity to configure the device's powerful time."""
@@ -97,12 +97,12 @@ class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
     @property
     def icon(self) -> str:
         """Return the icon."""
-        return "mdi:fire-off" if self.coordinator.device_info.powerful_time is PowerfulTime.OFF else "mdi:fire"
+        return "mdi:fire-off" if self.coordinator.device.powerful_time is PowerfulTime.OFF else "mdi:fire"
 
     @property
     def current_option(self) -> str:
         """The current select option."""
-        return POWERFUL_TIME_REVERSE_LOOKUP.get(self.coordinator.device_info.powerful_time)
+        return POWERFUL_TIME_REVERSE_LOOKUP.get(self.coordinator.device.powerful_time)
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
@@ -114,8 +114,8 @@ class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
 
         _LOGGER.debug(
             "Setting Powerful Time of device %s, from %s to %s",
-            self.coordinator.device_info.device_id,
-            str(self.coordinator.device_info.powerful_time),
+            self.coordinator.device.device_id,
+            str(self.coordinator.device.powerful_time),
             str(powerful_time)
         )
-        await self.coordinator.device_info.set_powerful_time(powerful_time)
+        await self.coordinator.device.set_powerful_time(powerful_time)
