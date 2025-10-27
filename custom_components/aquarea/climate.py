@@ -218,6 +218,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         await self.coordinator.device.set_mode(
             get_update_operation_mode_from_hvac_mode(hvac_mode), self._zone_id
         )
+        self.async_write_ha_state()
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature if supported by the zone."""
@@ -239,6 +240,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             await self.coordinator.device.set_temperature(
                 int(temperature), zone.zone_id
             )
+        self.async_write_ha_state()
 
     async def async_set_preset_mode(self, preset_mode):
         """Set new target preset mode."""
