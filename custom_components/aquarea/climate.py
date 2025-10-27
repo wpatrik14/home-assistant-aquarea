@@ -257,7 +257,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             "_attr_hvac_mode",
             hvac_mode,
             "Target HVAC mode",
-            get_update_operation_mode_from_hvac_mode(hvac_mode).value,
+            get_update_operation_mode_from_hvac_mode(hvac_mode),
             self._zone_id,
         )
 
@@ -281,7 +281,8 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
                 "_attr_target_temperature",
                 temperature,
                 "Target temperature",
-                int(temperature),
+                None, # state_check_func should be None
+                int(temperature), # This should be an *arg for set_temperature
                 zone.zone_id,
             )
 
