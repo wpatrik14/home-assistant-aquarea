@@ -51,7 +51,8 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_request_refresh(self) -> None:
         """Request a refresh of the data."""
         _LOGGER.debug("async_request_refresh called for device %s", self.device.device_id)
-        await super().async_request_refresh()
+        await self._async_update_data()
+        self.async_update_listeners()
 
     @property
     def device(self) -> aioaquarea.Device:
