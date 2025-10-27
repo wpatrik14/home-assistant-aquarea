@@ -87,16 +87,16 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
         super().__init__(coordinator)
 
         self._attrs: dict[str, Any] = {
-            "name": self.coordinator.device.name,
-            "id": self.coordinator.device.device_id,
+            "name": self.coordinator.device_info.name,
+            "id": self.coordinator.device_info.device_id,
         }
-        self._attr_unique_id = self.coordinator.device.device_id
+        self._attr_unique_id = self.coordinator.device_info.device_id
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.device.device_id)},
-            manufacturer=self.coordinator.device.manufacturer,
+            identifiers={(DOMAIN, self.coordinator.device_info.device_id)},
+            manufacturer=self.coordinator.device_info.manufacturer,
             model="",
-            name=self.coordinator.device.name,
-            sw_version=self.coordinator.device.version,
+            name=self.coordinator.device_info.name,
+            sw_version=self.coordinator.device_info.version,
         )
 
     async def async_added_to_hass(self) -> None:
