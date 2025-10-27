@@ -238,7 +238,7 @@ class OutdoorTemperatureSensor(AquareaBaseEntity, SensorEntity):
         _LOGGER.debug(
             "Updating sensor '%s' of %s",
             "outdoor_temperature",
-            self.coordinator.device.name,
+            self.coordinator.device_info.name,
         )
 
         self._attr_native_value = self.coordinator.device.temperature_outdoor
