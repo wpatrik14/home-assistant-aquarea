@@ -102,4 +102,4 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""
         await super().async_added_to_hass()
-        self._handle_coordinator_update()
+        self.async_write_ha_state()
