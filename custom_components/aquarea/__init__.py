@@ -103,3 +103,11 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
         """When entity is added to hass."""
         await super().async_added_to_hass()
         self.async_write_ha_state()
+
+    @callback
+    def async_write_ha_state(self) -> None:
+        """Write the state to Home Assistant."""
+        _LOGGER.debug(
+            "async_write_ha_state called for entity %s", self.entity_id
+        )
+        super().async_write_ha_state()
