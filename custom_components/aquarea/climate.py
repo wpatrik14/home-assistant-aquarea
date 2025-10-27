@@ -181,9 +181,29 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         )
         super()._handle_coordinator_update()
 
+    async def _schedule_refresh(self, delay: float = 5.0) -> None:
+        """Schedule a single coordinator refresh after a short delay.
+
+        Many Panasonic Aquarea API changes take a few seconds to propagate.
+        Instead of polling repeatedly, request a fresh read once after `delay`
+        seconds so the entity state updates shortly after the command.
+        """
+        await asyncio.sleep(delay)
+        try:
+            await self.coordinator.async_request_refresh(force_fetch=True)
+        except Exception:
+            _LOGGER.exception(
+                "Delayed refresh failed for device %s",
+                getattr(self.coordinator.device, "device_id", "unknown"),
+            )
+
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        """Set new target hvac mode."""
-        if hvac_mode not in self.hvac_modes: # Use self.hvac_modes instead of self._attr_hvac_modes
+        """Set new target hvac mode.
+
+        Instead of polling repeatedly, schedule a single delayed refresh so the
+        coordinator fetches the updated state a short time after the change.
+        """
+        if hvac_mode not in self.hvac_modes:  # Use self.hvac_modes instead of self._attr_hvac_modes
             raise ValueError(f"Unsupported HVAC mode: {hvac_mode}")
         _LOGGER.debug(
             "Setting operation mode of %s to %s",
@@ -193,10 +213,15 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         await self.coordinator.device.set_mode(
             get_update_operation_mode_from_hvac_mode(hvac_mode), self._zone_id
         )
-        await self.coordinator.async_request_refresh(force_fetch=True)
+
+        # Schedule a single delayed refresh (non-blocking)
+        self.hass.async_create_task(self._schedule_refresh(5.0))
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
-        """Set new target temperature if supported by the zone."""
+        """Set new target temperature if supported by the zone.
+
+        Schedule a single delayed refresh after the change instead of active polling.
+        """
         zone = self.coordinator.device.zones.get(self._zone_id)
         temperature: float | None = kwargs.get(ATTR_TEMPERATURE)
         hvac_mode: HVACMode | None = kwargs.get(ATTR_HVAC_MODE)
@@ -213,10 +238,16 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             await self.coordinator.device.set_temperature(
                 int(temperature), zone.zone_id
             )
-            await self.coordinator.async_request_refresh(force_fetch=True)
+
+            # Schedule a single delayed refresh (non-blocking)
+            self.hass.async_create_task(self._schedule_refresh(5.0))
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        """Set new target preset mode."""
+        """Set new target preset mode.
+
+        Schedule a single delayed refresh after applying the preset so the
+        coordinator fetches the resulting state once it's available.
+        """
         if preset_mode not in self.preset_modes:
             raise ValueError(f"Unsupported preset mode: {preset_mode}")
         _LOGGER.debug(
@@ -227,22 +258,28 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         await self.coordinator.device.set_special_status(
             SPECIAL_STATUS_LOOKUP[preset_mode]
         )
-        await self.coordinator.async_request_refresh(force_fetch=True)
+
+        # Schedule a single delayed refresh (non-blocking)
+        self.hass.async_create_task(self._schedule_refresh(5.0))
 
     async def async_turn_on(self) -> None:
-        """Turn the entity on."""
+        """Turn the entity on and schedule a delayed refresh."""
         _LOGGER.debug(
             "Turning on device %s",
             self.coordinator.device.device_id,
         )
         await self.coordinator.device.turn_on()
-        await self.coordinator.async_request_refresh(force_fetch=True)
+
+        # Schedule a single delayed refresh (non-blocking)
+        self.hass.async_create_task(self._schedule_refresh(5.0))
 
     async def async_turn_off(self) -> None:
-        """Turn the entity off."""
+        """Turn the entity off and schedule a delayed refresh."""
         _LOGGER.debug(
             "Turning off device %s",
             self.coordinator.device.device_id,
         )
         await self.coordinator.device.turn_off()
-        await self.coordinator.async_request_refresh(force_fetch=True)
+
+        # Schedule a single delayed refresh (non-blocking)
+        self.hass.async_create_task(self._schedule_refresh(5.0))
