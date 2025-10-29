@@ -255,13 +255,16 @@ class EnergyAccumulatedConsumptionSensor(
     def __init__(self, description: AquareaEnergyConsumptionSensorDescription, coordinator: AquareaDataUpdateCoordinator) -> None:
         """Initialize an accumulated energy consumption sensor."""
         super().__init__(coordinator)
-
+ 
         self._attr_unique_id = (
             f"{super().unique_id}_{description.key}"
         )
         self._period_being_processed: datetime | None = None
         self._accumulated_period_being_processed: float | None = None
         self.entity_description = description
+        # Track last hour we called the consumption API to ensure we call it at most once per hour
+        # Format uses YYYYMMDDHH to avoid duplicate calls when date/hour crosses.
+        self._last_api_hour: str | None = None
 
     async def async_added_to_hass(self) -> None:
         """Call when entity about to be added to hass."""
@@ -313,71 +316,17 @@ class EnergyAccumulatedConsumptionSensor(
             self.coordinator.device_info.name,
         )
 
-        # we need to check the value for the current hour. If the device returns None means that we don't have yet data for the current hour. However the device might still update the previous hour data.
-        device = self.coordinator.device
-        now = dt_util.now().replace(minute=0, second=0, microsecond=0)
-        previous_hour = now - timedelta(hours=1)
-    
-        # Schedule an async fetch for month-to-date totals so accumulated sensors can report
-        # month-to-date values (total, heat, cool, water). Run async task so we don't use
-        # await inside this synchronous callback.
-        try:
-            self.hass.async_create_task(self._async_fetch_month_consumption_and_apply())
-        except Exception:
-            _LOGGER.exception("Failed to schedule async month consumption fetch")
-    
-        try:
-            current_hour_consumption = device.get_or_schedule_consumption(
-                now, self.entity_description.consumption_type
-            )
-    
-            previous_hour_consumption = device.get_or_schedule_consumption(
-                previous_hour, self.entity_description.consumption_type
-            )
-    
-        except DataNotAvailableError:
-            # we don't have yet data for the current hour but should be available on next refresh
-            return
-
-        # Stale data
-        if self._period_being_processed not in [now, previous_hour]:
-            self._period_being_processed = now
-            self._accumulated_period_being_processed = 0
-
-        # 1. When we already have data for the current hour and we were still updating the previous one. This means that the previous hour data is now complete and we can update the sensor value
-        if (
-            current_hour_consumption is not None
-            and previous_hour_consumption is not None
-            and self._period_being_processed == previous_hour
-        ):
-            to_add = abs(previous_hour_consumption - self._accumulated_period_being_processed)
-            self._attr_native_value += to_add
-            # Store the previous period as completed and move to next one
-            self._period_being_processed = now
-            self._accumulated_period_being_processed = 0
-            super()._handle_coordinator_update()
-            return
-
-        # 2. We're still processing the previous hour data and we don't have yet the current hour data. This means that we need to update the sensor value with the previous hour data
-        if (
-            current_hour_consumption is None
-            and previous_hour_consumption is not None
-            and self._period_being_processed == previous_hour
-        ):
-            to_add = abs(previous_hour_consumption - self._accumulated_period_being_processed)
-            self._attr_native_value += to_add
-            self._accumulated_period_being_processed = previous_hour_consumption
-            super()._handle_coordinator_update()
-            return
-
-        # 3. We're processing the current hour
-        if current_hour_consumption is not None:
-            self._period_being_processed = now
-            to_add = abs(current_hour_consumption - self._accumulated_period_being_processed)
-            self._attr_native_value += to_add
-            self._accumulated_period_being_processed = current_hour_consumption
-            super()._handle_coordinator_update()
-            return
+        # Trigger monthly API fetch once per hour; the async helper will update the entity when data is available.
+        current_hour = dt_util.now().strftime("%Y%m%d%H")
+        if self._last_api_hour != current_hour:
+            self._last_api_hour = current_hour
+            try:
+                self.hass.async_create_task(self._async_fetch_month_consumption_and_apply())
+            except Exception:
+                _LOGGER.exception("Failed to schedule async month consumption fetch")
+        # No immediate state change here; monthly fetch will call _handle_coordinator_update when data is applied.
+        super()._handle_coordinator_update()
+        return
 
     async def _async_fetch_month_consumption_and_apply(self) -> None:
         """Async helper to fetch month-to-date consumption and apply totals.
@@ -469,12 +418,15 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
     def __init__(self, description: AquareaEnergyConsumptionSensorDescription, coordinator: AquareaDataUpdateCoordinator) -> None:
         """Initialize an accumulated energy consumption sensor."""
         super().__init__(coordinator)
-
+ 
         self._attr_unique_id = (
             f"{super().unique_id}_{description.key}"
         )
         self._period_being_processed: datetime | None = None
         self.entity_description = description
+        # Track last hour we called the consumption API to ensure we call it at most once per hour
+        # Format uses YYYYMMDDHH to avoid duplicate calls when date/hour crosses.
+        self._last_api_hour: str | None = None
 
     async def async_added_to_hass(self) -> None:
         """Call when entity about to be added to hass."""
@@ -518,73 +470,19 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
             self.coordinator.device_info.name,
         )
 
-        # we need to check the value for the current hour. If the device returns None means that we don't have yet data for the current hour. However the device might still update the previous hour data.
-        device = self.coordinator.device
+        # Trigger hourly API fetch once per hour; the async helper will update the entity when data is available.
         now = dt_util.now().replace(minute=0, second=0, microsecond=0)
         previous_hour = now - timedelta(hours=1)
-    
-        # Schedule an async fetch for the day/hourly consumption so we can update the entity
-        # with richer hourly data when it becomes available. This avoids using `await`
-        # inside this synchronous callback.
-        try:
-            self.hass.async_create_task(self._async_fetch_day_consumption_and_apply(now, previous_hour))
-        except Exception:
-            _LOGGER.exception("Failed to schedule async day consumption fetch")
-    
-        try:
-            current_hour_consumption = device.get_or_schedule_consumption(
-                now, self.entity_description.consumption_type
-            )
-    
-            previous_hour_consumption = device.get_or_schedule_consumption(
-                previous_hour, self.entity_description.consumption_type
-            )
-    
-        except DataNotAvailableError:
-            # we don't have yet data for the current hour but should be available on next refresh
-            return
-
-        # Stale data, we reset to 0 to start a new cycle
-        if self._period_being_processed not in [now, previous_hour]:
-            self._period_being_processed = now
-            self._attr_native_value = 0
-            super()._handle_coordinator_update()
-            return
-
-        # 1. When we already have data for the current hour and we were still updating the previous one. This means that the previous hour data is now complete and we can update the sensor value
-        if (
-            current_hour_consumption is not None
-            and previous_hour_consumption is not None
-            and self._period_being_processed == previous_hour
-        ):
-            self._attr_native_value = previous_hour_consumption
-            self._period_being_processed = now
-            # Store the previous period as completed
-            super()._handle_coordinator_update()
-            # Reset the value to 0 to start the new period
-            self._attr_native_value = 0
-            super()._handle_coordinator_update()
-            # Update the value with the current hour data
-            self._attr_native_value = current_hour_consumption
-            super()._handle_coordinator_update()
-            return
-
-        # 2. We're still processing the previous hour data and we don't have yet the current hour data. This means that we need to update the sensor value with the previous hour data
-        if (
-            current_hour_consumption is None
-            and previous_hour_consumption is not None
-            and self._period_being_processed == previous_hour
-        ):
-            self._attr_native_value = previous_hour_consumption
-            super()._handle_coordinator_update()
-            return
-
-        # 3. We're processing the current hour
-        if current_hour_consumption is not None:
-            self._period_being_processed = now
-            self._attr_native_value = current_hour_consumption
-            super()._handle_coordinator_update()
-            return
+        current_hour = dt_util.now().strftime("%Y%m%d%H")
+        if self._last_api_hour != current_hour:
+            self._last_api_hour = current_hour
+            try:
+                self.hass.async_create_task(self._async_fetch_day_consumption_and_apply(now, previous_hour))
+            except Exception:
+                _LOGGER.exception("Failed to schedule async day consumption fetch")
+        # No immediate state change here; hourly fetch will update the entity asynchronously.
+        super()._handle_coordinator_update()
+        return
 
     async def _async_fetch_day_consumption_and_apply(self, now: datetime, previous_hour: datetime) -> None:
         """Async helper to fetch day/hourly consumption and apply current/previous hour values.
@@ -615,7 +513,6 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
             raw_val = None
 
             current_entry = None
-            previous_entry = None
 
             if day_consumption:
                 # Try to find the entry for the current hour using a few common data_time formats
@@ -640,27 +537,6 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                     except Exception:
                         pass
 
-                # Try to find previous hour entry
-                prev_hour_idx = previous_hour.hour
-                for c in day_consumption:
-                    dt_str = c.data_time
-                    if not dt_str:
-                        continue
-                    try:
-                        item_dt = datetime.strptime(dt_str, "%Y%m%d%H")
-                        if item_dt.date() == previous_hour.date() and item_dt.hour == prev_hour_idx:
-                            previous_entry = c
-                            break
-                    except Exception:
-                        pass
-                    try:
-                        if len(dt_str) <= 2 and dt_str.isdigit():
-                            if int(dt_str) == prev_hour_idx:
-                                previous_entry = c
-                                break
-                    except Exception:
-                        pass
-
             # Populate values from found entries
             if current_entry:
                 heat_val = float(current_entry.heat_consumption or 0.0)
@@ -674,29 +550,20 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                 data_time_val = current_entry.data_time
                 raw_val = current_entry.raw_data if hasattr(current_entry, "raw_data") else getattr(current_entry, "_data", {})
 
-            # If no current entry, but previous entry exists, use that as a fallback
-            if not current_entry and previous_entry:
-                heat_val = float(previous_entry.heat_consumption or 0.0)
-                cool_val = float(previous_entry.cool_consumption or 0.0)
-                tank_val = float(previous_entry.tank_consumption or 0.0)
-                try:
-                    total_val = float(previous_entry.total_consumption or 0.0)
-                except Exception:
-                    total_val = heat_val + cool_val + tank_val
-                data_time_val = previous_entry.data_time
-                raw_val = previous_entry.raw_data if hasattr(previous_entry, "raw_data") else getattr(previous_entry, "_data", {})
+            # Do not fallback to previous hour entry — only use the current hour entry when present.
 
-            # Map sensor consumption_type to the appropriate reported value
+            # Map sensor consumption_type to the appropriate reported value only if a current hour entry was found
             reported_val = None
             ctype = self.entity_description.consumption_type
-            if ctype == ConsumptionType.HEAT:
-                reported_val = heat_val
-            elif ctype == ConsumptionType.COOL:
-                reported_val = cool_val
-            elif ctype == ConsumptionType.WATER_TANK:
-                reported_val = tank_val
-            elif ctype == ConsumptionType.TOTAL:
-                reported_val = total_val
+            if current_entry:
+                if ctype == ConsumptionType.HEAT:
+                    reported_val = heat_val
+                elif ctype == ConsumptionType.COOL:
+                    reported_val = cool_val
+                elif ctype == ConsumptionType.WATER_TANK:
+                    reported_val = tank_val
+                elif ctype == ConsumptionType.TOTAL:
+                    reported_val = total_val
 
             # Always log the current-hour values (zeros if missing)
             _LOGGER.info(
@@ -711,10 +578,11 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
 
             # If we have a value for this sensor, apply it and write state
             if reported_val is not None:
-                # Set period being processed according to whether it's the current or previous hour
-                self._period_being_processed = now if current_entry else previous_hour
-                self._attr_native_value = reported_val
-                # Use the base handler to write state
-                super()._handle_coordinator_update()
+                # Set period being processed to the current hour (we no longer fallback to previous hour)
+                if current_entry:
+                    self._period_being_processed = now
+                    self._attr_native_value = reported_val
+                    # Use the base handler to write state
+                    super()._handle_coordinator_update()
         except Exception:
             _LOGGER.exception("Error fetching/applying day consumption")
