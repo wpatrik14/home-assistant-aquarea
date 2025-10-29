@@ -90,14 +90,31 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
                 if self.coordinator.device.is_on_error
                 else "mdi:water-boiler-off"
             )
-        else:
-            self._attr_icon = "mdi:water-boiler"
-            self._attr_state = STATE_HEAT_PUMP
-            self._attr_current_operation = (
-                HEATING
-                if self.coordinator.device.current_action == DeviceAction.HEATING_WATER
-                else IDLE
-            )
+            return
+
+        # Device reports tank is on; treat the water heater as a heat pump device.
+        self._attr_icon = "mdi:water-boiler"
+        self._attr_state = STATE_HEAT_PUMP
+
+        # Determine if the device is actively heating the tank. Different device actions
+        # from the library may be used depending on model/version; check several forms.
+        current_action = getattr(self.coordinator.device, "current_action", None)
+        is_heating = False
+
+        try:
+            # Prefer explicit enum comparisons if available
+            if current_action in (DeviceAction.HEATING_WATER, DeviceAction.HEATING):
+                is_heating = True
+            else:
+                # Fallback: check name/value for common substrings (robust against enum changes)
+                action_name = getattr(current_action, "name", str(current_action)).upper()
+                if "HEAT" in action_name or "WATER" in action_name:
+                    is_heating = True
+        except Exception:
+            # On any unexpected value, conservatively treat as not heating
+            is_heating = False
+
+        self._attr_current_operation = HEATING if is_heating else IDLE
 
     def _update_temperature(self) -> None:
         self._attr_min_temp = self.coordinator.device.tank.heat_min
