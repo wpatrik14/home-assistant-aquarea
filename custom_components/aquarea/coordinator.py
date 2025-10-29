@@ -5,6 +5,7 @@ from datetime import timedelta
 import logging
 
 import aioaquarea
+from aioaquarea.statistics import DateType
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_USERNAME
@@ -41,6 +42,13 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
         self._device_info = device_info
         self._device = None
 
+        # Consumption caching / rate limiting
+        # Last hour string in format YYYYMMDDHH for which consumption was fetched
+        self._last_consumption_hour: str | None = None
+        # Cached consumption results (lists of Consumption objects from aioaquarea.statistics)
+        self._day_consumption = None
+        self._month_consumption = None
+
         super().__init__(
             hass,
             _LOGGER,
@@ -66,11 +74,21 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
         """Return the device info."""
         return self._device_info
 
+    @property
+    def day_consumption(self):
+        """Return the last cached day (hourly) consumption entries or None."""
+        return getattr(self, "_day_consumption", None)
+
+    @property
+    def month_consumption(self):
+        """Return the last cached month consumption entries or None."""
+        return getattr(self, "_month_consumption", None)
+
     async def _async_update_data(self) -> None:
-        """Fetch data from Aquarea Smart Cloud Service."""
+        """Fetch data from Aquarea Smart Cloud Service and hourly consumption when needed."""
         _LOGGER.debug("Fetching data from Aquarea Smart Cloud Service")
         try:
-            # We are not getting consumption data on the first refresh, we'll get it on the next ones
+            # Initialize or refresh device state
             if not self._device:
                 _LOGGER.debug("Initializing device for the first time")
                 self._device = await self._client.get_device(
@@ -81,6 +99,50 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
             else:
                 _LOGGER.debug("Refreshing device data")
                 await self.device.refresh_data()
+
+            # Centralized hourly consumption fetch (once per YYYYMMDDHH)
+            try:
+                now = dt_util.now()
+                current_hour = now.strftime("%Y%m%d%H")
+                if self._last_consumption_hour != current_hour:
+                    self._last_consumption_hour = current_hour
+
+                    # Day (hourly) consumption for the current date
+                    date_str = now.strftime("%Y%m%d")
+                    _LOGGER.debug(
+                        "Coordinator fetching day (hourly) consumption for date %s", date_str
+                    )
+                    try:
+                        self._day_consumption = await self._client.get_device_consumption(
+                            self._device.long_id, DateType.DAY, date_str
+                        )
+                    except Exception as exc:
+                        _LOGGER.warning(
+                            "Failed to fetch day consumption for device %s: %s",
+                            getattr(self._device, "long_id", "<unknown>"),
+                            exc,
+                        )
+                        self._day_consumption = None
+
+                    # Month (monthly entries) - fetch month-to-date data
+                    month_date_str = now.strftime("%Y%m01")
+                    _LOGGER.debug(
+                        "Coordinator fetching month consumption for %s", month_date_str
+                    )
+                    try:
+                        self._month_consumption = await self._client.get_device_consumption(
+                            self._device.long_id, DateType.MONTH, month_date_str
+                        )
+                    except Exception as exc:
+                        _LOGGER.warning(
+                            "Failed to fetch month consumption for device %s: %s",
+                            getattr(self._device, "long_id", "<unknown>"),
+                            exc,
+                        )
+                        self._month_consumption = None
+            except Exception:
+                _LOGGER.exception("Unexpected error while fetching consumption data")
+
             _LOGGER.debug("Data fetching complete")
         except aioaquarea.AuthenticationError as err:
             if err.error_code in (
