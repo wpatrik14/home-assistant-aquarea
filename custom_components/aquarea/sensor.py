@@ -6,6 +6,7 @@ import logging
 from typing import Any, Self
 
 from aioaquarea import ConsumptionType, DataNotAvailableError
+from aioaquarea.statistics import DateType
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -316,16 +317,24 @@ class EnergyAccumulatedConsumptionSensor(
         device = self.coordinator.device
         now = dt_util.now().replace(minute=0, second=0, microsecond=0)
         previous_hour = now - timedelta(hours=1)
-
+    
+        # Schedule an async fetch for month-to-date totals so accumulated sensors can report
+        # month-to-date values (total, heat, cool, water). Run async task so we don't use
+        # await inside this synchronous callback.
+        try:
+            self.hass.async_create_task(self._async_fetch_month_consumption_and_apply())
+        except Exception:
+            _LOGGER.exception("Failed to schedule async month consumption fetch")
+    
         try:
             current_hour_consumption = device.get_or_schedule_consumption(
                 now, self.entity_description.consumption_type
             )
-
+    
             previous_hour_consumption = device.get_or_schedule_consumption(
                 previous_hour, self.entity_description.consumption_type
             )
-
+    
         except DataNotAvailableError:
             # we don't have yet data for the current hour but should be available on next refresh
             return
@@ -369,6 +378,88 @@ class EnergyAccumulatedConsumptionSensor(
             self._accumulated_period_being_processed = current_hour_consumption
             super()._handle_coordinator_update()
             return
+
+    async def _async_fetch_month_consumption_and_apply(self) -> None:
+        """Async helper to fetch month-to-date consumption and apply totals.
+
+        Fetches monthly consumption entries via the client and sums entries up to today
+        to produce month-to-date totals broken down by heat/cool/tank and a total.
+        The result is applied to the accumulated sensors (for the matching consumption_type).
+        """
+        try:
+            now = dt_util.now()
+            # YYYYMM01 to request the month aggregation from the API
+            month_date_str = now.strftime("%Y%m01")
+            _LOGGER.info("Fetching month consumption for %s", month_date_str)
+
+            month_consumption = await self.coordinator._client.get_device_consumption(
+                self.coordinator.device.long_id, DateType.MONTH, month_date_str
+            )
+
+            if not month_consumption:
+                _LOGGER.warning("No month consumption data returned for %s", month_date_str)
+                return
+
+            month_heat = 0.0
+            month_cool = 0.0
+            month_tank = 0.0
+            month_total = 0.0
+
+            for c in month_consumption:
+                try:
+                    dt_str = c.data_time
+                    if not dt_str:
+                        continue
+                    # dataTime for month mode is expected as YYYYMMDD
+                    item_date = datetime.strptime(dt_str, "%Y%m%d").date()
+                    if item_date <= now.date():
+                        month_heat += float(c.heat_consumption or 0.0)
+                        month_cool += float(c.cool_consumption or 0.0)
+                        month_tank += float(c.tank_consumption or 0.0)
+                        # total_consumption may be provided; otherwise sum parts per item
+                        try:
+                            month_total += float(c.total_consumption or 0.0)
+                        except Exception:
+                            month_total += float(
+                                (c.heat_consumption or 0.0)
+                                + (c.cool_consumption or 0.0)
+                                + (c.tank_consumption or 0.0)
+                            )
+                except Exception:
+                    _LOGGER.exception(
+                        "Failed to parse month consumption item date: %s", getattr(c, "data_time", None)
+                    )
+
+            _LOGGER.info(
+                "Month-to-date consumption (kWh) - heat: %.3f, cool: %.3f, water_tank: %.3f, total: %.3f",
+                month_heat,
+                month_cool,
+                month_tank,
+                month_total,
+            )
+
+            # Map sensor consumption_type to the appropriate reported value
+            reported_val = None
+            ctype = self.entity_description.consumption_type
+            if ctype == ConsumptionType.HEAT:
+                reported_val = month_heat
+            elif ctype == ConsumptionType.COOL:
+                reported_val = month_cool
+            elif ctype == ConsumptionType.WATER_TANK:
+                reported_val = month_tank
+            elif ctype == ConsumptionType.TOTAL:
+                reported_val = month_total
+
+            if reported_val is not None:
+                # Set period being processed to the start of the month
+                month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                self._period_being_processed = month_start
+                self._attr_native_value = reported_val
+                # write state via base handler
+                super()._handle_coordinator_update()
+
+        except Exception:
+            _LOGGER.exception("Error fetching month consumption")
 
 class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
     """Representation of a Aquarea sensor."""
@@ -431,16 +522,24 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
         device = self.coordinator.device
         now = dt_util.now().replace(minute=0, second=0, microsecond=0)
         previous_hour = now - timedelta(hours=1)
-
+    
+        # Schedule an async fetch for the day/hourly consumption so we can update the entity
+        # with richer hourly data when it becomes available. This avoids using `await`
+        # inside this synchronous callback.
+        try:
+            self.hass.async_create_task(self._async_fetch_day_consumption_and_apply(now, previous_hour))
+        except Exception:
+            _LOGGER.exception("Failed to schedule async day consumption fetch")
+    
         try:
             current_hour_consumption = device.get_or_schedule_consumption(
                 now, self.entity_description.consumption_type
             )
-
+    
             previous_hour_consumption = device.get_or_schedule_consumption(
                 previous_hour, self.entity_description.consumption_type
             )
-
+    
         except DataNotAvailableError:
             # we don't have yet data for the current hour but should be available on next refresh
             return
@@ -486,3 +585,136 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
             self._attr_native_value = current_hour_consumption
             super()._handle_coordinator_update()
             return
+
+    async def _async_fetch_day_consumption_and_apply(self, now: datetime, previous_hour: datetime) -> None:
+        """Async helper to fetch day/hourly consumption and apply current/previous hour values.
+
+        This fetches hourly/day consumption via the client and, when an entry for the
+        current hour (or previous hour) is present, writes the value to the entity.
+        """
+        try:
+            date_str = now.strftime("%Y%m%d")
+            current_hour = now.hour
+            _LOGGER.info(
+                "Fetching day (hourly/daily) consumption for date %s (current hour %02d)",
+                date_str,
+                current_hour,
+            )
+
+            # Attempt to fetch hourly/day consumption entries from the client
+            day_consumption = await self.coordinator._client.get_device_consumption(
+                self.coordinator.device.long_id, DateType.DAY, date_str
+            )
+
+            # Default values (explicit zeros if missing)
+            heat_val = 0.0
+            cool_val = 0.0
+            tank_val = 0.0
+            total_val = 0.0
+            data_time_val = None
+            raw_val = None
+
+            current_entry = None
+            previous_entry = None
+
+            if day_consumption:
+                # Try to find the entry for the current hour using a few common data_time formats
+                for c in day_consumption:
+                    dt_str = c.data_time
+                    if not dt_str:
+                        continue
+                    # Try YYYYMMDDHH
+                    try:
+                        item_dt = datetime.strptime(dt_str, "%Y%m%d%H")
+                        if item_dt.date() == now.date() and item_dt.hour == current_hour:
+                            current_entry = c
+                            break
+                    except Exception:
+                        pass
+                    # Try HH or H
+                    try:
+                        if len(dt_str) <= 2 and dt_str.isdigit():
+                            if int(dt_str) == current_hour:
+                                current_entry = c
+                                break
+                    except Exception:
+                        pass
+
+                # Try to find previous hour entry
+                prev_hour_idx = previous_hour.hour
+                for c in day_consumption:
+                    dt_str = c.data_time
+                    if not dt_str:
+                        continue
+                    try:
+                        item_dt = datetime.strptime(dt_str, "%Y%m%d%H")
+                        if item_dt.date() == previous_hour.date() and item_dt.hour == prev_hour_idx:
+                            previous_entry = c
+                            break
+                    except Exception:
+                        pass
+                    try:
+                        if len(dt_str) <= 2 and dt_str.isdigit():
+                            if int(dt_str) == prev_hour_idx:
+                                previous_entry = c
+                                break
+                    except Exception:
+                        pass
+
+            # Populate values from found entries
+            if current_entry:
+                heat_val = float(current_entry.heat_consumption or 0.0)
+                cool_val = float(current_entry.cool_consumption or 0.0)
+                tank_val = float(current_entry.tank_consumption or 0.0)
+                # total_consumption may be provided by the model, otherwise sum parts
+                try:
+                    total_val = float(current_entry.total_consumption or 0.0)
+                except Exception:
+                    total_val = heat_val + cool_val + tank_val
+                data_time_val = current_entry.data_time
+                raw_val = current_entry.raw_data if hasattr(current_entry, "raw_data") else getattr(current_entry, "_data", {})
+
+            # If no current entry, but previous entry exists, use that as a fallback
+            if not current_entry and previous_entry:
+                heat_val = float(previous_entry.heat_consumption or 0.0)
+                cool_val = float(previous_entry.cool_consumption or 0.0)
+                tank_val = float(previous_entry.tank_consumption or 0.0)
+                try:
+                    total_val = float(previous_entry.total_consumption or 0.0)
+                except Exception:
+                    total_val = heat_val + cool_val + tank_val
+                data_time_val = previous_entry.data_time
+                raw_val = previous_entry.raw_data if hasattr(previous_entry, "raw_data") else getattr(previous_entry, "_data", {})
+
+            # Map sensor consumption_type to the appropriate reported value
+            reported_val = None
+            ctype = self.entity_description.consumption_type
+            if ctype == ConsumptionType.HEAT:
+                reported_val = heat_val
+            elif ctype == ConsumptionType.COOL:
+                reported_val = cool_val
+            elif ctype == ConsumptionType.WATER_TANK:
+                reported_val = tank_val
+            elif ctype == ConsumptionType.TOTAL:
+                reported_val = total_val
+
+            # Always log the current-hour values (zeros if missing)
+            _LOGGER.info(
+                "Current hour consumption (kWh) - heat: %.3f, cool: %.3f, water_tank: %.3f, total: %.3f; data_time=%s raw=%s",
+                heat_val,
+                cool_val,
+                tank_val,
+                total_val,
+                data_time_val or "N/A",
+                raw_val or {},
+            )
+
+            # If we have a value for this sensor, apply it and write state
+            if reported_val is not None:
+                # Set period being processed according to whether it's the current or previous hour
+                self._period_being_processed = now if current_entry else previous_hour
+                self._attr_native_value = reported_val
+                # Use the base handler to write state
+                super()._handle_coordinator_update()
+        except Exception:
+            _LOGGER.exception("Error fetching/applying day consumption")
