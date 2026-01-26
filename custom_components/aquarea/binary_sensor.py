@@ -32,8 +32,9 @@ async def async_setup_entry(
 
     entities: list[BinarySensorEntity] = []
 
-    entities.extend([AquareaStatusBinarySensor(coordinator) for coordinator in data.values()])
-    entities.extend([AquareaDefrostBinarySensor(coordinator) for coordinator in data.values()])
+    for coordinator in data.values():
+        entities.append(AquareaStatusBinarySensor(coordinator))
+        entities.append(AquareaDefrostBinarySensor(coordinator))
 
     async_add_entities(entities)
 

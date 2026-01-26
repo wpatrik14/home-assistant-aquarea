@@ -28,16 +28,11 @@ async def async_setup_entry(
 
     entities: list[SwitchEntity] = []
 
-    entities.extend(
-        [
-            AquareaForceDHWSwitch(coordinator)
-            for coordinator in data.values()
-            if coordinator.device.has_tank
-        ]
-    )
-
-    entities.extend([AquareaForceHeaterSwitch(coordinator) for coordinator in data.values()])
-    entities.extend([AquareaHolidayTimerSwitch(coordinator) for coordinator in data.values()])
+    for coordinator in data.values():
+        if coordinator.device.has_tank:
+            entities.append(AquareaForceDHWSwitch(coordinator))
+        entities.append(AquareaForceHeaterSwitch(coordinator))
+        entities.append(AquareaHolidayTimerSwitch(coordinator))
 
     async_add_entities(entities)
 

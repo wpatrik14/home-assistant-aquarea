@@ -144,9 +144,8 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self._api.login()
         except aioaquarea.AuthenticationError:
             errors["base"] = "invalid_auth"
-        except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception("Unexpected exception")
-            errors["base"] = "unknown"
+        except aioaquarea.errors.RequestFailedError:
+            errors["base"] = "cannot_connect"
 
         return errors
 

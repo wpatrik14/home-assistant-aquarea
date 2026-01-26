@@ -42,6 +42,9 @@ SPECIAL_STATUS_LOOKUP: dict[str, SpecialStatus | None] = {
 SPECIAL_STATUS_REVERSE_LOOKUP = {v: k for k, v in SPECIAL_STATUS_LOOKUP.items()}
 
 
+CLIMATE_DELAY_SHORT = 5.0
+CLIMATE_DELAY_LONG = 10.0
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -118,7 +121,8 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         super().__init__(coordinator)
         self._zone_id = zone_id
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
-        self._attr_name = self.coordinator.device.zones.get(zone_id).name
+        zone = self.coordinator.device.zones.get(zone_id)
+        self._attr_name = zone.name
         self._attr_unique_id = f"{super().unique_id}_climate_{zone_id}"
         self._attr_supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
@@ -191,7 +195,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         await asyncio.sleep(delay)
         try:
             await self.coordinator.async_request_refresh(force_fetch=True)
-        except Exception:
+        except aioaquarea.errors.RequestFailedError:
             _LOGGER.exception(
                 "Delayed refresh failed for device %s",
                 getattr(self.coordinator.device, "device_id", "unknown"),
@@ -203,7 +207,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         Instead of polling repeatedly, schedule a single delayed refresh so the
         coordinator fetches the updated state a short time after the change.
         """
-        if hvac_mode not in self.hvac_modes:  # Use self.hvac_modes instead of self._attr_hvac_modes
+        if hvac_mode not in self.hvac_modes:
             raise ValueError(f"Unsupported HVAC mode: {hvac_mode}")
         _LOGGER.debug(
             "Setting operation mode of %s to %s",
@@ -215,7 +219,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         )
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(10.0))
+        self.hass.async_create_task(self._schedule_refresh(CLIMATE_DELAY_LONG))
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature if supported by the zone.
@@ -240,7 +244,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             )
 
             # Schedule a single delayed refresh (non-blocking)
-            self.hass.async_create_task(self._schedule_refresh(5.0))
+            self.hass.async_create_task(self._schedule_refresh(CLIMATE_DELAY_SHORT))
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new target preset mode.
@@ -260,7 +264,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         )
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(10.0))
+        self.hass.async_create_task(self._schedule_refresh(CLIMATE_DELAY_LONG))
 
     async def async_turn_on(self) -> None:
         """Turn the entity on and schedule a delayed refresh."""
@@ -271,7 +275,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         await self.coordinator.device.turn_on()
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(10.0))
+        self.hass.async_create_task(self._schedule_refresh(CLIMATE_DELAY_LONG))
 
     async def async_turn_off(self) -> None:
         """Turn the entity off and schedule a delayed refresh."""
@@ -282,4 +286,4 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         await self.coordinator.device.turn_off()
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(10.0))
+        self.hass.async_create_task(self._schedule_refresh(CLIMATE_DELAY_LONG))

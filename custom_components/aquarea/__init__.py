@@ -89,10 +89,7 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
         """Initialize entity."""
         super().__init__(coordinator)
 
-        self._attrs: dict[str, Any] = {
-            "name": self.coordinator.device_info.name,
-            "id": self.coordinator.device_info.device_id,
-        }
+
         self._attr_unique_id = self.coordinator.device_info.device_id
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.device_info.device_id)},
@@ -105,7 +102,6 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""
         await super().async_added_to_hass()
-        self.async_write_ha_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:

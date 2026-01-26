@@ -145,7 +145,7 @@ class AquareaSensorExtraStoredData(SensorExtraStoredData):
         return cls(
             native_value=sensor_data.native_value,
             native_unit_of_measurement=sensor_data.native_unit_of_measurement,
-            period_being_processed=dt_util.parse_datetime(restored.get("period_being_processed","")),
+            period_being_processed=dt_util.parse_datetime(restored["period_being_processed"]) if "period_being_processed" in restored else None,
         )
 
     def as_dict(self) -> dict[str, Any]:
@@ -165,7 +165,7 @@ class AquareaAccumulatedSensorExtraStoredData(AquareaSensorExtraStoredData):
             native_value=sensor_data.native_value,
             native_unit_of_measurement=sensor_data.native_unit_of_measurement,
             period_being_processed=sensor_data.period_being_processed,
-            accumulated_period_being_processed=restored["accumulated_period_being_processed"],
+            accumulated_period_being_processed=restored.get("accumulated_period_being_processed"),
         )
 
     def as_dict(self) -> dict[str, Any]:
@@ -199,7 +199,7 @@ class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, Restor
         self.entity_description = description
 
     async def async_added_to_hass(self) -> None:
-        if (sensor_data := await self.async_get_last_sensor_data()) is not None:
+        if sensor_data is not None:
             self._attr_native_value = sensor_data.native_value
             self._period_being_processed = sensor_data.period_being_processed
             self._accumulated_period_being_processed = sensor_data.accumulated_period_being_processed
@@ -211,7 +211,7 @@ class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, Restor
 
     @property
     def extra_restore_state_data(self) -> AquareaAccumulatedSensorExtraStoredData:
-        return AquareaAccumulatedSensorExtraStoredData(self.native_value, self.native_unit_of_measurement, self.period_being_processed)
+        return AquareaAccumulatedSensorExtraStoredData(self.native_value, self.native_unit_of_measurement, self.period_being_processed, self._accumulated_period_being_processed)
 
     async def async_get_last_sensor_data(self) -> AquareaAccumulatedSensorExtraStoredData | None:
         if (restored_last_extra_data := await self.async_get_last_extra_data()) is None:
@@ -225,45 +225,43 @@ class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, Restor
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug("Updating sensor '%s' of %s", self.unique_id, self.coordinator.device_info.name)
-        month_consumption = self.coordinator.month_consumption
         if not month_consumption:
-            super()._handle_coordinator_update()
-            return
+            self._attr_native_value = None
+        else:
+            now = dt_util.now()
+            month_heat = month_cool = month_tank = month_total = 0.0
+            for c in month_consumption:
+                try:
+                    dt_str = c.data_time
+                    if not dt_str:
+                        continue
+                    item_date = datetime.strptime(dt_str, "%Y%m%d").date()
+                    if item_date <= now.date():
+                        month_heat += float(c.heat_consumption or 0.0)
+                        month_cool += float(c.cool_consumption or 0.0)
+                        month_tank += float(c.tank_consumption or 0.0)
+                        try:
+                            month_total += float(c.total_consumption or 0.0)
+                        except (ValueError, TypeError):
+                            month_total += float((c.heat_consumption or 0.0) + (c.cool_consumption or 0.0) + (c.tank_consumption or 0.0))
+                except (ValueError, TypeError) as e:
+                    _LOGGER.exception("Failed to parse month consumption item date: %s, error: %s", getattr(c, "data_time", None), e)
 
-        now = dt_util.now()
-        month_heat = month_cool = month_tank = month_total = 0.0
-        for c in month_consumption:
-            try:
-                dt_str = c.data_time
-                if not dt_str:
-                    continue
-                item_date = datetime.strptime(dt_str, "%Y%m%d").date()
-                if item_date <= now.date():
-                    month_heat += float(c.heat_consumption or 0.0)
-                    month_cool += float(c.cool_consumption or 0.0)
-                    month_tank += float(c.tank_consumption or 0.0)
-                    try:
-                        month_total += float(c.total_consumption or 0.0)
-                    except Exception:
-                        month_total += float((c.heat_consumption or 0.0) + (c.cool_consumption or 0.0) + (c.tank_consumption or 0.0))
-            except Exception:
-                _LOGGER.exception("Failed to parse month consumption item date: %s", getattr(c, "data_time", None))
-
-        _LOGGER.debug("Coordinator-provided month-to-date (kWh) - heat: %.3f, cool: %.3f, water_tank: %.3f, total: %.3f", month_heat, month_cool, month_tank, month_total)
-        ctype = self.entity_description.consumption_type
-        reported_val = None
-        if ctype == ConsumptionType.HEAT:
-            reported_val = month_heat
-        elif ctype == ConsumptionType.COOL:
-            reported_val = month_cool
-        elif ctype == ConsumptionType.WATER_TANK:
-            reported_val = month_tank
-        elif ctype == ConsumptionType.TOTAL:
-            reported_val = month_total
-        if reported_val is not None:
-            month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            self._period_being_processed = month_start
-            self._attr_native_value = reported_val
+            _LOGGER.debug("Coordinator-provided month-to-date (kWh) - heat: %.3f, cool: %.3f, water_tank: %.3f, total: %.3f", month_heat, month_cool, month_tank, month_total)
+            ctype = self.entity_description.consumption_type
+            reported_val = None
+            if ctype == ConsumptionType.HEAT:
+                reported_val = month_heat
+            elif ctype == ConsumptionType.COOL:
+                reported_val = month_cool
+            elif ctype == ConsumptionType.WATER_TANK:
+                reported_val = month_tank
+            elif ctype == ConsumptionType.TOTAL:
+                reported_val = month_total
+            if reported_val is not None:
+                month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                self._period_being_processed = month_start
+                self._attr_native_value = reported_val
         super()._handle_coordinator_update()
 
 class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
@@ -276,7 +274,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
         self.entity_description = description
 
     async def async_added_to_hass(self) -> None:
-        if (sensor_data := await self.async_get_last_sensor_data()) is not None:
+        if sensor_data is not None:
             self._attr_native_value = sensor_data.native_value
             self._period_being_processed = sensor_data.period_being_processed
         if self._attr_native_value is None:
@@ -299,47 +297,54 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug("Updating sensor '%s' of %s", self.unique_id, self.coordinator.device_info.name)
-        day_consumption = self.coordinator.day_consumption
         if not day_consumption:
-            super()._handle_coordinator_update()
-            return
-        now = dt_util.now().replace(minute=0, second=0, microsecond=0)
-        current_hour = now.hour
-        current_entry = None
-        for c in day_consumption:
-            dt_str = c.data_time
-            if not dt_str:
-                continue
-            try:
-                item_dt = datetime.strptime(dt_str, "%Y%m%d%H")
-                if item_dt.date() == now.date() and item_dt.hour == current_hour:
-                    current_entry = c
-                    break
-            except Exception:
-                pass
-            try:
-                if len(dt_str) <= 2 and dt_str.isdigit():
-                    if int(dt_str) == current_hour:
+            self._attr_native_value = None
+        else:
+            now = dt_util.now().replace(minute=0, second=0, microsecond=0)
+            current_hour = now.hour
+            current_entry = None
+            for c in day_consumption:
+                dt_str = c.data_time
+                if not dt_str:
+                    continue
+                try:
+                    item_dt = datetime.strptime(dt_str, "%Y%m%d%H")
+                    if item_dt.date() == now.date() and item_dt.hour == current_hour:
                         current_entry = c
                         break
-            except Exception:
+                except (ValueError, TypeError) as e:
+                    _LOGGER.debug("Failed to parse day consumption item date: %s, error: %s", dt_str, e)
+            if current_entry:
                 pass
-        if not current_entry:
-            super()._handle_coordinator_update()
-            return
-        ctype = self.entity_description.consumption_type
-        reported_val = None
-        if ctype == ConsumptionType.HEAT:
-            reported_val = float(current_entry.heat_consumption or 0.0)
-        elif ctype == ConsumptionType.COOL:
-            reported_val = float(current_entry.cool_consumption or 0.0)
-        elif ctype == ConsumptionType.WATER_TANK:
-            reported_val = float(current_entry.tank_consumption or 0.0)
-        elif ctype == ConsumptionType.TOTAL:
-            try:
-                reported_val = float(current_entry.total_consumption or 0.0)
-            except Exception:
-                reported_val = float((current_entry.heat_consumption or 0.0) + (current_entry.cool_consumption or 0.0) + (current_entry.tank_consumption or 0.0))
-        self._period_being_processed = now
-        self._attr_native_value = reported_val
+            else:
+                # If current hour's data is not available, try to get the last available hour's data
+                for c in reversed(day_consumption):
+                    dt_str = c.data_time
+                    if not dt_str:
+                        continue
+                    try:
+                        item_dt = datetime.strptime(dt_str, "%Y%m%d%H")
+                        current_entry = c
+                        break
+                    except (ValueError, TypeError) as e:
+                        _LOGGER.debug("Failed to parse day consumption item date: %s, error: %s", dt_str, e)
+
+            if current_entry:
+                ctype = self.entity_description.consumption_type
+                reported_val = None
+                if ctype == ConsumptionType.HEAT:
+                    reported_val = float(current_entry.heat_consumption or 0.0)
+                elif ctype == ConsumptionType.COOL:
+                    reported_val = float(current_entry.cool_consumption or 0.0)
+                elif ctype == ConsumptionType.WATER_TANK:
+                    reported_val = float(current_entry.tank_consumption or 0.0)
+                elif ctype == ConsumptionType.TOTAL:
+                    try:
+                        reported_val = float(current_entry.total_consumption or 0.0)
+                    except Exception:
+                        reported_val = float((current_entry.heat_consumption or 0.0) + (current_entry.cool_consumption or 0.0) + (current_entry.tank_consumption or 0.0))
+                self._period_being_processed = now
+                self._attr_native_value = reported_val
+            else:
+                self._attr_native_value = None
         super()._handle_coordinator_update()

@@ -72,7 +72,7 @@ class AquareaQuietModeSelect(AquareaBaseEntity, SelectEntity):
         if(quiet_mode := QUIET_MODE_LOOKUP.get(option)) is None:
             return
 
-        if quiet_mode is self.coordinator.device_info.quiet_mode:
+        if quiet_mode is self.coordinator.device.quiet_mode:
             return
 
         _LOGGER.debug(
@@ -109,7 +109,7 @@ class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
         if(powerful_time := POWERFUL_TIME_LOOKUP.get(option)) is None:
             return
 
-        if powerful_time is self.coordinator.device_info.powerful_time:
+        if powerful_time is self.coordinator.device.powerful_time:
             return
 
         _LOGGER.debug(

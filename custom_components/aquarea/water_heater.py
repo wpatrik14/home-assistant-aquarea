@@ -38,13 +38,11 @@ async def async_setup_entry(
         config_entry.entry_id
     ][DEVICES]
 
-    async_add_entities(
-        [
-            WaterHeater(coordinator)
-            for coordinator in data.values()
-            if coordinator.device.has_tank
-        ]
-    )
+    entities: list[WaterHeater] = []
+    for coordinator in data.values():
+        if coordinator.device.has_tank:
+            entities.append(WaterHeater(coordinator))
+    async_add_entities(entities)
 
 
 class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
@@ -103,14 +101,14 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
 
         try:
             # Prefer explicit enum comparisons if available
-            if current_action in (DeviceAction.HEATING_WATER, DeviceAction.HEATING):
+            if current_action in (DeviceAction.HEATING_WATER, DeviceAction.HEATING, getattr(DeviceAction, "WATER_HEATING", None)):
                 is_heating = True
             else:
                 # Fallback: check name/value for common substrings (robust against enum changes)
-                action_name = getattr(current_action, "name", str(current_action)).upper()
-                if "HEAT" in action_name or "WATER" in action_name:
+                action_name = str(current_action).upper()
+                if "HEAT" in action_name or "WATER" in action_name or "TANK" in action_name:
                     is_heating = True
-        except Exception:
+        except (AttributeError, TypeError):
             # On any unexpected value, conservatively treat as not heating
             is_heating = False
 
