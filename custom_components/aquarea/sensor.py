@@ -312,7 +312,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                 if not dt_str:
                     continue
                 try:
-                    item_dt = datetime.strptime(dt_str, "%Y%m%d%H")
+                    item_dt = datetime.strptime(dt_str, "%Y%m%d %H")
                     if item_dt.date() == now.date() and item_dt.hour == current_hour:
                         current_entry = c
                         break
@@ -327,7 +327,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                     if not dt_str:
                         continue
                     try:
-                        item_dt = datetime.strptime(dt_str, "%Y%m%d%H")
+                        item_dt = datetime.strptime(dt_str, "%Y%m%d %H")
                         current_entry = c
                         break
                     except (ValueError, TypeError) as e:
