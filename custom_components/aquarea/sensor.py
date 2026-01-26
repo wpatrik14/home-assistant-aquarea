@@ -199,6 +199,7 @@ class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, Restor
         self.entity_description = description
 
     async def async_added_to_hass(self) -> None:
+        sensor_data = await self.async_get_last_sensor_data()
         if sensor_data is not None:
             self._attr_native_value = sensor_data.native_value
             self._period_being_processed = sensor_data.period_being_processed
@@ -225,6 +226,7 @@ class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, Restor
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug("Updating sensor '%s' of %s", self.unique_id, self.coordinator.device_info.name)
+        month_consumption = self.coordinator.month_consumption
         if not month_consumption:
             self._attr_native_value = None
         else:
@@ -274,6 +276,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
         self.entity_description = description
 
     async def async_added_to_hass(self) -> None:
+        sensor_data = await self.async_get_last_sensor_data()
         if sensor_data is not None:
             self._attr_native_value = sensor_data.native_value
             self._period_being_processed = sensor_data.period_being_processed
@@ -297,6 +300,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug("Updating sensor '%s' of %s", self.unique_id, self.coordinator.device_info.name)
+        day_consumption = self.coordinator.day_consumption
         if not day_consumption:
             self._attr_native_value = None
         else:
