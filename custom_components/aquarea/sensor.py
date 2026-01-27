@@ -301,17 +301,6 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug("Updating sensor '%s' of %s", self.unique_id, self.coordinator.device_info.name)
         day_consumption = self.coordinator.day_consumption
-        if day_consumption:
-            _LOGGER.debug("Hourly consumption data for past 24 hours:")
-            for c in day_consumption:
-                _LOGGER.debug(
-                    "  Time: %s, Heat: %s, Cool: %s, Tank: %s, Total: %s",
-                    c.data_time,
-                    c.heat_consumption,
-                    c.cool_consumption,
-                    c.tank_consumption,
-                    c.total_consumption,
-                )
         if not day_consumption:
             self._attr_native_value = None
         else:

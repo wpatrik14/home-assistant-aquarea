@@ -16,7 +16,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 
-DEFAULT_SCAN_INTERVAL_SECONDS = 60
+DEFAULT_SCAN_INTERVAL_SECONDS = 900
 SCAN_INTERVAL = timedelta(seconds=DEFAULT_SCAN_INTERVAL_SECONDS)
 CONSUMPTION_REFRESH_INTERVAL_MINUTES = 15
 CONSUMPTION_REFRESH_INTERVAL = timedelta(minutes=CONSUMPTION_REFRESH_INTERVAL_MINUTES)
@@ -116,6 +116,17 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
                             self._day_consumption = await self._client.get_device_consumption(
                                 self._device.long_id, DateType.DAY, date_str
                             )
+                            if self._day_consumption:
+                                _LOGGER.debug("Hourly consumption data for past 24 hours:")
+                                for c in self._day_consumption:
+                                    _LOGGER.debug(
+                                        "  Time: %s, Heat: %s, Cool: %s, Tank: %s, Total: %s",
+                                        c.data_time,
+                                        c.heat_consumption,
+                                        c.cool_consumption,
+                                        c.tank_consumption,
+                                        c.total_consumption,
+                                    )
                         except Exception as exc:
                             _LOGGER.warning(
                                 "Failed to fetch day consumption for device %s: %s",
