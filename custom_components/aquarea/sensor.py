@@ -305,7 +305,9 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
             self._attr_native_value = None
         else:
             now = dt_util.now().replace(minute=0, second=0, microsecond=0)
-            current_hour = now.hour
+            previous_hour_dt = now - timedelta(hours=1)
+            target_hour = previous_hour_dt.hour
+            target_date = previous_hour_dt.date()
             current_entry = None
             for c in day_consumption:
                 dt_str = c.data_time
@@ -313,7 +315,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                     continue
                 try:
                     item_dt = datetime.strptime(dt_str, "%Y%m%d %H")
-                    if item_dt.date() == now.date() and item_dt.hour == current_hour:
+                    if item_dt.date() == target_date and item_dt.hour == target_hour:
                         current_entry = c
                         break
                 except (ValueError, TypeError) as e:
