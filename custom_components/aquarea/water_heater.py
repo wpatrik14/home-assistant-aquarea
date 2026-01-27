@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from aioaquarea.data import DeviceAction, OperationStatus
+from aioaquarea.data import DeviceAction, DeviceDirection, OperationStatus
 
 from homeassistant.components.water_heater import (
     STATE_HEAT_PUMP,
