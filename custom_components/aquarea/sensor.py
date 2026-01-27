@@ -337,6 +337,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                         _LOGGER.debug("Failed to parse day consumption item date: %s, error: %s", dt_str, e)
 
             if current_entry:
+                _LOGGER.debug("Current entry consumption values - heat: %s, cool: %s, tank: %s, total: %s", current_entry.heat_consumption, current_entry.cool_consumption, current_entry.tank_consumption, current_entry.total_consumption)
                 ctype = self.entity_description.consumption_type
                 reported_val = None
                 if ctype == ConsumptionType.HEAT:
