@@ -16,7 +16,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 
-DEFAULT_SCAN_INTERVAL_SECONDS = 900
+DEFAULT_SCAN_INTERVAL_SECONDS = 120
 SCAN_INTERVAL = timedelta(seconds=DEFAULT_SCAN_INTERVAL_SECONDS)
 CONSUMPTION_REFRESH_INTERVAL_MINUTES = 15
 CONSUMPTION_REFRESH_INTERVAL = timedelta(minutes=CONSUMPTION_REFRESH_INTERVAL_MINUTES)
@@ -56,6 +56,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
             name=f"{DOMAIN}-{entry.data[CONF_USERNAME]}-{device_info.device_id}",
             update_interval=SCAN_INTERVAL,
         )
+        self.hass.async_create_task(self.async_request_refresh(force_fetch=True))
 
     async def async_request_refresh(self, force_fetch: bool = False) -> None:
         """Request a refresh of the data."""
@@ -103,7 +104,8 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
             # Centralized hourly consumption fetch (once per hour at :00)
             now = dt_util.now()
             current_hour_str = now.strftime("%Y%m%d%H")
-            if (self._last_consumption_hour is None) or (now.minute == 0 and self._last_consumption_hour != current_hour_str):
+            if (self._last_consumption_fetch_time is None) or (now - self._last_consumption_fetch_time >= CONSUMPTION_REFRESH_INTERVAL):
+                self._last_consumption_fetch_time = now
                 self._last_consumption_hour = current_hour_str
                 try:
 
