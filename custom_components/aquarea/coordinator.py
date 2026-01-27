@@ -103,16 +103,17 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Centralized hourly consumption fetch (once per hour at :00)
             now = dt_util.now()
+            previous_hour = now - timedelta(hours=1)
             current_hour_str = now.strftime("%Y%m%d%H")
             if (self._last_consumption_fetch_time is None) or (now - self._last_consumption_fetch_time >= CONSUMPTION_REFRESH_INTERVAL):
                 self._last_consumption_fetch_time = now
                 self._last_consumption_hour = current_hour_str
                 try:
 
-                        # Day (hourly) consumption for the current date
-                        date_str = now.strftime("%Y%m%d")
+                        # Day (hourly) consumption for the previous hour
+                        date_str = previous_hour.strftime("%Y%m%d")
                         _LOGGER.debug(
-                            "Coordinator fetching day (hourly) consumption for date %s", date_str
+                            "Coordinator fetching day (hourly) consumption for date %s (previous hour)", date_str
                         )
                         try:
                             self._day_consumption = await self._client.get_device_consumption(
