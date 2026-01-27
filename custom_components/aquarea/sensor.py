@@ -301,6 +301,17 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug("Updating sensor '%s' of %s", self.unique_id, self.coordinator.device_info.name)
         day_consumption = self.coordinator.day_consumption
+        if day_consumption:
+            _LOGGER.debug("Hourly consumption data for past 24 hours:")
+            for c in day_consumption:
+                _LOGGER.debug(
+                    "  Time: %s, Heat: %s, Cool: %s, Tank: %s, Total: %s",
+                    c.data_time,
+                    c.heat_consumption,
+                    c.cool_consumption,
+                    c.tank_consumption,
+                    c.total_consumption,
+                )
         if not day_consumption:
             self._attr_native_value = None
         else:
@@ -312,12 +323,9 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                 if not dt_str:
                     continue
                 try:
-                    _LOGGER.debug("Parsing day consumption item date: %s", dt_str)
                     item_dt = datetime.strptime(dt_str, "%Y%m%d %H")
-                    _LOGGER.debug("Parsed item_dt: %s, now.date(): %s, current_hour: %s", item_dt, now.date(), current_hour)
                     if item_dt.date() == now.date() and item_dt.hour == current_hour:
                         current_entry = c
-                        _LOGGER.debug("Found current_entry for current hour: %s", current_entry)
                         break
                 except (ValueError, TypeError) as e:
                     _LOGGER.debug("Failed to parse day consumption item date: %s, error: %s", dt_str, e)
@@ -337,7 +345,6 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                         _LOGGER.debug("Failed to parse day consumption item date: %s, error: %s", dt_str, e)
 
             if current_entry:
-                _LOGGER.debug("Current entry consumption values - heat: %s, cool: %s, tank: %s, total: %s", current_entry.heat_consumption, current_entry.cool_consumption, current_entry.tank_consumption, current_entry.total_consumption)
                 ctype = self.entity_description.consumption_type
                 reported_val = None
                 if ctype == ConsumptionType.HEAT:
