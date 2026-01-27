@@ -312,9 +312,12 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                 if not dt_str:
                     continue
                 try:
+                    _LOGGER.debug("Parsing day consumption item date: %s", dt_str)
                     item_dt = datetime.strptime(dt_str, "%Y%m%d %H")
+                    _LOGGER.debug("Parsed item_dt: %s, now.date(): %s, current_hour: %s", item_dt, now.date(), current_hour)
                     if item_dt.date() == now.date() and item_dt.hour == current_hour:
                         current_entry = c
+                        _LOGGER.debug("Found current_entry for current hour: %s", current_entry)
                         break
                 except (ValueError, TypeError) as e:
                     _LOGGER.debug("Failed to parse day consumption item date: %s, error: %s", dt_str, e)

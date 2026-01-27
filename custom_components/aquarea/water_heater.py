@@ -97,20 +97,24 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
         # Determine if the device is actively heating the tank. Different device actions
         # from the library may be used depending on model/version; check several forms.
         current_action = getattr(self.coordinator.device, "current_action", None)
+        current_direction = getattr(self.coordinator.device, "current_direction", None)
         is_heating = False
 
-        try:
-            # Prefer explicit enum comparisons if available
-            if current_action in (DeviceAction.HEATING_WATER, DeviceAction.HEATING, getattr(DeviceAction, "WATER_HEATING", None)):
-                is_heating = True
-            else:
-                # Fallback: check name/value for common substrings (robust against enum changes)
-                action_name = str(current_action).upper()
-                if "HEAT" in action_name or "WATER" in action_name or "TANK" in action_name:
+        if current_direction == DeviceDirection.WATER:
+            is_heating = True
+        else:
+            try:
+                # Prefer explicit enum comparisons if available
+                if current_action in (DeviceAction.HEATING_WATER, DeviceAction.HEATING, getattr(DeviceAction, "WATER_HEATING", None)):
                     is_heating = True
-        except (AttributeError, TypeError):
-            # On any unexpected value, conservatively treat as not heating
-            is_heating = False
+                else:
+                    # Fallback: check name/value for common substrings (robust against enum changes)
+                    action_name = str(current_action).upper()
+                    if "HEAT" in action_name or "WATER" in action_name or "TANK" in action_name:
+                        is_heating = True
+            except (AttributeError, TypeError):
+                # On any unexpected value, conservatively treat as not heating
+                is_heating = False
 
         self._attr_current_operation = HEATING if is_heating else IDLE
 
