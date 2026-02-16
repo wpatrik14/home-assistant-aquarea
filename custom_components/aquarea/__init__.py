@@ -93,7 +93,7 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
         self._attr_unique_id = self.coordinator.device_info.device_id
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.device_info.device_id)},
-            manufacturer=self.coordinator.device.manufacturer,
+            manufacturer="Panasonic",
             model=self.coordinator.device_info.model,
             name=self.coordinator.device_info.name,
             sw_version=self.coordinator.device_info.firmware_version,

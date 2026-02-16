@@ -18,7 +18,7 @@ from .const import DOMAIN
 
 DEFAULT_SCAN_INTERVAL_SECONDS = 120
 SCAN_INTERVAL = timedelta(seconds=DEFAULT_SCAN_INTERVAL_SECONDS)
-CONSUMPTION_REFRESH_INTERVAL_MINUTES = 15
+CONSUMPTION_REFRESH_INTERVAL_MINUTES = 60
 CONSUMPTION_REFRESH_INTERVAL = timedelta(minutes=CONSUMPTION_REFRESH_INTERVAL_MINUTES)
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,11 +56,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
             name=f"{DOMAIN}-{entry.data[CONF_USERNAME]}-{device_info.device_id}",
             update_interval=SCAN_INTERVAL,
         )
-        self.hass.async_create_task(self.async_request_refresh(force_fetch=True))
 
     async def async_request_refresh(self, force_fetch: bool = False) -> None:
         """Request a refresh of the data."""
-        _LOGGER.debug("async_request_refresh called for device %s", self.device.device_id)
+        _LOGGER.debug("async_request_refresh called for device %s", self._device_info.device_id)
         if force_fetch:
             self._device = None
         await super().async_request_refresh()

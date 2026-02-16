@@ -38,7 +38,7 @@ ACCUMULATED_ENERGY_SENSORS = [
         translation_key="heating_accumulated_energy_consumption",
         name="Heating Accumulated Consumption",
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=ConsumptionType.HEAT,
@@ -48,7 +48,7 @@ ACCUMULATED_ENERGY_SENSORS = [
         translation_key="cooling_accumulated_energy_consumption",
         name="Cooling Accumulated Consumption",
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=ConsumptionType.COOL,
@@ -59,7 +59,7 @@ ACCUMULATED_ENERGY_SENSORS = [
         translation_key="tank_accumulated_energy_consumption",
         name="Tank Accumulated Consumption",
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=ConsumptionType.WATER_TANK,
@@ -70,7 +70,7 @@ ACCUMULATED_ENERGY_SENSORS = [
         translation_key="accumulated_energy_consumption",
         name="Accumulated Consumption",
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=ConsumptionType.TOTAL,
@@ -185,6 +185,8 @@ class OutdoorTemperatureSensor(AquareaBaseEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug("Updating sensor '%s' of %s", "outdoor_temperature", self.coordinator.device_info.name)
+        if self.coordinator.device is None:
+            return
         self._attr_native_value = self.coordinator.device.temperature_outdoor
         super()._handle_coordinator_update()
 
