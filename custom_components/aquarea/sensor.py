@@ -131,6 +131,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     entities: list[SensorEntity] = []
     for coordinator in data.values():
         entities.append(OutdoorTemperatureSensor(coordinator))
+        entities.append(PumpDirectionSensor(coordinator))
         entities.extend([EnergyAccumulatedConsumptionSensor(description, coordinator) for description in ACCUMULATED_ENERGY_SENSORS if description.exists_fn(coordinator)])
         entities.extend([EnergyConsumptionSensor(description, coordinator) for description in ENERGY_SENSORS if description.exists_fn(coordinator)])
     async_add_entities(entities)
@@ -188,6 +189,19 @@ class OutdoorTemperatureSensor(AquareaBaseEntity, SensorEntity):
         if self.coordinator.device is None:
             return
         self._attr_native_value = self.coordinator.device.temperature_outdoor
+        super()._handle_coordinator_update()
+
+class PumpDirectionSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_name = "Direction"
+        self._attr_unique_id = f"{super().unique_id}_direction"
+        self._attr_icon = "mdi:compass"
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        _LOGGER.debug("Updating sensor '%s' of %s", "direction", self.coordinator.device.device_name)
+        self._attr_native_value = self.coordinator.device.current_direction.name
         super()._handle_coordinator_update()
 
 class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
