@@ -1,0 +1,76 @@
+name: Bump aioaquarea
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  bump:
+    name: Check and bump aioaquarea version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest aioaquarea version from PyPI
+        id: pypi
+        run: |
+          LATEST=$(curl -s https://pypi.org/pypi/aioaquarea/json | python3 -c "import sys,json; print(json.load(sys.stdin)['info']['version'])")
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+
+      - name: Get current aioaquarea version from manifest.json
+        id: current
+        run: |
+          CURRENT=$(python3 -c "
+          import json, re
+          manifest = json.load(open('custom_components/aquarea/manifest.json'))
+          req = next(r for r in manifest['requirements'] if r.startswith('aioaquarea'))
+          version = re.search(r'[\d.]+', req).group()
+          print(version)
+          ")
+          echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+
+      - name: Check if update is needed
+        id: check
+        run: |
+          LATEST="${{ steps.pypi.outputs.latest }}"
+          CURRENT="${{ steps.current.outputs.version }}"
+          echo "Latest: $LATEST, Current: $CURRENT"
+          if python3 -c "from packaging.version import Version; exit(0 if Version('$LATEST') > Version('$CURRENT') else 1)"; then
+            echo "update_needed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "update_needed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update manifest.json
+        if: steps.check.outputs.update_needed == 'true'
+        run: |
+          LATEST="${{ steps.pypi.outputs.latest }}"
+          python3 -c "
+          import json, re
+          path = 'custom_components/aquarea/manifest.json'
+          manifest = json.load(open(path))
+          manifest['requirements'] = [
+              re.sub(r'aioaquarea>=[\d.]+', f'aioaquarea>=$LATEST', r)
+              for r in manifest['requirements']
+          ]
+          with open(path, 'w') as f:
+              json.dump(manifest, f, indent=2)
+              f.write('\n')
+          "
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_needed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Bump aioaquarea from ${{ steps.current.outputs.version }} to ${{ steps.pypi.outputs.latest }}"
+          branch: bump/aioaquarea-${{ steps.pypi.outputs.latest }}
+          delete-branch: true
+          title: "Bump aioaquarea from ${{ steps.current.outputs.version }} to ${{ steps.pypi.outputs.latest }}"
+          body: |
+            Bumps [aioaquarea](https://github.com/cjaliaga/aioaquarea) from `${{ steps.current.outputs.version }}` to `${{ steps.pypi.outputs.latest }}`.
+
+            - [PyPI release](https://pypi.org/project/aioaquarea/${{ steps.pypi.outputs.latest }}/)
+            - [Changelog](https://github.com/cjaliaga/aioaquarea/releases/tag/${{ steps.pypi.outputs.latest }})
+          labels: dependencies
