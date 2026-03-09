@@ -57,8 +57,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass=hass, entry=entry, client=client, device_info=device
             )
             hass.data[DOMAIN][entry.entry_id][DEVICES][device.device_id] = coordinator
+            _LOGGER.debug("Performing first refresh for device %s", device.device_id)
             await coordinator.async_config_entry_first_refresh()
 
+        _LOGGER.debug("Forwarding entry setups for platforms")
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     except aioaquarea.AuthenticationError as err:
         if err.error_code in (

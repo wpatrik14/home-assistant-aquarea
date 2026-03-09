@@ -184,6 +184,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.exception("Failed to fetch consumption data")
 
             _LOGGER.debug("Data fetching complete")
+            return self._device
         except aioaquarea.AuthenticationError as err:
             if err.error_code in (
                 aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
