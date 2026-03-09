@@ -15,12 +15,29 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-from .const import DOMAIN
+from homeassistant.core import callback
+
+from .const import (
+    DOMAIN,
+    CONF_SCAN_INTERVAL,
+    CONF_CONSUMPTION_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
+    DEFAULT_CONSUMPTION_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
-    {vol.Required(CONF_USERNAME): str, vol.Required(CONF_PASSWORD): str}
+    {
+        vol.Required(CONF_USERNAME): str,
+        vol.Required(CONF_PASSWORD): str,
+        vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
+            vol.Coerce(int), vol.Range(min=10)
+        ),
+        vol.Required(
+            CONF_CONSUMPTION_INTERVAL, default=DEFAULT_CONSUMPTION_INTERVAL
+        ): vol.All(vol.Coerce(int), vol.Range(min=10)),
+    }
 )
 
 
@@ -37,58 +54,57 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.info = {}
         self._api: aioaquarea.Client = None
 
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> AquareaOptionsFlowHandler:
+        """Get the options flow for this handler."""
+        return AquareaOptionsFlowHandler(config_entry)
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step."""
-        if user_input is None:
-            return self.async_show_form(
-                step_id="user", data_schema=STEP_USER_DATA_SCHEMA
+        errors = {}
+        if user_input is not None:
+            await self.async_set_unique_id(str.lower(user_input[CONF_USERNAME]))
+            self._abort_if_unique_id_configured()
+
+            errors = await self._validate_input(
+                user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
             )
 
-        await self.async_set_unique_id(str.lower(user_input[CONF_USERNAME]))
-        self._abort_if_unique_id_configured()
+            if not errors:
+                return self.async_create_entry(
+                    title=user_input[CONF_USERNAME], data=user_input
+                )
 
-        errors = await self._validate_input(
-            user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_USER_DATA_SCHEMA, user_input
+            ),
+            errors=errors,
         )
-
-        if errors != {}:
-            return self.async_show_form(
-                step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
-            )
-
-        return self.async_create_entry(title=user_input[CONF_USERNAME], data=user_input)
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any], user_input=None):
         """Perform reauth upon an API authentication error."""
         self._username = self._try_get_username(entry_data)
+        errors = {}
 
-        if entry_data:
+        if user_input is not None:
             errors = await self._validate_input(
-                self._username, entry_data.get(CONF_PASSWORD)
+                self._username, user_input[CONF_PASSWORD]
             )
 
-            if errors != {}:
-                return await self.async_show_reauth_form(self._username, errors)
+            if not errors:
+                # If we get here, we have a valid login
+                return await self.async_complete_reauth(
+                    self._username, user_input[CONF_PASSWORD]
+                )
 
-            # If we get here, we have a valid login
-            return await self.async_complete_reauth(
-                self._username, entry_data[CONF_PASSWORD]
-            )
-
-        if user_input is None:
-            return await self.async_show_reauth_form(self._username)
-
-        errors = await self._validate_input(self._username, user_input[CONF_PASSWORD])
-
-        if errors != {}:
-            return await self.async_show_reauth_form(self._username, errors)
-
-        # If we get here, we have a valid login
-        return await self.async_complete_reauth(
-            self._username, user_input[CONF_PASSWORD]
-        )
+        return await self.async_show_reauth_form(self._username, errors)
 
     async def async_complete_reauth(self, username: str, password: str) -> FlowResult:
         """Complete reauth."""
@@ -97,6 +113,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.hass.config_entries.async_update_entry(
             entry,
             data={
+                **entry.data,
                 CONF_USERNAME: username,
                 CONF_PASSWORD: password,
             },
@@ -142,12 +159,87 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._api = aioaquarea.Client(self._session, username, password)
         try:
             await self._api.login()
+            # Also try to get devices to catch ApiErrors like "Terms updated"
+            await self._api.get_devices()
         except aioaquarea.AuthenticationError:
             errors["base"] = "invalid_auth"
+        except aioaquarea.errors.ApiError as err:
+            _LOGGER.error("API error during setup: %s", err)
+            errors["base"] = "api_error"
+            self.context["api_error_msg"] = str(err)
         except aioaquarea.errors.RequestFailedError:
             errors["base"] = "cannot_connect"
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.exception("Unexpected error during setup")
+            errors["base"] = "unknown"
 
         return errors
+
+    async def async_show_form(
+        self,
+        *,
+        step_id: str,
+        data_schema: vol.Schema | None = None,
+        errors: dict[str, str] | None = None,
+        description_placeholders: dict[str, str] | None = None,
+        last_step: bool | None = None,
+    ) -> FlowResult:
+        """Show the form with dynamic error message if needed."""
+        if errors and errors.get("base") == "api_error":
+            if description_placeholders is None:
+                description_placeholders = {}
+            description_placeholders["api_error_msg"] = self.context.get(
+                "api_error_msg", "Unknown API error"
+            )
+
+        return await super().async_show_form(
+            step_id=step_id,
+            data_schema=data_schema,
+            errors=errors,
+            description_placeholders=description_placeholders,
+            last_step=last_step,
+        )
+
+
+class AquareaOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle Aquarea options."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_SCAN_INTERVAL,
+                        default=self.config_entry.options.get(
+                            CONF_SCAN_INTERVAL,
+                            self.config_entry.data.get(
+                                CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                            ),
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=10)),
+                    vol.Required(
+                        CONF_CONSUMPTION_INTERVAL,
+                        default=self.config_entry.options.get(
+                            CONF_CONSUMPTION_INTERVAL,
+                            self.config_entry.data.get(
+                                CONF_CONSUMPTION_INTERVAL, DEFAULT_CONSUMPTION_INTERVAL
+                            ),
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=10)),
+                }
+            ),
+        )
 
 
 class CannotConnect(HomeAssistantError):

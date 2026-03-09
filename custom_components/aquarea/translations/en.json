@@ -6,20 +6,34 @@
         "error": {
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid username or password",
-            "unknown": "Unexpected error"
+            "unknown": "Unexpected error",
+            "api_error": "API error: {api_error_msg}"
         },
         "step": {
             "user": {
-                "description": "Please enter your Panasonic ID and password:",
+                "description": "Please enter your Panasonic ID and password. Warning: Setting the refresh interval too low can cause your IP to be banned from Panasonic Cloud.",
                 "data": {
                     "password": "Password",
-                    "username": "Username"
+                    "username": "Username",
+                    "scan_interval": "Device state refresh interval (seconds)",
+                    "consumption_interval": "Consumption data refresh interval (minutes)"
                 }
             },
             "reauth": {
                 "description": "Please enter the password for your Panasonic ID {username}:",
                 "data": {
                     "password": "Password"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Warning: Setting the refresh interval too low can cause your IP to be banned from Panasonic Cloud.",
+                "data": {
+                    "scan_interval": "Device state refresh interval (seconds)",
+                    "consumption_interval": "Consumption data refresh interval (minutes)"
                 }
             }
         }

@@ -14,12 +14,14 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    CONF_SCAN_INTERVAL,
+    CONF_CONSUMPTION_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
+    DEFAULT_CONSUMPTION_INTERVAL,
+)
 
-DEFAULT_SCAN_INTERVAL_SECONDS = 120
-SCAN_INTERVAL = timedelta(seconds=DEFAULT_SCAN_INTERVAL_SECONDS)
-CONSUMPTION_REFRESH_INTERVAL_MINUTES = 60
-CONSUMPTION_REFRESH_INTERVAL = timedelta(minutes=CONSUMPTION_REFRESH_INTERVAL_MINUTES)
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -50,11 +52,19 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
         self._month_consumption = None
         self._last_consumption_fetch_time: datetime | None = None
 
+        scan_interval = entry.options.get(
+            CONF_SCAN_INTERVAL, entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        )
+        self.consumption_interval = entry.options.get(
+            CONF_CONSUMPTION_INTERVAL,
+            entry.data.get(CONF_CONSUMPTION_INTERVAL, DEFAULT_CONSUMPTION_INTERVAL),
+        )
+
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN}-{entry.data[CONF_USERNAME]}-{device_info.device_id}",
-            update_interval=SCAN_INTERVAL,
+            update_interval=timedelta(seconds=scan_interval),
         )
 
     async def async_request_refresh(self, force_fetch: bool = False) -> None:
@@ -93,7 +103,9 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug("Initializing device for the first time")
                 self._device = await self._client.get_device(
                     device_info=self._device_info,
-                    consumption_refresh_interval=CONSUMPTION_REFRESH_INTERVAL,
+                    consumption_refresh_interval=timedelta(
+                        minutes=self.consumption_interval
+                    ),
                     timezone=dt_util.get_time_zone(self.hass.config.time_zone),
                 )
             else:
@@ -104,7 +116,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
             now = dt_util.now()
             previous_hour = now - timedelta(hours=1)
             current_hour_str = now.strftime("%Y%m%d%H")
-            if (self._last_consumption_fetch_time is None) or (now - self._last_consumption_fetch_time >= CONSUMPTION_REFRESH_INTERVAL):
+            if (self._last_consumption_fetch_time is None) or (
+                now - self._last_consumption_fetch_time
+                >= timedelta(minutes=self.consumption_interval)
+            ):
                 self._last_consumption_fetch_time = now
                 self._last_consumption_hour = current_hour_str
                 try:

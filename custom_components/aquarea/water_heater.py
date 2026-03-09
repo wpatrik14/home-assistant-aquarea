@@ -1,9 +1,11 @@
 """Defines the water heater entity to control the Aquarea water tank."""
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from aioaquarea.data import DeviceAction, DeviceDirection, OperationStatus
+from aioaquarea.errors import RequestFailedError
 
 from homeassistant.components.water_heater import (
     STATE_HEAT_PUMP,
@@ -25,6 +27,8 @@ from .const import DEVICES, DOMAIN, HEATING, IDLE
 from .coordinator import AquareaDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+WATER_HEATER_DELAY = 10.0
 
 
 async def async_setup_entry(
@@ -124,6 +128,17 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
         self._attr_target_temperature = self.coordinator.device.tank.target_temperature
         self._attr_current_temperature = self.coordinator.device.tank.temperature
 
+    async def _schedule_refresh(self, delay: float = 10.0) -> None:
+        """Schedule a single coordinator refresh after a short delay."""
+        await asyncio.sleep(delay)
+        try:
+            await self.coordinator.async_request_refresh(force_fetch=True)
+        except RequestFailedError:
+            _LOGGER.exception(
+                "Delayed refresh failed for device %s",
+                getattr(self.coordinator.device, "device_id", "unknown"),
+            )
+
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
         temperature: float | None = kwargs.get(ATTR_TEMPERATURE)
@@ -133,7 +148,14 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
                 self.coordinator.device.device_id,
                 str(temperature),
             )
+            # Optimistic update
+            self._attr_target_temperature = temperature
+            self.async_write_ha_state()
+
             await self.coordinator.device.tank.set_target_temperature(int(temperature))
+
+            # Schedule a single delayed refresh (non-blocking)
+            self.hass.async_create_task(self._schedule_refresh(WATER_HEATER_DELAY))
 
     async def async_set_operation_mode(self, operation_mode):
         _LOGGER.debug(
@@ -141,7 +163,17 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
             self.coordinator.device.device_id,
             operation_mode,
         )
+        # Optimistic update
         if operation_mode == HEATING:
+            self._attr_state = STATE_HEAT_PUMP
+            self._attr_current_operation = IDLE # It will be updated to HEATING on next refresh if active
             await self.coordinator.device.tank.turn_on()
         elif operation_mode == STATE_OFF:
+            self._attr_state = STATE_OFF
+            self._attr_current_operation = STATE_OFF
             await self.coordinator.device.tank.turn_off()
+        
+        self.async_write_ha_state()
+
+        # Schedule a single delayed refresh (non-blocking)
+        self.hass.async_create_task(self._schedule_refresh(WATER_HEATER_DELAY))

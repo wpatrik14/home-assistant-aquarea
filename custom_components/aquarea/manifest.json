@@ -11,6 +11,6 @@
   "loggers": ["aquarea"],
   "requirements": ["aioaquarea>=1.0.4"],
   "ssdp": [],
-  "version": "1.0.41",
+  "version": "1.0.42",
   "zeroconf": []
 }

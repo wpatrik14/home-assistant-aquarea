@@ -214,6 +214,10 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             self.coordinator.device.device_id,
             hvac_mode,
         )
+        # Optimistic update
+        self._attr_hvac_mode = hvac_mode
+        self.async_write_ha_state()
+
         await self.coordinator.device.set_mode(
             get_update_operation_mode_from_hvac_mode(hvac_mode), self._zone_id
         )
@@ -239,6 +243,11 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
                 str(temperature),
             )
             _LOGGER.debug(f"Attempting to set temperature for zone {zone.zone_id} to {temperature}")
+            
+            # Optimistic update
+            self._attr_target_temperature = temperature
+            self.async_write_ha_state()
+
             await self.coordinator.device.set_temperature(
                 int(temperature), zone.zone_id
             )
@@ -259,6 +268,10 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             self.coordinator.device.device_id,
             preset_mode,
         )
+        # Optimistic update
+        self._attr_preset_mode = preset_mode
+        self.async_write_ha_state()
+
         await self.coordinator.device.set_special_status(
             SPECIAL_STATUS_LOOKUP[preset_mode]
         )
@@ -272,6 +285,10 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             "Turning on device %s",
             self.coordinator.device.device_id,
         )
+        # Optimistic update (assuming HEAT as default or last mode)
+        self._attr_hvac_mode = HVACMode.HEAT 
+        self.async_write_ha_state()
+
         await self.coordinator.device.turn_on()
 
         # Schedule a single delayed refresh (non-blocking)
@@ -283,6 +300,10 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             "Turning off device %s",
             self.coordinator.device.device_id,
         )
+        # Optimistic update
+        self._attr_hvac_mode = HVACMode.OFF
+        self.async_write_ha_state()
+
         await self.coordinator.device.turn_off()
 
         # Schedule a single delayed refresh (non-blocking)

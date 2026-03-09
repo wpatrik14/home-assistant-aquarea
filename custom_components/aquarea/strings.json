@@ -2,19 +2,34 @@
   "config": {
     "step": {
       "user": {
+        "description": "Warning: Setting the refresh interval too low can cause your IP to be banned from Panasonic Cloud.",
         "data": {
           "username": "[%key:common::config_flow::data::username%]",
-          "password": "[%key:common::config_flow::data::password%]"
+          "password": "[%key:common::config_flow::data::password%]",
+          "scan_interval": "Device state refresh interval (seconds)",
+          "consumption_interval": "Consumption data refresh interval (minutes)"
         }
       }
     },
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-      "unknown": "[%key:common::config_flow::error::unknown%]"
+      "unknown": "[%key:common::config_flow::error::unknown%]",
+      "api_error": "API error: {api_error_msg}"
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "description": "Warning: Setting the refresh interval too low can cause your IP to be banned from Panasonic Cloud.",
+        "data": {
+          "scan_interval": "Device state refresh interval (seconds)",
+          "consumption_interval": "Consumption data refresh interval (minutes)"
+        }
+      }
     }
   }
 }
