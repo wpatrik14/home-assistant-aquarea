@@ -175,7 +175,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return errors
 
-    async def async_show_form(
+    def async_show_form(
         self,
         *,
         step_id: str,
@@ -192,7 +192,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "api_error_msg", "Unknown API error"
             )
 
-        return await super().async_show_form(
+        return super().async_show_form(
             step_id=step_id,
             data_schema=data_schema,
             errors=errors,
