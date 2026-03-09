@@ -98,6 +98,11 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
         """Fetch data from Aquarea Smart Cloud Service and hourly consumption when needed."""
         _LOGGER.debug("Fetching data from Aquarea Smart Cloud Service")
         try:
+            # Ensure we are logged in and token is valid
+            if not self._client.is_logged:
+                _LOGGER.debug("Client not logged in or token expired, logging in")
+                await self._client.login()
+
             # Initialize or refresh device state
             # We always re-fetch the device to ensure all internal objects (like zones) are correctly updated
             # as the library's refresh_data method may not update zone status references.
@@ -109,6 +114,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
                 ),
                 timezone=dt_util.get_time_zone(self.hass.config.time_zone),
             )
+
+            # Refresh zones data immediately to ensure they are properly initialized
+            _LOGGER.debug("Refreshing zones data for device %s", self._device_info.device_id)
+            await self._device.refresh_data()
 
             # Centralized hourly consumption fetch (once per hour at :00)
             now = dt_util.now()
