@@ -117,7 +117,12 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Refresh zones data immediately to ensure they are properly initialized
             _LOGGER.debug("Refreshing zones data for device %s", self._device_info.device_id)
-            await self._device.refresh_data()
+            try:
+                await self._device.refresh_data()
+            except aioaquarea.AuthenticationError:
+                _LOGGER.debug("Token expired during refresh, logging in again")
+                await self._client.login()
+                await self._device.refresh_data()
 
             # Centralized hourly consumption fetch (once per hour at :00)
             now = dt_util.now()
