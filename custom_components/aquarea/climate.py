@@ -64,10 +64,12 @@ async def async_setup_entry(
 
 
 def get_hvac_mode_from_ext_op_mode(
-    mode: ExtendedOperationMode, zone_status: OperationStatus
+    mode: ExtendedOperationMode,
+    zone_status: OperationStatus,
+    device_status: OperationStatus,
 ) -> HVACMode:
     """Convert extended operation mode to HVAC mode."""
-    if zone_status == OperationStatus.OFF:
+    if zone_status == OperationStatus.OFF or device_status == OperationStatus.OFF:
         return HVACMode.OFF
     if mode == ExtendedOperationMode.HEAT:
         return HVACMode.HEAT
@@ -143,7 +145,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         device = self.coordinator.device
         zone = device.zones.get(self._zone_id)
         self._attr_hvac_mode = get_hvac_mode_from_ext_op_mode(
-            device.mode, zone.operation_status
+            device.mode, zone.operation_status, device.operation_status
         )
         self._attr_hvac_action = get_hvac_action_from_device_direction(
             device.current_direction, self._attr_hvac_mode
