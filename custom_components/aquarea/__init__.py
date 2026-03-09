@@ -62,6 +62,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         _LOGGER.debug("Forwarding entry setups for platforms")
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+        # Trigger an immediate refresh for all coordinators to ensure entities have data
+        # async_config_entry_first_refresh already did one, but some entities might need
+        # a follow-up if they were registered after the first refresh.
+        for coordinator in hass.data[DOMAIN][entry.entry_id][DEVICES].values():
+            hass.async_create_task(coordinator.async_refresh())
+            # Also ensure we write the state immediately for all entities
+            for entity in coordinator.async_contexts():
+                if hasattr(entity, "async_write_ha_state"):
+                    entity.async_write_ha_state()
     except aioaquarea.AuthenticationError as err:
         if err.error_code in (
             aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
