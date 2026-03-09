@@ -77,7 +77,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
     @property
     def device(self) -> aioaquarea.Device:
         """Return the device."""
-        return self._device
+        return self.data if self.data is not None else self._device
 
     @property
     def device_info(self) -> aioaquarea.data.DeviceInfo:
