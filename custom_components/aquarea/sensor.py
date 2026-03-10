@@ -253,7 +253,19 @@ class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, Restor
                     dt_str = c.data_time
                     if not dt_str:
                         continue
-                    item_date = datetime.strptime(dt_str, "%Y%m%d").date()
+                    # Robust parsing: try multiple formats or handle unexpected changes
+                    item_date = None
+                    for fmt in ("%Y%m%d", "%Y-%m-%d"):
+                        try:
+                            item_date = datetime.strptime(dt_str, fmt).date()
+                            break
+                        except ValueError:
+                            continue
+                    
+                    if item_date is None:
+                        _LOGGER.warning("Unexpected date format for month consumption: %s", dt_str)
+                        continue
+
                     if item_date <= now.date():
                         month_heat += float(c.heat_consumption or 0.0)
                         month_cool += float(c.cool_consumption or 0.0)
@@ -330,8 +342,15 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                 if not dt_str:
                     continue
                 try:
-                    item_dt = datetime.strptime(dt_str, "%Y%m%d %H")
-                    if item_dt.date() == target_date and item_dt.hour == target_hour:
+                    item_dt = None
+                    for fmt in ("%Y%m%d %H", "%Y-%m-%d %H"):
+                        try:
+                            item_dt = datetime.strptime(dt_str, fmt)
+                            break
+                        except ValueError:
+                            continue
+                    
+                    if item_dt and item_dt.date() == target_date and item_dt.hour == target_hour:
                         current_entry = c
                         break
                 except (ValueError, TypeError) as e:
@@ -345,9 +364,16 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                     if not dt_str:
                         continue
                     try:
-                        item_dt = datetime.strptime(dt_str, "%Y%m%d %H")
-                        current_entry = c
-                        break
+                        item_dt = None
+                        for fmt in ("%Y%m%d %H", "%Y-%m-%d %H"):
+                            try:
+                                item_dt = datetime.strptime(dt_str, fmt)
+                                break
+                            except ValueError:
+                                continue
+                        if item_dt:
+                            current_entry = c
+                            break
                     except (ValueError, TypeError) as e:
                         _LOGGER.debug("Failed to parse day consumption item date: %s, error: %s", dt_str, e)
 

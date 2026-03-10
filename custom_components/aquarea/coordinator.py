@@ -1,7 +1,8 @@
 """Coordinator for Aquarea."""
 from __future__ import annotations
 
-from datetime import timedelta
+import asyncio
+from datetime import datetime, timedelta
 import logging
 
 import aioaquarea
@@ -122,66 +123,54 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
             except aioaquarea.AuthenticationError:
                 _LOGGER.debug("Token expired during refresh, logging in again")
                 await self._client.login()
+                # Re-fetch device to ensure we have a fresh state with the new token
+                self._device = await self._client.get_device(
+                    device_info=self._device_info,
+                    consumption_refresh_interval=timedelta(
+                        minutes=self.consumption_interval
+                    ),
+                    timezone=dt_util.get_time_zone(self.hass.config.time_zone),
+                )
                 await self._device.refresh_data()
 
             # Centralized hourly consumption fetch (once per hour at :00)
             now = dt_util.now()
-            previous_hour = now - timedelta(hours=1)
-            current_hour_str = now.strftime("%Y%m%d%H")
             if (self._last_consumption_fetch_time is None) or (
                 now - self._last_consumption_fetch_time
                 >= timedelta(minutes=self.consumption_interval)
             ):
                 self._last_consumption_fetch_time = now
-                self._last_consumption_hour = current_hour_str
-                try:
+                self._last_consumption_hour = now.strftime("%Y%m%d%H")
+                
+                # Parallelize consumption fetching to avoid blocking
+                previous_hour = now - timedelta(hours=1)
+                date_str = previous_hour.strftime("%Y%m%d")
+                month_date_str = now.strftime("%Y%m01")
+                
+                _LOGGER.debug("Coordinator fetching consumption data in parallel")
+                results = await asyncio.gather(
+                    self._client.get_device_consumption(self._device.long_id, DateType.DAY, date_str),
+                    self._client.get_device_consumption(self._device.long_id, DateType.MONTH, month_date_str),
+                    return_exceptions=True
+                )
+                
+                # Handle day consumption result
+                if isinstance(results[0], Exception):
+                    _LOGGER.warning("Failed to fetch day consumption for device %s: %s", self._device.long_id, results[0])
+                    self._day_consumption = None
+                else:
+                    self._day_consumption = results[0]
+                    if self._day_consumption:
+                        _LOGGER.debug("Hourly consumption data for past 24 hours fetched")
 
-                        # Day (hourly) consumption for the previous hour
-                        date_str = previous_hour.strftime("%Y%m%d")
-                        _LOGGER.debug(
-                            "Coordinator fetching day (hourly) consumption for date %s (previous hour)", date_str
-                        )
-                        try:
-                            self._day_consumption = await self._client.get_device_consumption(
-                                self._device.long_id, DateType.DAY, date_str
-                            )
-                            if self._day_consumption:
-                                _LOGGER.debug("Hourly consumption data for past 24 hours:")
-                                for c in self._day_consumption:
-                                    _LOGGER.debug(
-                                        "  Time: %s, Heat: %s, Cool: %s, Tank: %s, Total: %s",
-                                        c.data_time,
-                                        c.heat_consumption,
-                                        c.cool_consumption,
-                                        c.tank_consumption,
-                                        c.total_consumption,
-                                    )
-                        except Exception as exc:
-                            _LOGGER.warning(
-                                "Failed to fetch day consumption for device %s: %s",
-                                getattr(self._device, "long_id", "<unknown>"),
-                                exc,
-                            )
-                            self._day_consumption = None
-
-                        # Month (monthly entries) - fetch month-to-date data
-                        month_date_str = now.strftime("%Y%m01")
-                        _LOGGER.debug(
-                            "Coordinator fetching month consumption for %s", month_date_str
-                        )
-                        try:
-                            self._month_consumption = await self._client.get_device_consumption(
-                                self._device.long_id, DateType.MONTH, month_date_str
-                            )
-                        except Exception as exc:
-                            _LOGGER.warning(
-                                "Failed to fetch month consumption for device %s: %s",
-                                getattr(self._device, "long_id", "<unknown>"),
-                                exc,
-                            )
-                            self._month_consumption = None
-                except aioaquarea.errors.RequestFailedError:
-                    _LOGGER.exception("Failed to fetch consumption data")
+                # Handle month consumption result
+                if isinstance(results[1], Exception):
+                    _LOGGER.warning("Failed to fetch month consumption for device %s: %s", self._device.long_id, results[1])
+                    self._month_consumption = None
+                else:
+                    self._month_consumption = results[1]
+                    if self._month_consumption:
+                        _LOGGER.debug("Month consumption data fetched")
 
             _LOGGER.debug("Data fetching complete")
             return self._device

@@ -66,12 +66,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Trigger an immediate refresh for all coordinators to ensure entities have data
         # async_config_entry_first_refresh already did one, but some entities might need
         # a follow-up if they were registered after the first refresh.
+        # We use a small delay or staggered approach if there are many devices,
+        # but for now we just remove the redundant state write burst.
         for coordinator in hass.data[DOMAIN][entry.entry_id][DEVICES].values():
             hass.async_create_task(coordinator.async_refresh())
-            # Also ensure we write the state immediately for all entities
-            for entity in coordinator.async_contexts():
-                if hasattr(entity, "async_write_ha_state"):
-                    entity.async_write_ha_state()
     except aioaquarea.AuthenticationError as err:
         if err.error_code in (
             aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
