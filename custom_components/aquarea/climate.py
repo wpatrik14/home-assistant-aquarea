@@ -69,7 +69,7 @@ def get_hvac_mode_from_ext_op_mode(
     device_status: OperationStatus,
 ) -> HVACMode:
     """Convert extended operation mode to HVAC mode."""
-    if zone_status == OperationStatus.OFF or device_status == OperationStatus.OFF:
+    if zone_status == OperationStatus.OFF:
         return HVACMode.OFF
     if mode == ExtendedOperationMode.HEAT:
         return HVACMode.HEAT
