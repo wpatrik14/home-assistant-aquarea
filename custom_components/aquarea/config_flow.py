@@ -31,9 +31,6 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_USERNAME): str,
         vol.Required(CONF_PASSWORD): str,
-        vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
-            vol.Coerce(int), vol.Range(min=10)
-        ),
         vol.Required(
             CONF_CONSUMPTION_INTERVAL, default=DEFAULT_CONSUMPTION_INTERVAL
         ): vol.All(vol.Coerce(int), vol.Range(min=10)),
@@ -215,15 +212,6 @@ class AquareaOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Required(
-                        CONF_SCAN_INTERVAL,
-                        default=self.config_entry.options.get(
-                            CONF_SCAN_INTERVAL,
-                            self.config_entry.data.get(
-                                CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
-                            ),
-                        ),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=10)),
                     vol.Required(
                         CONF_CONSUMPTION_INTERVAL,
                         default=self.config_entry.options.get(

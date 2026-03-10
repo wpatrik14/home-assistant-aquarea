@@ -185,7 +185,6 @@ class OutdoorTemperatureSensor(AquareaBaseEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug("Updating sensor '%s' of %s", "outdoor_temperature", self.coordinator.device_info.name)
         if self.coordinator.device is None:
             return
         self._attr_native_value = self.coordinator.device.temperature_outdoor
@@ -200,7 +199,6 @@ class PumpDirectionSensor(AquareaBaseEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug("Updating sensor '%s' of %s", "direction", self.coordinator.device.device_name)
         self._attr_native_value = self.coordinator.device.current_direction.name
         super()._handle_coordinator_update()
 
@@ -241,7 +239,6 @@ class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, Restor
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug("Updating sensor '%s' of %s", self.unique_id, self.coordinator.device_info.name)
         month_consumption = self.coordinator.month_consumption
         if not month_consumption:
             self._attr_native_value = None
@@ -277,7 +274,6 @@ class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, Restor
                 except (ValueError, TypeError) as e:
                     _LOGGER.exception("Failed to parse month consumption item date: %s, error: %s", getattr(c, "data_time", None), e)
 
-            _LOGGER.debug("Coordinator-provided month-to-date (kWh) - heat: %.3f, cool: %.3f, water_tank: %.3f, total: %.3f", month_heat, month_cool, month_tank, month_total)
             ctype = self.entity_description.consumption_type
             reported_val = None
             if ctype == ConsumptionType.HEAT:
@@ -327,7 +323,6 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug("Updating sensor '%s' of %s", self.unique_id, self.coordinator.device_info.name)
         day_consumption = self.coordinator.day_consumption
         if not day_consumption:
             self._attr_native_value = None

@@ -6,8 +6,7 @@
         "data": {
           "username": "[%key:common::config_flow::data::username%]",
           "password": "[%key:common::config_flow::data::password%]",
-          "scan_interval": "Device state refresh interval (seconds)",
-          "consumption_interval": "Consumption data refresh interval (minutes)"
+          "consumption_interval": "Accumulated (monthly) consumption refresh interval (minutes)"
         }
       }
     },
@@ -26,8 +25,7 @@
       "init": {
         "description": "Warning: Setting the refresh interval too low can cause your IP to be banned from Panasonic Cloud.",
         "data": {
-          "scan_interval": "Device state refresh interval (seconds)",
-          "consumption_interval": "Consumption data refresh interval (minutes)"
+          "consumption_interval": "Accumulated (monthly) consumption refresh interval (minutes)"
         }
       }
     }

@@ -178,15 +178,6 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             ) else zone.heat_target_temperature
         )
         self._attr_target_temperature_step = 1
-        _LOGGER.debug(
-            "Zone %s: Temp: %s, Cool Max: %s, Heat Max: %s, Cool Target: %s, Heat Target: %s",
-            self._zone_id,
-            zone.temperature,
-            zone.cool_max,
-            zone.heat_max,
-            zone.cool_target_temperature,
-            zone.heat_target_temperature,
-        )
         super()._handle_coordinator_update()
 
     async def _schedule_refresh(self, delay: float = 5.0) -> None:
