@@ -121,7 +121,4 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
     @callback
     def async_write_ha_state(self) -> None:
         """Write the state to Home Assistant."""
-        _LOGGER.debug(
-            "async_write_ha_state called for entity %s", self.entity_id
-        )
         super().async_write_ha_state()
