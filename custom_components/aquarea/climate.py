@@ -5,6 +5,7 @@ import asyncio
 import logging
 from typing import Any
 
+import aioaquarea
 from aioaquarea import (
     DeviceAction,
     ExtendedOperationMode,

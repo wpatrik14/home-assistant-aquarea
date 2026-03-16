@@ -29,7 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass(kw_only=True)
 class AquareaEnergyConsumptionSensorDescription(SensorEntityDescription):
-    consumption_type: ConsumptionType
+    consumption_type: aioaquarea.ConsumptionType
     exists_fn: Callable[[AquareaDataUpdateCoordinator], bool] = lambda _: True
 
 ACCUMULATED_ENERGY_SENSORS = [
@@ -292,13 +292,13 @@ class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, Restor
 
             ctype = self.entity_description.consumption_type
             reported_val = None
-            if ctype == ConsumptionType.HEAT:
+            if ctype == aioaquarea.ConsumptionType.HEAT:
                 reported_val = month_heat
-            elif ctype == ConsumptionType.COOL:
+            elif ctype == aioaquarea.ConsumptionType.COOL:
                 reported_val = month_cool
-            elif ctype == ConsumptionType.WATER_TANK:
+            elif ctype == aioaquarea.ConsumptionType.WATER_TANK:
                 reported_val = month_tank
-            elif ctype == ConsumptionType.TOTAL:
+            elif ctype == aioaquarea.ConsumptionType.TOTAL:
                 reported_val = month_total
             if reported_val is not None:
                 month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -391,13 +391,13 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
             if current_entry:
                 ctype = self.entity_description.consumption_type
                 reported_val = None
-                if ctype == ConsumptionType.HEAT:
+                if ctype == aioaquarea.ConsumptionType.HEAT:
                     reported_val = float(current_entry.heat_consumption or 0.0)
-                elif ctype == ConsumptionType.COOL:
+                elif ctype == aioaquarea.ConsumptionType.COOL:
                     reported_val = float(current_entry.cool_consumption or 0.0)
-                elif ctype == ConsumptionType.WATER_TANK:
+                elif ctype == aioaquarea.ConsumptionType.WATER_TANK:
                     reported_val = float(current_entry.tank_consumption or 0.0)
-                elif ctype == ConsumptionType.TOTAL:
+                elif ctype == aioaquarea.ConsumptionType.TOTAL:
                     try:
                         reported_val = float(current_entry.total_consumption or 0.0)
                     except Exception:
