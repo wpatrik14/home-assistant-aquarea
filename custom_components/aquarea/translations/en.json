@@ -85,21 +85,6 @@
         },
         "direction": {
           "name": "Direction"
-        },
-        "quiet_mode": {
-          "name": "Quiet mode"
-        },
-        "powerful_time": {
-          "name": "Powerful time"
-        },
-        "force_dhw": {
-          "name": "Force DHW"
-        },
-        "force_heater": {
-          "name": "Force heater"
-        },
-        "holiday_timer": {
-          "name": "Holiday timer"
         }
       },
       "select": {

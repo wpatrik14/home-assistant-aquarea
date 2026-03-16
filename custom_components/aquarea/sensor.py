@@ -133,11 +133,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
         entities.append(OutdoorTemperatureSensor(coordinator))
         entities.append(PumpDirectionSensor(coordinator))
         entities.append(PumpStatusSensor(coordinator))
-        entities.append(QuietModeSensor(coordinator))
-        entities.append(PowerfulTimeSensor(coordinator))
-        entities.append(ForceDHWSensor(coordinator))
-        entities.append(ForceHeaterSensor(coordinator))
-        entities.append(HolidayTimerSensor(coordinator))
         entities.extend([EnergyAccumulatedConsumptionSensor(description, coordinator) for description in ACCUMULATED_ENERGY_SENSORS if description.exists_fn(coordinator)])
         entities.extend([EnergyConsumptionSensor(description, coordinator) for description in ENERGY_SENSORS if description.exists_fn(coordinator)])
     async_add_entities(entities)
@@ -218,66 +213,6 @@ class PumpStatusSensor(AquareaBaseEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         self._attr_native_value = "On" if self.coordinator.device.pump_duty == 1 else "Off"
-        super()._handle_coordinator_update()
-
-class QuietModeSensor(AquareaBaseEntity, SensorEntity):
-    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_translation_key = "quiet_mode"
-        self._attr_unique_id = f"{super().unique_id}_quiet_mode"
-        self._attr_icon = "mdi:volume-off"
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        self._attr_native_value = self.coordinator.device.quiet_mode.name
-        super()._handle_coordinator_update()
-
-class PowerfulTimeSensor(AquareaBaseEntity, SensorEntity):
-    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_translation_key = "powerful_time"
-        self._attr_unique_id = f"{super().unique_id}_powerful_time"
-        self._attr_icon = "mdi:speedometer"
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        self._attr_native_value = self.coordinator.device.powerful_time.name
-        super()._handle_coordinator_update()
-
-class ForceDHWSensor(AquareaBaseEntity, SensorEntity):
-    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_translation_key = "force_dhw"
-        self._attr_unique_id = f"{super().unique_id}_force_dhw"
-        self._attr_icon = "mdi:water-boiler"
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        self._attr_native_value = self.coordinator.device.force_dhw.name
-        super()._handle_coordinator_update()
-
-class ForceHeaterSensor(AquareaBaseEntity, SensorEntity):
-    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_translation_key = "force_heater"
-        self._attr_unique_id = f"{super().unique_id}_force_heater"
-        self._attr_icon = "mdi:radiator"
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        self._attr_native_value = self.coordinator.device.force_heater.name
-        super()._handle_coordinator_update()
-
-class HolidayTimerSensor(AquareaBaseEntity, SensorEntity):
-    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_translation_key = "holiday_timer"
-        self._attr_unique_id = f"{super().unique_id}_holiday_timer"
-        self._attr_icon = "mdi:calendar-check"
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        self._attr_native_value = self.coordinator.device.holiday_timer.name
         super()._handle_coordinator_update()
 
 class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
