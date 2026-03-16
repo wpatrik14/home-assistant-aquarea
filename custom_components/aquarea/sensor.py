@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import logging
 from typing import Any, Self
 
-from aioaquarea import ConsumptionType
+import aioaquarea
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -41,7 +41,7 @@ ACCUMULATED_ENERGY_SENSORS = [
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
-        consumption_type=ConsumptionType.HEAT,
+        consumption_type=aioaquarea.ConsumptionType.HEAT,
     ),
     AquareaEnergyConsumptionSensorDescription(
         key="cooling_accumulated_energy_consumption",
@@ -51,7 +51,7 @@ ACCUMULATED_ENERGY_SENSORS = [
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
-        consumption_type=ConsumptionType.COOL,
+        consumption_type=aioaquarea.ConsumptionType.COOL,
         exists_fn=lambda coordinator: any(zone.cool_mode for zone in coordinator.device.zones.values()),
     ),
     AquareaEnergyConsumptionSensorDescription(
@@ -62,7 +62,7 @@ ACCUMULATED_ENERGY_SENSORS = [
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
-        consumption_type=ConsumptionType.WATER_TANK,
+        consumption_type=aioaquarea.ConsumptionType.WATER_TANK,
         exists_fn=lambda coordinator: coordinator.device.has_tank,
     ),
     AquareaEnergyConsumptionSensorDescription(
@@ -73,7 +73,7 @@ ACCUMULATED_ENERGY_SENSORS = [
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
-        consumption_type=ConsumptionType.TOTAL,
+        consumption_type=aioaquarea.ConsumptionType.TOTAL,
     ),
 ]
 
@@ -86,7 +86,7 @@ ENERGY_SENSORS = [
         state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
-        consumption_type=ConsumptionType.HEAT,
+        consumption_type=aioaquarea.ConsumptionType.HEAT,
         entity_registry_enabled_default=False,
     ),
     AquareaEnergyConsumptionSensorDescription(
@@ -97,7 +97,7 @@ ENERGY_SENSORS = [
         state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
-        consumption_type=ConsumptionType.WATER_TANK,
+        consumption_type=aioaquarea.ConsumptionType.WATER_TANK,
         exists_fn=lambda coordinator: coordinator.device.has_tank,
         entity_registry_enabled_default=False,
     ),
@@ -109,7 +109,7 @@ ENERGY_SENSORS = [
         state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
-        consumption_type=ConsumptionType.COOL,
+        consumption_type=aioaquarea.ConsumptionType.COOL,
         exists_fn=lambda coordinator: any(zone.cool_mode for zone in coordinator.device.zones.values()),
         entity_registry_enabled_default=False,
     ),
@@ -121,7 +121,7 @@ ENERGY_SENSORS = [
         state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
-        consumption_type=ConsumptionType.TOTAL,
+        consumption_type=aioaquarea.ConsumptionType.TOTAL,
         entity_registry_enabled_default=False,
     ),
 ]
@@ -132,6 +132,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     for coordinator in data.values():
         entities.append(OutdoorTemperatureSensor(coordinator))
         entities.append(PumpDirectionSensor(coordinator))
+        entities.append(PumpStatusSensor(coordinator))
         entities.extend([EnergyAccumulatedConsumptionSensor(description, coordinator) for description in ACCUMULATED_ENERGY_SENSORS if description.exists_fn(coordinator)])
         entities.extend([EnergyConsumptionSensor(description, coordinator) for description in ENERGY_SENSORS if description.exists_fn(coordinator)])
     async_add_entities(entities)
@@ -193,13 +194,28 @@ class OutdoorTemperatureSensor(AquareaBaseEntity, SensorEntity):
 class PumpDirectionSensor(AquareaBaseEntity, SensorEntity):
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
-        self._attr_name = "Direction"
+        self._attr_translation_key = "direction"
         self._attr_unique_id = f"{super().unique_id}_direction"
         self._attr_icon = "mdi:compass"
 
     @callback
     def _handle_coordinator_update(self) -> None:
         self._attr_native_value = self.coordinator.device.current_direction.name
+        super()._handle_coordinator_update()
+
+class PumpStatusSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "pump_status"
+        self._attr_unique_id = f"{super().unique_id}_pump_status"
+        self._attr_icon = "mdi:pump"
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        if self.coordinator.device.pump_duty == aioaquarea.PumpDuty.ON:
+            self._attr_native_value = "On"
+        else:
+            self._attr_native_value = "Off"
         super()._handle_coordinator_update()
 
 class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):

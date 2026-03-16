@@ -79,6 +79,12 @@
         },
         "outdoor_temperature": {
           "name": "Outdoor temperature"
+        },
+        "pump_status": {
+          "name": "Pump status"
+        },
+        "direction": {
+          "name": "Direction"
         }
       },
       "select": {

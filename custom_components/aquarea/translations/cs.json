@@ -23,5 +23,15 @@
                 }
             }
         }
+    },
+    "entity": {
+      "sensor": {
+        "pump_status": {
+          "name": "Stav čerpadla"
+        },
+        "direction": {
+          "name": "Směr"
+        }
+      }
     }
 }
