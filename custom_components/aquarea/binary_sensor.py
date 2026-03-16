@@ -35,6 +35,7 @@ async def async_setup_entry(
     for coordinator in data.values():
         entities.append(AquareaStatusBinarySensor(coordinator))
         entities.append(AquareaDefrostBinarySensor(coordinator))
+        entities.append(AquareaUncontrollableTaw1BinarySensor(coordinator))
 
     async_add_entities(entities)
 
@@ -76,3 +77,19 @@ class AquareaDefrostBinarySensor(AquareaBaseEntity, BinarySensorEntity):
     def is_on(self) -> bool:
         """Return true if the binary sensor is on."""
         return self.coordinator.device.device_mode_status is aioaquarea.DeviceModeStatus.DEFROST
+
+class AquareaUncontrollableTaw1BinarySensor(AquareaBaseEntity, BinarySensorEntity):
+    """Representation of a Aquarea sensor that indicates if the TAW1 is uncontrollable."""
+
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+
+        self._attr_unique_id = f"{super().unique_id}_uncontrollable_taw1"
+        self._attr_translation_key = "uncontrollable_taw1"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if the binary sensor is on."""
+        return self.coordinator.device.uncontrollable_taw1_flg

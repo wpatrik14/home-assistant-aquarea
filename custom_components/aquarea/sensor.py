@@ -133,6 +133,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
         entities.append(OutdoorTemperatureSensor(coordinator))
         entities.append(PumpDirectionSensor(coordinator))
         entities.append(PumpStatusSensor(coordinator))
+        entities.append(ServiceTypeSensor(coordinator))
+        entities.append(TankFlagSensor(coordinator))
+        entities.append(MultiOdConnectionSensor(coordinator))
+        entities.append(BivalentSensor(coordinator))
+        entities.append(BivalentActualSensor(coordinator))
+        entities.append(WaterPressureSensor(coordinator))
+        entities.append(ElectricAnodeSensor(coordinator))
+        entities.append(DeiceStatusSensor(coordinator))
+        entities.append(SpecialStatusRawSensor(coordinator))
+        entities.append(ModelSeriesSelectionSensor(coordinator))
+        entities.append(StandAloneSensor(coordinator))
+        entities.append(ControlBoxSensor(coordinator))
+        entities.append(ExternalHeaterSensor(coordinator))
         entities.extend([EnergyAccumulatedConsumptionSensor(description, coordinator) for description in ACCUMULATED_ENERGY_SENSORS if description.exists_fn(coordinator)])
         entities.extend([EnergyConsumptionSensor(description, coordinator) for description in ENERGY_SENSORS if description.exists_fn(coordinator)])
     async_add_entities(entities)
@@ -212,10 +225,164 @@ class PumpStatusSensor(AquareaBaseEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        if self.coordinator.device.pump_duty == 1:
-            self._attr_native_value = "On"
-        else:
-            self._attr_native_value = "Off"
+        self._attr_native_value = "On" if self.coordinator.device.pump_duty == 1 else "Off"
+        super()._handle_coordinator_update()
+
+class ServiceTypeSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "service_type"
+        self._attr_unique_id = f"{super().unique_id}_service_type"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.service_type
+        super()._handle_coordinator_update()
+
+class TankFlagSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "tank_flag"
+        self._attr_unique_id = f"{super().unique_id}_tank_flag"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.tank_flag
+        super()._handle_coordinator_update()
+
+class MultiOdConnectionSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "multi_od_connection"
+        self._attr_unique_id = f"{super().unique_id}_multi_od_connection"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.multi_od_connection
+        super()._handle_coordinator_update()
+
+class BivalentSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "bivalent"
+        self._attr_unique_id = f"{super().unique_id}_bivalent"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.bivalent
+        super()._handle_coordinator_update()
+
+class BivalentActualSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "bivalent_actual"
+        self._attr_unique_id = f"{super().unique_id}_bivalent_actual"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.bivalent_actual
+        super()._handle_coordinator_update()
+
+class WaterPressureSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "water_pressure"
+        self._attr_unique_id = f"{super().unique_id}_water_pressure"
+        self._attr_device_class = SensorDeviceClass.PRESSURE
+        self._attr_native_unit_of_measurement = "bar" # Assuming bar, common for heat pumps
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.water_pressure
+        super()._handle_coordinator_update()
+
+class ElectricAnodeSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "electric_anode"
+        self._attr_unique_id = f"{super().unique_id}_electric_anode"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.electric_anode
+        super()._handle_coordinator_update()
+
+class DeiceStatusSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "deice_status"
+        self._attr_unique_id = f"{super().unique_id}_deice_status"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.deice_status
+        super()._handle_coordinator_update()
+
+class SpecialStatusRawSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "special_status_raw"
+        self._attr_unique_id = f"{super().unique_id}_special_status_raw"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.special_status_raw
+        super()._handle_coordinator_update()
+
+class ModelSeriesSelectionSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "model_series_selection"
+        self._attr_unique_id = f"{super().unique_id}_model_series_selection"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.model_series_selection
+        super()._handle_coordinator_update()
+
+class StandAloneSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "stand_alone"
+        self._attr_unique_id = f"{super().unique_id}_stand_alone"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.stand_alone
+        super()._handle_coordinator_update()
+
+class ControlBoxSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "control_box"
+        self._attr_unique_id = f"{super().unique_id}_control_box"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.control_box
+        super()._handle_coordinator_update()
+
+class ExternalHeaterSensor(AquareaBaseEntity, SensorEntity):
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "external_heater"
+        self._attr_unique_id = f"{super().unique_id}_external_heater"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.device.external_heater
         super()._handle_coordinator_update()
 
 class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):

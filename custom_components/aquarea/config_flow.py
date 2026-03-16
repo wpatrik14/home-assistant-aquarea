@@ -156,8 +156,6 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._api = aioaquarea.Client(self._session, username, password)
         try:
             await self._api.login()
-            # Also try to get devices to catch ApiErrors like "Terms updated"
-            await self._api.get_devices()
         except aioaquarea.AuthenticationError:
             errors["base"] = "invalid_auth"
         except aioaquarea.errors.ApiError as err:
