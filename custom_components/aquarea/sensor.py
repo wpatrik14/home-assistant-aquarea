@@ -212,7 +212,7 @@ class PumpStatusSensor(AquareaBaseEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        if self.coordinator.device.pump_duty == aioaquarea.PumpDuty.ON:
+        if self.coordinator.device.pump_duty == 1:
             self._attr_native_value = "On"
         else:
             self._attr_native_value = "Off"
