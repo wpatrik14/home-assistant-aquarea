@@ -45,9 +45,6 @@
         },
         "status": {
           "name": "Status"
-        },
-        "uncontrollable_taw1": {
-          "name": "Uncontrollable TAW1"
         }
       },
       "button": {
@@ -89,44 +86,20 @@
         "direction": {
           "name": "Direction"
         },
-        "service_type": {
-          "name": "Service type"
+        "quiet_mode": {
+          "name": "Quiet mode"
         },
-        "tank_flag": {
-          "name": "Tank flag"
+        "powerful_time": {
+          "name": "Powerful time"
         },
-        "multi_od_connection": {
-          "name": "Multi OD connection"
+        "force_dhw": {
+          "name": "Force DHW"
         },
-        "bivalent": {
-          "name": "Bivalent"
+        "force_heater": {
+          "name": "Force heater"
         },
-        "bivalent_actual": {
-          "name": "Bivalent actual"
-        },
-        "water_pressure": {
-          "name": "Water pressure"
-        },
-        "electric_anode": {
-          "name": "Electric anode"
-        },
-        "deice_status": {
-          "name": "Deice status"
-        },
-        "special_status_raw": {
-          "name": "Special status raw"
-        },
-        "model_series_selection": {
-          "name": "Model series selection"
-        },
-        "stand_alone": {
-          "name": "Stand alone"
-        },
-        "control_box": {
-          "name": "Control box"
-        },
-        "external_heater": {
-          "name": "External heater"
+        "holiday_timer": {
+          "name": "Holiday timer"
         }
       },
       "select": {
