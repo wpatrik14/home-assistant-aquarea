@@ -82,6 +82,7 @@ class AquareaQuietModeSelect(AquareaBaseEntity, SelectEntity):
             str(quiet_mode)
         )
         await self.coordinator.device.set_quiet_mode(quiet_mode)
+        await self.coordinator.async_request_refresh()
 
 class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
     """Representation of an Aquarea select entity to configure the device's powerful time."""
@@ -119,3 +120,4 @@ class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
             str(powerful_time)
         )
         await self.coordinator.device.set_powerful_time(powerful_time)
+        await self.coordinator.async_request_refresh()
