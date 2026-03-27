@@ -1,4 +1,5 @@
 """Select entities for Aquarea integration."""
+import asyncio
 import logging
 
 from aioaquarea import PowerfulTime, QuietMode
@@ -11,6 +12,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import AquareaBaseEntity
 from .const import DEVICES, DOMAIN
 from .coordinator import AquareaDataUpdateCoordinator
+
+SELECT_DELAY = 10.0
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,11 +64,20 @@ class AquareaQuietModeSelect(AquareaBaseEntity, SelectEntity):
         self._attr_translation_key = "quiet_mode"
         self._attr_options = list(QUIET_MODE_LOOKUP.keys())
         self._attr_icon = "mdi:volume-off"
+        self._optimistic_option: str | None = None
 
     @property
     def current_option(self) -> str:
         """The current select option."""
+        if self._optimistic_option is not None:
+            return self._optimistic_option
         return QUIET_MODE_REVERSE_LOOKUP.get(self.coordinator.device.quiet_mode)
+
+    async def _schedule_refresh(self, delay: float = SELECT_DELAY) -> None:
+        """Clear optimistic state and request a coordinator refresh after a short delay."""
+        await asyncio.sleep(delay)
+        self._optimistic_option = None
+        await self.coordinator.async_request_refresh()
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
@@ -81,8 +93,10 @@ class AquareaQuietModeSelect(AquareaBaseEntity, SelectEntity):
             str(self.coordinator.device.quiet_mode),
             str(quiet_mode)
         )
+        self._optimistic_option = option
+        self.async_write_ha_state()
         await self.coordinator.device.set_quiet_mode(quiet_mode)
-        await self.coordinator.async_request_refresh()
+        self.hass.async_create_task(self._schedule_refresh())
 
 class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
     """Representation of an Aquarea select entity to configure the device's powerful time."""
@@ -94,16 +108,27 @@ class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
         self._attr_unique_id = f"{super().unique_id}_powerful_time"
         self._attr_translation_key = "powerful_time"
         self._attr_options = list(POWERFUL_TIME_LOOKUP.keys())
+        self._optimistic_option: str | None = None
 
     @property
     def icon(self) -> str:
         """Return the icon."""
+        if self._optimistic_option is not None:
+            return "mdi:fire-off" if self._optimistic_option == "off" else "mdi:fire"
         return "mdi:fire-off" if self.coordinator.device.powerful_time is PowerfulTime.OFF else "mdi:fire"
 
     @property
     def current_option(self) -> str:
         """The current select option."""
+        if self._optimistic_option is not None:
+            return self._optimistic_option
         return POWERFUL_TIME_REVERSE_LOOKUP.get(self.coordinator.device.powerful_time)
+
+    async def _schedule_refresh(self, delay: float = SELECT_DELAY) -> None:
+        """Clear optimistic state and request a coordinator refresh after a short delay."""
+        await asyncio.sleep(delay)
+        self._optimistic_option = None
+        await self.coordinator.async_request_refresh()
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
@@ -119,5 +144,7 @@ class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
             str(self.coordinator.device.powerful_time),
             str(powerful_time)
         )
+        self._optimistic_option = option
+        self.async_write_ha_state()
         await self.coordinator.device.set_powerful_time(powerful_time)
-        await self.coordinator.async_request_refresh()
+        self.hass.async_create_task(self._schedule_refresh())
