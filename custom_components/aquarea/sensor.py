@@ -1,7 +1,7 @@
 """Adds Aquarea sensors."""
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 from typing import Any, Self
 
@@ -83,7 +83,7 @@ ENERGY_SENSORS = [
         translation_key="heating_energy_consumption",
         name="Heating Consumption",
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=aioaquarea.ConsumptionType.HEAT,
@@ -94,7 +94,7 @@ ENERGY_SENSORS = [
         translation_key="tank_energy_consumption",
         name="Tank Consumption",
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=aioaquarea.ConsumptionType.WATER_TANK,
@@ -106,7 +106,7 @@ ENERGY_SENSORS = [
         translation_key="cooling_energy_consumption",
         name="Cooling Consumption",
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=aioaquarea.ConsumptionType.COOL,
@@ -118,7 +118,7 @@ ENERGY_SENSORS = [
         translation_key="energy_consumption",
         name="Consumption",
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=aioaquarea.ConsumptionType.TOTAL,
@@ -336,71 +336,49 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        day_consumption = self.coordinator.day_consumption
-        if not day_consumption:
-            self._attr_native_value = None
-        else:
-            now = dt_util.now().replace(minute=0, second=0, microsecond=0)
-            previous_hour_dt = now - timedelta(hours=1)
-            target_hour = previous_hour_dt.hour
-            target_date = previous_hour_dt.date()
-            current_entry = None
-            for c in day_consumption:
-                dt_str = c.data_time
-                if not dt_str:
-                    continue
-                try:
-                    item_dt = None
-                    for fmt in ("%Y%m%d %H", "%Y-%m-%d %H"):
-                        try:
-                            item_dt = datetime.strptime(dt_str, fmt)
-                            break
-                        except ValueError:
-                            continue
-                    
-                    if item_dt and item_dt.date() == target_date and item_dt.hour == target_hour:
-                        current_entry = c
-                        break
-                except (ValueError, TypeError) as e:
-                    _LOGGER.debug("Failed to parse day consumption item date: %s, error: %s", dt_str, e)
-            if current_entry:
-                pass
-            else:
-                # If current hour's data is not available, try to get the last available hour's data
-                for c in reversed(day_consumption):
-                    dt_str = c.data_time
-                    if not dt_str:
-                        continue
-                    try:
-                        item_dt = None
-                        for fmt in ("%Y%m%d %H", "%Y-%m-%d %H"):
-                            try:
-                                item_dt = datetime.strptime(dt_str, fmt)
-                                break
-                            except ValueError:
-                                continue
-                        if item_dt:
-                            current_entry = c
-                            break
-                    except (ValueError, TypeError) as e:
-                        _LOGGER.debug("Failed to parse day consumption item date: %s, error: %s", dt_str, e)
+        month_consumption = self.coordinator.month_consumption
+        if not month_consumption:
+            super()._handle_coordinator_update()
+            return
 
-            if current_entry:
-                ctype = self.entity_description.consumption_type
-                reported_val = None
-                if ctype == aioaquarea.ConsumptionType.HEAT:
-                    reported_val = float(current_entry.heat_consumption or 0.0)
-                elif ctype == aioaquarea.ConsumptionType.COOL:
-                    reported_val = float(current_entry.cool_consumption or 0.0)
-                elif ctype == aioaquarea.ConsumptionType.WATER_TANK:
-                    reported_val = float(current_entry.tank_consumption or 0.0)
-                elif ctype == aioaquarea.ConsumptionType.TOTAL:
-                    try:
-                        reported_val = float(current_entry.total_consumption or 0.0)
-                    except Exception:
-                        reported_val = float((current_entry.heat_consumption or 0.0) + (current_entry.cool_consumption or 0.0) + (current_entry.tank_consumption or 0.0))
-                self._period_being_processed = now
-                self._attr_native_value = reported_val
-            else:
-                self._attr_native_value = None
+        now = dt_util.now()
+        today = now.date()
+        today_entry = None
+        for c in month_consumption:
+            dt_str = c.data_time
+            if not dt_str:
+                continue
+            item_date = None
+            for fmt in ("%Y%m%d", "%Y-%m-%d"):
+                try:
+                    item_date = datetime.strptime(dt_str, fmt).date()
+                    break
+                except ValueError:
+                    continue
+            if item_date == today:
+                today_entry = c
+                break
+
+        if today_entry is None:
+            super()._handle_coordinator_update()
+            return
+
+        ctype = self.entity_description.consumption_type
+        if ctype == aioaquarea.ConsumptionType.HEAT:
+            reported_val = float(today_entry.heat_consumption or 0.0)
+        elif ctype == aioaquarea.ConsumptionType.COOL:
+            reported_val = float(today_entry.cool_consumption or 0.0)
+        elif ctype == aioaquarea.ConsumptionType.WATER_TANK:
+            reported_val = float(today_entry.tank_consumption or 0.0)
+        elif ctype == aioaquarea.ConsumptionType.TOTAL:
+            try:
+                reported_val = float(today_entry.total_consumption or 0.0)
+            except (ValueError, TypeError):
+                reported_val = float((today_entry.heat_consumption or 0.0) + (today_entry.cool_consumption or 0.0) + (today_entry.tank_consumption or 0.0))
+        else:
+            super()._handle_coordinator_update()
+            return
+
+        self._period_being_processed = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        self._attr_native_value = reported_val
         super()._handle_coordinator_update()

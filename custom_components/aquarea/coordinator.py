@@ -1,7 +1,6 @@
 """Coordinator for Aquarea."""
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta
 import logging
 
@@ -20,7 +19,6 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_CONSUMPTION_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
-    DEFAULT_DAILY_CONSUMPTION_INTERVAL,
     DEFAULT_CONSUMPTION_INTERVAL,
 )
 
@@ -47,13 +45,8 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
         self._device = None
 
         # Consumption caching / rate limiting
-        # Last hour string in format YYYYMMDDHH for which consumption was fetched
-        self._last_consumption_hour: str | None = None
         # Cached consumption results (lists of Consumption objects from aioaquarea.statistics)
-        self._day_consumption = None
         self._month_consumption = None
-        
-        self._last_daily_fetch_time: datetime | None = None
         self._last_monthly_fetch_time: datetime | None = None
 
         # Main device and zones are fixed at 1 minute
@@ -87,11 +80,6 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
     def device_info(self) -> aioaquarea.data.DeviceInfo:
         """Return the device info."""
         return self._device_info
-
-    @property
-    def day_consumption(self):
-        """Return the last cached day (hourly) consumption entries or None."""
-        return getattr(self, "_day_consumption", None)
 
     @property
     def month_consumption(self):
@@ -129,46 +117,21 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
                 )
                 await self._device.refresh_data()
 
-            # 2. Determine if we need to fetch consumption data
-            fetch_daily = (self._last_daily_fetch_time is None) or (
-                now - self._last_daily_fetch_time >= timedelta(minutes=DEFAULT_DAILY_CONSUMPTION_INTERVAL)
-            )
+            # 2. Fetch monthly consumption (used by both today and month-to-date sensors)
             fetch_monthly = (self._last_monthly_fetch_time is None) or (
                 now - self._last_monthly_fetch_time >= timedelta(minutes=self.consumption_interval)
             )
 
-            if fetch_daily or fetch_monthly:
-                tasks = []
-                if fetch_daily:
-                    _LOGGER.debug("Fetching daily consumption data from Cloud API (15m interval)")
-                    previous_hour = now - timedelta(hours=1)
-                    date_str = previous_hour.strftime("%Y%m%d")
-                    tasks.append(self._client.get_device_consumption(self._device.long_id, DateType.DAY, date_str))
-                else:
-                    tasks.append(asyncio.sleep(0, result=self._day_consumption))
-
-                if fetch_monthly:
-                    _LOGGER.debug("Fetching monthly consumption data from Cloud API (%sm interval)", self.consumption_interval)
-                    month_date_str = now.strftime("%Y%m01")
-                    tasks.append(self._client.get_device_consumption(self._device.long_id, DateType.MONTH, month_date_str))
-                else:
-                    tasks.append(asyncio.sleep(0, result=self._month_consumption))
-
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-
-                if fetch_daily:
-                    if isinstance(results[0], Exception):
-                        _LOGGER.warning("Failed to fetch day consumption: %s", results[0])
-                    else:
-                        self._day_consumption = results[0]
-                        self._last_daily_fetch_time = now
-                
-                if fetch_monthly:
-                    if isinstance(results[1], Exception):
-                        _LOGGER.warning("Failed to fetch month consumption: %s", results[1])
-                    else:
-                        self._month_consumption = results[1]
-                        self._last_monthly_fetch_time = now
+            if fetch_monthly:
+                _LOGGER.debug("Fetching monthly consumption data from Cloud API (%sm interval)", self.consumption_interval)
+                month_date_str = now.strftime("%Y%m01")
+                try:
+                    self._month_consumption = await self._client.get_device_consumption(
+                        self._device.long_id, DateType.MONTH, month_date_str
+                    )
+                    self._last_monthly_fetch_time = now
+                except Exception as ex:
+                    _LOGGER.warning("Failed to fetch month consumption: %s", ex)
 
             return self._device
         except aioaquarea.AuthenticationError as err:
