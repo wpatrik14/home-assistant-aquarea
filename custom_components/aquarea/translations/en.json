@@ -85,6 +85,12 @@
         },
         "direction": {
           "name": "Direction"
+        },
+        "dhw_cycles_today": {
+          "name": "DHW heating cycles today"
+        },
+        "defrost_cycles_today": {
+          "name": "Defrost cycles today"
         }
       },
       "select": {

@@ -17,6 +17,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfEnergy, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
@@ -126,6 +127,18 @@ ENERGY_SENSORS = [
     ),
 ]
 
+def _is_heating_water(device: aioaquarea.Device) -> bool:
+    direction = getattr(device, "current_direction", None)
+    if direction is None:
+        return False
+    name = getattr(direction, "name", None)
+    return name == "WATER" if name is not None else str(direction) == "WATER"
+
+
+def _is_defrosting(device: aioaquarea.Device) -> bool:
+    return device.device_mode_status is aioaquarea.DeviceModeStatus.DEFROST
+
+
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     data: dict[str, AquareaDataUpdateCoordinator] = hass.data[DOMAIN][config_entry.entry_id][DEVICES]
     entities: list[SensorEntity] = []
@@ -133,6 +146,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
         entities.append(OutdoorTemperatureSensor(coordinator))
         entities.append(PumpDirectionSensor(coordinator))
         entities.append(PumpStatusSensor(coordinator))
+        entities.append(DailyEdgeCounterSensor(
+            coordinator,
+            unique_suffix="dhw_cycles_today",
+            translation_key="dhw_cycles_today",
+            icon="mdi:water-boiler",
+            detector=_is_heating_water,
+        ))
+        entities.append(DailyEdgeCounterSensor(
+            coordinator,
+            unique_suffix="defrost_cycles_today",
+            translation_key="defrost_cycles_today",
+            icon="mdi:snowflake-melt",
+            detector=_is_defrosting,
+        ))
         entities.extend([EnergyAccumulatedConsumptionSensor(description, coordinator) for description in ACCUMULATED_ENERGY_SENSORS if description.exists_fn(coordinator)])
         entities.extend([EnergyConsumptionSensor(description, coordinator) for description in ENERGY_SENSORS if description.exists_fn(coordinator)])
     async_add_entities(entities)
@@ -381,4 +408,106 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
 
         self._period_being_processed = now.replace(hour=0, minute=0, second=0, microsecond=0)
         self._attr_native_value = reported_val
+        super()._handle_coordinator_update()
+
+
+@dataclass
+class AquareaEdgeCounterExtraStoredData(SensorExtraStoredData):
+    last_reset: datetime | None = None
+    last_state: bool = False
+
+    @classmethod
+    def from_dict(cls, restored: dict[str, Any]) -> Self:
+        sensor_data = super().from_dict(restored)
+        return cls(
+            native_value=sensor_data.native_value,
+            native_unit_of_measurement=sensor_data.native_unit_of_measurement,
+            last_reset=dt_util.parse_datetime(restored["last_reset"]) if restored.get("last_reset") else None,
+            last_state=bool(restored.get("last_state", False)),
+        )
+
+    def as_dict(self) -> dict[str, Any]:
+        data = super().as_dict()
+        if self.last_reset is not None:
+            data["last_reset"] = dt_util.as_local(self.last_reset).isoformat()
+        data["last_state"] = self.last_state
+        return data
+
+
+class DailyEdgeCounterSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
+    """Counts low→high transitions of a boolean detector, reset at local midnight."""
+
+    _attr_state_class = SensorStateClass.TOTAL
+    _attr_native_unit_of_measurement = None
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self,
+        coordinator: AquareaDataUpdateCoordinator,
+        *,
+        unique_suffix: str,
+        translation_key: str,
+        icon: str,
+        detector: Callable[[aioaquarea.Device], bool],
+    ) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{super().unique_id}_{unique_suffix}"
+        self._attr_translation_key = translation_key
+        self._attr_icon = icon
+        self._detector = detector
+        self._last_state: bool = False
+        self._attr_last_reset: datetime | None = None
+        self._attr_native_value: int = 0
+
+    async def async_added_to_hass(self) -> None:
+        restored = await self.async_get_last_sensor_data()
+        if restored is not None:
+            try:
+                self._attr_native_value = int(restored.native_value) if restored.native_value is not None else 0
+            except (TypeError, ValueError):
+                self._attr_native_value = 0
+            self._attr_last_reset = restored.last_reset
+            self._last_state = restored.last_state
+        if self._attr_last_reset is None:
+            self._attr_last_reset = dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        await super().async_added_to_hass()
+
+    @property
+    def extra_restore_state_data(self) -> AquareaEdgeCounterExtraStoredData:
+        return AquareaEdgeCounterExtraStoredData(
+            native_value=self.native_value,
+            native_unit_of_measurement=self.native_unit_of_measurement,
+            last_reset=self._attr_last_reset,
+            last_state=self._last_state,
+        )
+
+    async def async_get_last_sensor_data(self) -> AquareaEdgeCounterExtraStoredData | None:
+        if (restored_last_extra_data := await self.async_get_last_extra_data()) is None:
+            return None
+        return AquareaEdgeCounterExtraStoredData.from_dict(restored_last_extra_data.as_dict())
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        device = self.coordinator.device
+        if device is None:
+            super()._handle_coordinator_update()
+            return
+
+        now = dt_util.now()
+        today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        if self._attr_last_reset is None or dt_util.as_local(self._attr_last_reset).date() != now.date():
+            self._attr_last_reset = today_midnight
+            self._attr_native_value = 0
+
+        try:
+            current = bool(self._detector(device))
+        except Exception as e:  # noqa: BLE001
+            _LOGGER.debug("Edge detector failed for %s: %s", self._attr_unique_id, e)
+            super()._handle_coordinator_update()
+            return
+
+        if current and not self._last_state:
+            self._attr_native_value = int(self._attr_native_value or 0) + 1
+        self._last_state = current
+
         super()._handle_coordinator_update()
