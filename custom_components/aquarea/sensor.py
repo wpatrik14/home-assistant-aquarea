@@ -137,11 +137,22 @@ def _is_heating_water(device: aioaquarea.Device) -> bool:
 
 
 def _is_zone_active(device: aioaquarea.Device) -> bool:
+    # DeviceDirection.PUMP is reported not only for space heating/cooling but
+    # also transiently while the tank is being heated, so a PUMP reading on its
+    # own would miscount DHW activity as zone cycles. Only count it when at
+    # least one zone is actually switched on.
     direction = getattr(device, "current_direction", None)
     if direction is None:
         return False
     name = getattr(direction, "name", None)
-    return name == "PUMP" if name is not None else str(direction) == "PUMP"
+    is_pump = name == "PUMP" if name is not None else str(direction) == "PUMP"
+    if not is_pump:
+        return False
+    zones = getattr(device, "zones", None) or {}
+    return any(
+        zone.operation_status == aioaquarea.OperationStatus.ON
+        for zone in zones.values()
+    )
 
 
 def _is_defrosting(device: aioaquarea.Device) -> bool:
