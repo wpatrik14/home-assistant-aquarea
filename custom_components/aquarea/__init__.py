@@ -4,12 +4,13 @@ from __future__ import annotations
 from typing import Any
 import logging
 
+import aiohttp
 import aioaquarea
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -67,7 +68,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
             aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
         ):
-            raise ConfigEntryAuthFailed from err
+            raise ConfigEntryAuthFailed(
+                "Invalid Aquarea Smart Cloud credentials"
+            ) from err
+        # Any other authentication failure (SESSION_CLOSED, API_ERROR,
+        # TOKEN_EXPIRED, ...) is transient. Never fall through to `return True`
+        # here: that would report a successful setup while no devices,
+        # coordinators or platforms had been set up.
+        raise ConfigEntryNotReady(
+            f"Aquarea Smart Cloud authentication failed: {err}"
+        ) from err
+    except aioaquarea.ClientError as err:
+        # ApiError, RequestFailedError, InvalidData - the cloud is reachable
+        # but unhappy. Worth retrying.
+        raise ConfigEntryNotReady(f"Aquarea Smart Cloud error: {err}") from err
+    except (aiohttp.ClientError, TimeoutError) as err:
+        # DNS failures, connection resets, timeouts. Without this, a transient
+        # network blip leaves the entry in `setup_error` forever, because Home
+        # Assistant only retries setup when ConfigEntryNotReady is raised.
+        raise ConfigEntryNotReady(
+            f"Unable to reach Aquarea Smart Cloud: {err}"
+        ) from err
 
     return True
 
