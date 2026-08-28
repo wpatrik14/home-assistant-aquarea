@@ -5,7 +5,7 @@
         },
         "error": {
             "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid username or password",
+            "invalid_auth": "Invalid username or password. Note: this integration uses your Panasonic Comfort Cloud account (the same login as the Comfort Cloud app) — not the separate Aquarea Smart Cloud / Aquarea Home app account.",
             "unknown": "Unexpected error",
             "api_error": "API error: {api_error_msg}"
         },
