@@ -28,7 +28,7 @@ from .coordinator import AquareaDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-@dataclass(kw_only=True)
+@dataclass(frozen=True, kw_only=True)
 class AquareaEnergyConsumptionSensorDescription(SensorEntityDescription):
     consumption_type: aioaquarea.ConsumptionType
     exists_fn: Callable[[AquareaDataUpdateCoordinator], bool] = lambda _: True

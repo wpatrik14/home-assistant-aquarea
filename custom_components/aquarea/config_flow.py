@@ -10,8 +10,8 @@ import aiohttp
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
@@ -61,7 +61,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
@@ -103,7 +103,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self.async_show_reauth_form(self._username, errors)
 
-    async def async_complete_reauth(self, username: str, password: str) -> FlowResult:
+    async def async_complete_reauth(self, username: str, password: str) -> ConfigFlowResult:
         """Complete reauth."""
         entry = await self.async_set_unique_id(self.unique_id)
         assert entry
@@ -119,7 +119,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_show_reauth_form(
         self, username: str, errors: dict[str, str] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Show the reauth form."""
         return self.async_show_form(
             step_id="reauth",
@@ -178,7 +178,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] | None = None,
         description_placeholders: dict[str, str] | None = None,
         last_step: bool | None = None,
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Show the form with dynamic error message if needed."""
         if errors and errors.get("base") == "api_error":
             if description_placeholders is None:
@@ -201,7 +201,7 @@ class AquareaOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
