@@ -17,11 +17,24 @@ A Home Assistant custom integration for Panasonic Aquarea heat pumps. It consist
 ## Commands
 
 ### CI Validation
-The two GitHub Actions workflows validate:
+The GitHub Actions workflows validate:
 - **hassfest** (`.github/workflows/hassfest.yaml`) — HA integration correctness
 - **HACS** (`.github/workflows/hacs.yaml`) — HACS compatibility
+- **mypy** (`.github/workflows/mypy.yaml`) — static type checking of
+  `custom_components/aquarea` against the Home Assistant version pinned in
+  `requirements_typing.txt`
 
-There is no automated test suite.
+```bash
+pip install -r requirements_typing.txt
+mypy custom_components/aquarea
+```
+
+Known type errors are silenced with inline `# type: ignore[code]  # reason`
+comments so the gate stays green while the underlying issues are fixed one at a
+time; `warn_unused_ignores` reports any that become unnecessary.
+
+The two files in `tests/` are stdlib-only and run directly
+(`python3 tests/test_setup_entry_errors.py`), but no workflow executes them.
 
 ### Installing the library for Development
 ```bash
@@ -75,8 +88,9 @@ All entities extend HA base classes and `CoordinatorEntity`. After sending a com
 | `button.py` | One-shot actions (refresh, force DHW, defrost) |
 
 ### Minimum Requirements
-- Home Assistant 2024.2.0+
-- Python 3.9+
+- Home Assistant 2024.12.0+ — the options flow relies on the framework-supplied
+  `OptionsFlow.config_entry` property, added in 2024.12
+- Python 3.12+ (required by Home Assistant 2024.12)
 
 ## Key Constraints
 

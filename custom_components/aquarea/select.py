@@ -71,7 +71,10 @@ class AquareaQuietModeSelect(AquareaBaseEntity, SelectEntity):
         """The current select option."""
         if self._optimistic_option is not None:
             return self._optimistic_option
-        return QUIET_MODE_REVERSE_LOOKUP.get(self.coordinator.device.quiet_mode)
+        # lookup can miss; should be str | None
+        return QUIET_MODE_REVERSE_LOOKUP.get(  # type: ignore[return-value]
+            self.coordinator.device.quiet_mode
+        )
 
     async def _schedule_refresh(self, delay: float = SELECT_DELAY) -> None:
         """Clear optimistic state and request a coordinator refresh after a short delay."""
@@ -122,7 +125,10 @@ class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
         """The current select option."""
         if self._optimistic_option is not None:
             return self._optimistic_option
-        return POWERFUL_TIME_REVERSE_LOOKUP.get(self.coordinator.device.powerful_time)
+        # lookup can miss; should be str | None
+        return POWERFUL_TIME_REVERSE_LOOKUP.get(  # type: ignore[return-value]
+            self.coordinator.device.powerful_time
+        )
 
     async def _schedule_refresh(self, delay: float = SELECT_DELAY) -> None:
         """Clear optimistic state and request a coordinator refresh after a short delay."""

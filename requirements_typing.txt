@@ -1,0 +1,7 @@
+# Pinned so CI is reproducible: a new Home Assistant release can introduce type
+# errors in unchanged code, and that should arrive as a dependabot PR rather
+# than as a surprise red build. Keep python_version in pyproject.toml and the
+# workflow's python-version in step with the Home Assistant pin.
+homeassistant==2026.9.1
+mypy==2.3.1
+aioaquarea>=1.0.7

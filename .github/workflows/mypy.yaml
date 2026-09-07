@@ -1,0 +1,21 @@
+name: Type check with mypy
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  mypy:
+    name: mypy
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.14"
+          cache: "pip"
+          cache-dependency-path: "requirements_typing.txt"
+      - name: Install Home Assistant and mypy
+        run: pip install -r requirements_typing.txt
+      - name: Run mypy
+        run: mypy custom_components/aquarea
