@@ -271,7 +271,8 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         Schedule a single delayed refresh after applying the preset so the
         coordinator fetches the resulting state once it's available.
         """
-        if preset_mode not in self.preset_modes:
+        # preset_modes may be None
+        if preset_mode not in self.preset_modes:  # type: ignore[operator]
             raise ValueError(f"Unsupported preset mode: {preset_mode}")
         _LOGGER.debug(
             "Setting preset mode of device %s to %s",

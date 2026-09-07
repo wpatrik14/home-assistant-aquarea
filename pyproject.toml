@@ -1,0 +1,10 @@
+[tool.mypy]
+python_version = "3.14"
+warn_unused_ignores = true
+
+# aioaquarea ships no py.typed marker, so its symbols are untyped for mypy.
+# Scoped to the one module rather than set globally, so a genuinely missing
+# dependency still fails loudly.
+[[tool.mypy.overrides]]
+module = "aioaquarea.*"
+ignore_missing_imports = true

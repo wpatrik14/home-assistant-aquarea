@@ -137,15 +137,18 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._username = entry_data[CONF_USERNAME]
             return self._username
 
-        if self.context.init_data and self.context.init_data.get(CONF_USERNAME):
-            self._username = self.context.init_data[CONF_USERNAME]
+        # init_data is not declared on ConfigFlowContext
+        init_data = self.context.init_data  # type: ignore[attr-defined]
+        if init_data and init_data.get(CONF_USERNAME):
+            self._username = init_data[CONF_USERNAME]
             return self._username
 
         if self.unique_id:
             self._username = self.unique_id
             return self._username
 
-        return None
+        # returns None when no username is known
+        return None  # type: ignore[return-value]
 
     async def _validate_input(self, username, password) -> dict[str, str]:
         """Validate the user input allows us to connect."""
@@ -161,7 +164,8 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except aioaquarea.errors.ApiError as err:
             _LOGGER.error("API error during setup: %s", err)
             errors["base"] = "api_error"
-            self.context["api_error_msg"] = str(err)
+            # api_error_msg is not a ConfigFlowContext key
+            self.context["api_error_msg"] = str(err)  # type: ignore[typeddict-unknown-key]
         except aioaquarea.errors.RequestFailedError:
             errors["base"] = "cannot_connect"
         except Exception:  # pylint: disable=broad-except
@@ -170,7 +174,8 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return errors
 
-    def async_show_form(
+    # override is narrower than the base signature
+    def async_show_form(  # type: ignore[override]
         self,
         *,
         step_id: str,
@@ -183,9 +188,9 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if errors and errors.get("base") == "api_error":
             if description_placeholders is None:
                 description_placeholders = {}
-            description_placeholders["api_error_msg"] = self.context.get(
-                "api_error_msg", "Unknown API error"
-            )
+            msg = self.context.get("api_error_msg", "Unknown API error")
+            # context.get() returns object
+            description_placeholders["api_error_msg"] = msg  # type: ignore[assignment]
 
         return super().async_show_form(
             step_id=step_id,

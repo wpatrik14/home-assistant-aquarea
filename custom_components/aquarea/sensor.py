@@ -199,7 +199,8 @@ class AquareaSensorExtraStoredData(SensorExtraStoredData):
 
     @classmethod
     def from_dict(cls, restored: dict[str, Any]) -> Self:
-        sensor_data = super().from_dict(restored)
+        # restored data may be None
+        sensor_data: Self = super().from_dict(restored)  # type: ignore[assignment]
         return cls(
             native_value=sensor_data.native_value,
             native_unit_of_measurement=sensor_data.native_unit_of_measurement,
@@ -462,7 +463,8 @@ class AquareaEdgeCounterExtraStoredData(SensorExtraStoredData):
 
     @classmethod
     def from_dict(cls, restored: dict[str, Any]) -> Self:
-        sensor_data = super().from_dict(restored)
+        # restored data may be None
+        sensor_data: Self = super().from_dict(restored)  # type: ignore[assignment]
         return cls(
             native_value=sensor_data.native_value,
             native_unit_of_measurement=sensor_data.native_unit_of_measurement,
@@ -507,7 +509,11 @@ class DailyEdgeCounterSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
         restored = await self.async_get_last_sensor_data()
         if restored is not None:
             try:
-                self._attr_native_value = int(restored.native_value) if restored.native_value is not None else 0
+                native = restored.native_value
+                self._attr_native_value = (
+                    # native_value may be a date or Decimal
+                    int(native) if native is not None else 0  # type: ignore[arg-type]
+                )
             except (TypeError, ValueError):
                 self._attr_native_value = 0
             self._attr_last_reset = restored.last_reset
