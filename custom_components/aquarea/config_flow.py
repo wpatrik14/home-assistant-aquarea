@@ -137,8 +137,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._username = entry_data[CONF_USERNAME]
             return self._username
 
-        # init_data is not declared on ConfigFlowContext
-        init_data = self.context.init_data  # type: ignore[attr-defined]
+        init_data = self.init_data
         if init_data and init_data.get(CONF_USERNAME):
             self._username = init_data[CONF_USERNAME]
             return self._username
