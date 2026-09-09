@@ -198,9 +198,10 @@ class AquareaSensorExtraStoredData(SensorExtraStoredData):
     period_being_processed: datetime | None = None
 
     @classmethod
-    def from_dict(cls, restored: dict[str, Any]) -> Self:
-        # restored data may be None
-        sensor_data: Self = super().from_dict(restored)  # type: ignore[assignment]
+    def from_dict(cls, restored: dict[str, Any]) -> Self | None:
+        sensor_data = super().from_dict(restored)
+        if sensor_data is None:
+            return None
         return cls(
             native_value=sensor_data.native_value,
             native_unit_of_measurement=sensor_data.native_unit_of_measurement,
@@ -218,8 +219,10 @@ class AquareaAccumulatedSensorExtraStoredData(AquareaSensorExtraStoredData):
     accumulated_period_being_processed: float | None = None
 
     @classmethod
-    def from_dict(cls, restored: dict[str, Any]) -> Self:
+    def from_dict(cls, restored: dict[str, Any]) -> Self | None:
         sensor_data = super().from_dict(restored)
+        if sensor_data is None:
+            return None
         return cls(
             native_value=sensor_data.native_value,
             native_unit_of_measurement=sensor_data.native_unit_of_measurement,
@@ -462,9 +465,10 @@ class AquareaEdgeCounterExtraStoredData(SensorExtraStoredData):
     last_state: bool = False
 
     @classmethod
-    def from_dict(cls, restored: dict[str, Any]) -> Self:
-        # restored data may be None
-        sensor_data: Self = super().from_dict(restored)  # type: ignore[assignment]
+    def from_dict(cls, restored: dict[str, Any]) -> Self | None:
+        sensor_data = super().from_dict(restored)
+        if sensor_data is None:
+            return None
         return cls(
             native_value=sensor_data.native_value,
             native_unit_of_measurement=sensor_data.native_unit_of_measurement,
