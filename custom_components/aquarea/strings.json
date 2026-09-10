@@ -17,7 +17,8 @@
       "api_error": "API error: {api_error_msg}"
     },
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "reauth_no_username": "Could not reauthenticate: this configuration entry has no stored username. Remove the integration and add it again."
     }
   },
   "options": {
