@@ -90,6 +90,9 @@
         "direction": {
           "name": "Direction"
         },
+        "error_code": {
+          "name": "Error code"
+        },
         "dhw_cycles_today": {
           "name": "DHW heating cycles today"
         },
