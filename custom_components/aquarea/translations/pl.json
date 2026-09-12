@@ -1,7 +1,8 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Urządzenie jest już skonfigurowane"
+            "already_configured": "Urządzenie jest już skonfigurowane",
+            "reauth_no_username": "Nie można ponownie uwierzytelnić: ten wpis konfiguracji nie ma zapisanej nazwy użytkownika. Usuń integrację i dodaj ją ponownie."
         },
         "error": {
             "cannot_connect": "Nie udało się połączyć",

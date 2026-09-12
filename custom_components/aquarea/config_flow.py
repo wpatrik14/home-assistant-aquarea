@@ -87,21 +87,25 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any], user_input=None):
         """Perform reauth upon an API authentication error."""
-        self._username = self._try_get_username(entry_data)
+        username = self._try_get_username(entry_data)
+        if username is None:
+            # No username in the entry data, the flow context or the unique ID -
+            # nothing to reauthenticate against. Abort with a clear message
+            # instead of letting None reach the API client as invalid_auth.
+            return self.async_abort(reason="reauth_no_username")
+        self._username = username
         errors = {}
 
         if user_input is not None:
-            errors = await self._validate_input(
-                self._username, user_input[CONF_PASSWORD]
-            )
+            errors = await self._validate_input(username, user_input[CONF_PASSWORD])
 
             if not errors:
                 # If we get here, we have a valid login
                 return await self.async_complete_reauth(
-                    self._username, user_input[CONF_PASSWORD]
+                    username, user_input[CONF_PASSWORD]
                 )
 
-        return await self.async_show_reauth_form(self._username, errors)
+        return await self.async_show_reauth_form(username, errors)
 
     async def async_complete_reauth(self, username: str, password: str) -> ConfigFlowResult:
         """Complete reauth."""
@@ -128,8 +132,8 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    def _try_get_username(self, entry_data: Mapping[str, Any]) -> str:
-        """Try to get username from entry data or context"""
+    def _try_get_username(self, entry_data: Mapping[str, Any]) -> str | None:
+        """Try to get username from entry data or context, None if unknown."""
         if self._username is not None:
             return self._username
 
@@ -146,8 +150,8 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._username = self.unique_id
             return self._username
 
-        # returns None when no username is known
-        return None  # type: ignore[return-value]
+        # No username is known; async_step_reauth aborts on this.
+        return None
 
     async def _validate_input(self, username, password) -> dict[str, str]:
         """Validate the user input allows us to connect."""
