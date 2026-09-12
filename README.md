@@ -2,6 +2,10 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 ![GitHub Release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/wpatrik14/home-assistant-aquarea?include_prereleases)
+[![Validate with hassfest](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/hassfest.yaml)
+[![Validate with HACS](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/hacs.yaml/badge.svg)](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/hacs.yaml)
+[![Type check with mypy](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/mypy.yaml/badge.svg)](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/mypy.yaml)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-FFDD00.svg?logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/wpatrik14e)
 
 Panasonic Aquarea Smart Cloud is a cloud service that allows you to control your Panasonic Aquarea heat pump from your smartphone. This integration allows you to control your heat pump from Home Assistant.
 
@@ -9,7 +13,7 @@ This is a fork of the original integration by [cjaliaga](https://github.com/cjal
 
 The integration uses [aioaquarea](https://github.com/cjaliaga/aioaquarea) to communicate with the Panasonic Aquarea Smart Cloud service.
 
-This integration is currently in beta. Please report any issues you find and any feedback you may have. Thanks!
+This integration is actively maintained. Please report any issues you find and any feedback you may have. Thanks!
 
 ## ⚠️ As of March 18th, 2024 Panasonic changed the way to log into Aquarea Smart Cloud
 * Changes has been merged and released with version > 0.7.0 thanks to priceless [bimusiek](https://github.com/bimusiek) help.
@@ -20,6 +24,9 @@ This integration is currently in beta. Please report any issues you find and any
 * Sensor entity for the outdoor temperature.
 * Water heater entity for the hot water tank (if the device has one), that allows you to control the operation mode (enabled/disabled) and read the current temperature of the water in the tank.
 * Diagnostic sensor to indicate if the device has any problem (such not enough water flow).
+* Diagnostic sensor for the current error/fault code (e.g. `H62`) and its description, when the device is in an error state.
+* Diagnostic sensor for the pump status and current direction (idle/pump/water).
+* Diagnostic sensors counting today's DHW heating, zone and defrost cycles.
 * Energy consumption sensors (accumulated and sensors that reset the cycle every hour)
 * Quiet mode select entity
 * Request defrost
@@ -30,7 +37,6 @@ This integration is currently in beta. Please report any issues you find and any
 * Set the device in eco mode/comfort mode (if the device supports it).
 
 ## Features in the works
-* ~~Weekly schedule.~~
 * Improve translations
 * Rework of the water tank entity
 * Additional sensors/switches for the device.
@@ -72,21 +78,13 @@ The minimum supported version of Home Assistant is **2024.12**
    - Go to "Settings" >> "Devices & Services", click "+ ADD INTEGRATION" and select "Aquarea Smart Cloud"
 4. Follow the configuration steps. You'll need to provide your Panasonic ID and your password. The integration will discover the devices associated to your Panasonic ID.
 
-## ⚠️ Update to v0.2.0 from v0.1.X
-If you are updating from a version prior to v0.2.0, the recommendation is for you to remove the integration and add it again before updating. This is because v0.2.0 introduces a breaking change in the unique id generation for the entities. If you don't remove the integration and add it again, you will end up with duplicate entities.
-
-This is a one time thing during the beta that was needed in order to support multiple devices and zones. From now on, the unique id generation will be stable and you won't need to remove the integration and add it again.
-
-## Warning
-This integration is currently in beta. It supports several devices but it has been tested with a single device. If you have multiple devices under the same Panasonic ID, please test it and report any issue you find.
-
-The integration also supports devices with several zones, but it has not been tested with multiple zones. If you have a device with multiple zones, please test it and report any issue you find.
-
-The integration has been tested with a heat pump with a hot water tank, but it has not been tested with a heat pump without a hot water tank. If you have a heat pump without a hot water tank, please test it and report any issue you find.
-
 ## Disclaimer
 
 THIS PROJECT IS NOT IN ANY WAY ASSOCIATED WITH OR RELATED TO PANASONIC. The information here and online is for educational and resource purposes only and therefore the developers do not endorse or condone any inappropriate use of it, and take no legal responsibility for the functionality or security of your devices.
+
+## Support this project
+
+If this integration saved you an evening of fighting with Panasonic's cloud API, consider [buying me a coffee](https://www.buymeacoffee.com/wpatrik14e) — it helps keep it maintained.
 
 ## Acknowledgements and alternatives
 
