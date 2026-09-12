@@ -15,10 +15,6 @@ The integration uses [aioaquarea](https://github.com/cjaliaga/aioaquarea) to com
 
 This integration is actively maintained. Please report any issues you find and any feedback you may have. Thanks!
 
-## ⚠️ As of March 18th, 2024 Panasonic changed the way to log into Aquarea Smart Cloud
-* Changes has been merged and released with version > 0.7.0 thanks to priceless [bimusiek](https://github.com/bimusiek) help.
-* The investigation was performed in the [aioaquarea](https://github.com/cjaliaga/aioaquarea) repository: https://github.com/cjaliaga/aioaquarea/issues/44
-
 ## Features
 * Climate entity per device zone that allows you to control the operation mode, read the current temperature of the water in the device/zone and (if the zone supports it), change the target temperature.
 * Sensor entity for the outdoor temperature.
