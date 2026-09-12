@@ -1,19 +1,23 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Устройство уже настроено"
+            "already_configured": "Устройство уже настроено",
+            "reauth_no_username": "Не удалось выполнить повторную аутентификацию: в этой записи конфигурации не сохранено имя пользователя. Удалите интеграцию и добавьте её заново."
         },
         "error": {
             "cannot_connect": "Не удалось подключиться",
-            "invalid_auth": "Неверное имя пользователя или пароль",
-            "unknown": "Непредвиденная ошибка"
+            "invalid_auth": "Неверное имя пользователя или пароль. Примечание: эта интеграция использует учётную запись Panasonic Comfort Cloud (те же данные, что и в приложении Comfort Cloud), а не отдельную учётную запись Aquarea Smart Cloud / Aquarea Home.",
+            "unknown": "Непредвиденная ошибка",
+            "api_error": "Ошибка API: {api_error_msg}"
         },
         "step": {
             "user": {
-                "description": "Пожалуйста, введите свой идентификатор Panasonic и пароль:",
+                "description": "Пожалуйста, введите свой идентификатор Panasonic и пароль. Внимание: слишком короткий интервал обновления может привести к блокировке вашего IP-адреса облаком Panasonic.",
                 "data": {
                     "password": "Пароль",
-                    "username": "Имя пользователя"
+                    "username": "Имя пользователя",
+                    "scan_interval": "Интервал обновления состояния устройства (секунды)",
+                    "consumption_interval": "Интервал обновления данных о потреблении (минуты)"
                 }
             },
             "reauth": {
@@ -21,6 +25,113 @@
                 "data": {
                     "password": "Пароль"
                 }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Внимание: слишком короткий интервал обновления может привести к блокировке вашего IP-адреса облаком Panasonic.",
+                "data": {
+                    "scan_interval": "Интервал обновления состояния устройства (секунды)",
+                    "consumption_interval": "Интервал обновления данных о потреблении (минуты)"
+                }
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "defrost": {
+                "name": "Разморозка"
+            },
+            "status": {
+                "name": "Статус"
+            }
+        },
+        "button": {
+            "request_defrost": {
+                "name": "Запросить разморозку"
+            }
+        },
+        "sensor": {
+            "heating_accumulated_energy_consumption": {
+                "name": "Накопленное потребление на отопление"
+            },
+            "cooling_accumulated_energy_consumption": {
+                "name": "Накопленное потребление на охлаждение"
+            },
+            "tank_accumulated_energy_consumption": {
+                "name": "Накопленное потребление на нагрев бака"
+            },
+            "accumulated_energy_consumption": {
+                "name": "Накопленное потребление"
+            },
+            "heating_energy_consumption": {
+                "name": "Потребление на отопление"
+            },
+            "cooling_energy_consumption": {
+                "name": "Потребление на охлаждение"
+            },
+            "tank_energy_consumption": {
+                "name": "Потребление на нагрев бака"
+            },
+            "energy_consumption": {
+                "name": "Потребление"
+            },
+            "outdoor_temperature": {
+                "name": "Температура наружного воздуха"
+            },
+            "tank_temperature": {
+                "name": "Температура бака"
+            },
+            "pump_status": {
+                "name": "Статус насоса"
+            },
+            "direction": {
+                "name": "Направление"
+            },
+            "error_code": {
+                "name": "Код ошибки"
+            },
+            "dhw_cycles_today": {
+                "name": "Циклы нагрева ГВС сегодня"
+            },
+            "zone_cycles_today": {
+                "name": "Циклы зоны сегодня"
+            },
+            "defrost_cycles_today": {
+                "name": "Циклы разморозки сегодня"
+            }
+        },
+        "select": {
+            "quiet_mode": {
+                "name": "Тихий режим",
+                "state": {
+                    "level1": "Уровень 1",
+                    "level2": "Уровень 2",
+                    "level3": "Уровень 3",
+                    "off": "Выкл"
+                }
+            },
+            "powerful_time": {
+                "name": "Мощный режим",
+                "state": {
+                    "on-30m": "Вкл на 30 минут",
+                    "on-60m": "Вкл на 60 минут",
+                    "on-90m": "Вкл на 90 минут",
+                    "off": "Выкл"
+                }
+            }
+        },
+        "switch": {
+            "force_dhw": {
+                "name": "Принудительный нагрев ГВС"
+            },
+            "force_heater": {
+                "name": "Принудительный нагрев"
+            },
+            "holiday_timer": {
+                "name": "Таймер отпуска"
             }
         }
     }

@@ -1,25 +1,40 @@
 {
     "config": {
         "abort": {
-            "already_configured": "El dispositivo ya est\u00e1 configurado"
+            "already_configured": "El dispositivo ya está configurado",
+            "reauth_no_username": "No se pudo volver a autenticar: esta entrada de configuración no tiene un nombre de usuario guardado. Elimina la integración y vuelve a añadirla."
         },
         "error": {
             "cannot_connect": "No se pudo conectar",
-            "invalid_auth": "Usuario o contrase\u00f1a no v\u00e1lida",
-            "unknown": "Error inesperado"
+            "invalid_auth": "Usuario o contraseña no válida. Nota: esta integración utiliza tu cuenta de Panasonic Comfort Cloud (las mismas credenciales que la app Comfort Cloud), no la cuenta independiente de Aquarea Smart Cloud / Aquarea Home.",
+            "unknown": "Error inesperado",
+            "api_error": "Error de API: {api_error_msg}"
         },
         "step": {
             "user": {
-                "description": "Escribe tu ID de Panasonic y contrase\u00f1a:",
+                "description": "Escribe tu ID de Panasonic y contraseña. Aviso: un intervalo de actualización demasiado corto puede provocar que tu IP sea bloqueada por Panasonic Cloud.",
                 "data": {
-                    "password": "Contrase\u00f1a",
-                    "username": "Usuario"
+                    "password": "Contraseña",
+                    "username": "Usuario",
+                    "scan_interval": "Intervalo de actualización del estado del dispositivo (segundos)",
+                    "consumption_interval": "Intervalo de actualización de los datos de consumo (minutos)"
                 }
             },
             "reauth": {
-                "description": "Escribe la contrase\u00f1a de tu ID de Panasonic {username}:",
+                "description": "Escribe la contraseña de tu ID de Panasonic {username}:",
                 "data": {
-                    "password": "Contrase\u00f1a"
+                    "password": "Contraseña"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Aviso: un intervalo de actualización demasiado corto puede provocar que tu IP sea bloqueada por Panasonic Cloud.",
+                "data": {
+                    "scan_interval": "Intervalo de actualización del estado del dispositivo (segundos)",
+                    "consumption_interval": "Intervalo de actualización de los datos de consumo (minutos)"
                 }
             }
         }
@@ -65,6 +80,27 @@
         },
         "outdoor_temperature": {
           "name": "Temperatura exterior"
+        },
+        "tank_temperature": {
+          "name": "Temperatura del depósito"
+        },
+        "pump_status": {
+          "name": "Estado de la bomba"
+        },
+        "direction": {
+          "name": "Dirección"
+        },
+        "error_code": {
+          "name": "Código de error"
+        },
+        "dhw_cycles_today": {
+          "name": "Ciclos de ACS hoy"
+        },
+        "zone_cycles_today": {
+          "name": "Ciclos de zona hoy"
+        },
+        "defrost_cycles_today": {
+          "name": "Ciclos de descongelación hoy"
         }
       },
       "select": {

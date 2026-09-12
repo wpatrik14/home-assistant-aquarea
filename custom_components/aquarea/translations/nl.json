@@ -1,19 +1,23 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Het apparaat is al geconfigureerd"
+            "already_configured": "Het apparaat is al geconfigureerd",
+            "reauth_no_username": "Kan niet opnieuw verifiëren: deze configuratie heeft geen opgeslagen gebruikersnaam. Verwijder de integratie en voeg deze opnieuw toe."
         },
         "error": {
             "cannot_connect": "Geen verbinding mogelijk",
-            "invalid_auth": "Ongeldige gebruikersnaam of wachtwoord",
-            "unknown": "Onverwachte fout"
+            "invalid_auth": "Ongeldige gebruikersnaam of wachtwoord. Let op: deze integratie gebruikt uw Panasonic Comfort Cloud-account (dezelfde inloggegevens als de Comfort Cloud-app) — niet het aparte Aquarea Smart Cloud / Aquarea Home-account.",
+            "unknown": "Onverwachte fout",
+            "api_error": "API-fout: {api_error_msg}"
         },
         "step": {
             "user": {
-                "description": "Voer uw Panasonic ID en wachtwoord in:",
+                "description": "Voer uw Panasonic ID en wachtwoord in. Waarschuwing: een te kort vernieuwingsinterval kan ertoe leiden dat uw IP-adres door Panasonic Cloud wordt geblokkeerd.",
                 "data": {
                     "password": "Wachtwoord",
-                    "username": "Gebruikersnaam"
+                    "username": "Gebruikersnaam",
+                    "scan_interval": "Vernieuwingsinterval apparaatstatus (seconden)",
+                    "consumption_interval": "Vernieuwingsinterval verbruiksgegevens (minuten)"
                 }
             },
             "reauth": {
@@ -24,7 +28,31 @@
             }
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Waarschuwing: een te kort vernieuwingsinterval kan ertoe leiden dat uw IP-adres door Panasonic Cloud wordt geblokkeerd.",
+                "data": {
+                    "scan_interval": "Vernieuwingsinterval apparaatstatus (seconden)",
+                    "consumption_interval": "Vernieuwingsinterval verbruiksgegevens (minuten)"
+                }
+            }
+        }
+    },
     "entity": {
+        "binary_sensor": {
+            "defrost": {
+                "name": "Ontdooien"
+            },
+            "status": {
+                "name": "Status"
+            }
+        },
+        "button": {
+            "request_defrost": {
+                "name": "Ontdooien aanvragen"
+            }
+        },
         "sensor": {
             "heating_accumulated_energy_consumption": {
                 "name": "Gecumuleerd verbruik verwarming"
@@ -52,6 +80,58 @@
             },
             "outdoor_temperature": {
                 "name": "Buitentemperatuur"
+            },
+            "tank_temperature": {
+                "name": "Tanktemperatuur"
+            },
+            "pump_status": {
+                "name": "Pompstatus"
+            },
+            "direction": {
+                "name": "Richting"
+            },
+            "error_code": {
+                "name": "Foutcode"
+            },
+            "dhw_cycles_today": {
+                "name": "Warmwatercycli vandaag"
+            },
+            "zone_cycles_today": {
+                "name": "Zonecycli vandaag"
+            },
+            "defrost_cycles_today": {
+                "name": "Ontdooicycli vandaag"
+            }
+        },
+        "select": {
+            "quiet_mode": {
+                "name": "Stille modus",
+                "state": {
+                    "level1": "Niveau 1",
+                    "level2": "Niveau 2",
+                    "level3": "Niveau 3",
+                    "off": "Uit"
+                }
+            },
+            "powerful_time": {
+                "name": "Krachtige modus",
+                "state": {
+                    "on-30m": "30 minuten aan",
+                    "on-60m": "60 minuten aan",
+                    "on-90m": "90 minuten aan",
+                    "off": "Uit"
+                }
+            }
+        },
+        "switch": {
+            "force_dhw": {
+                "name": "Warmwater forceren"
+            },
+            "force_heater": {
+                "name": "Verwarming forceren"
+            },
+            "holiday_timer": {
+                "name": "Vakantietimer"
             }
         }
     }

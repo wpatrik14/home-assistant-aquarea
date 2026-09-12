@@ -1,25 +1,40 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Įrenginys jau nustatytas"
+            "already_configured": "Įrenginys jau nustatytas",
+            "reauth_no_username": "Nepavyko iš naujo autentifikuoti: šiame konfigūracijos įraše nėra išsaugoto vartotojo vardo. Pašalinkite integraciją ir pridėkite ją iš naujo."
         },
         "error": {
             "cannot_connect": "Nepavyko prisijungti",
-            "invalid_auth": "Neteisingas prisijungimo vardas arba slaptažodis",
-            "unknown": "Nežinoma klaida"
+            "invalid_auth": "Neteisingas prisijungimo vardas arba slaptažodis. Pastaba: ši integracija naudoja jūsų Panasonic Comfort Cloud paskyrą (tuos pačius duomenis, kaip Comfort Cloud programėlėje), o ne atskirą Aquarea Smart Cloud / Aquarea Home paskyrą.",
+            "unknown": "Nežinoma klaida",
+            "api_error": "API klaida: {api_error_msg}"
         },
         "step": {
             "user": {
-                "description": "Įveskite savo Panasonic ID ir slaptažodį:",
+                "description": "Įveskite savo Panasonic ID ir slaptažodį. Įspėjimas: per trumpas atnaujinimo intervalas gali sukelti jūsų IP adreso blokavimą Panasonic Cloud.",
                 "data": {
                     "password": "Slaptažodis",
-                    "username": "Prisijungimo vardas"
+                    "username": "Prisijungimo vardas",
+                    "scan_interval": "Įrenginio būsenos atnaujinimo intervalas (sekundėmis)",
+                    "consumption_interval": "Suvartojimo duomenų atnaujinimo intervalas (minutėmis)"
                 }
             },
             "reauth": {
                 "description": "Įveskite slatažodį Panasonic ID vartotojui {username}:",
                 "data": {
                     "password": "Slaptažodis"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Įspėjimas: per trumpas atnaujinimo intervalas gali sukelti jūsų IP adreso blokavimą Panasonic Cloud.",
+                "data": {
+                    "scan_interval": "Įrenginio būsenos atnaujinimo intervalas (sekundėmis)",
+                    "consumption_interval": "Suvartojimo duomenų atnaujinimo intervalas (minutėmis)"
                 }
             }
         }
@@ -65,6 +80,27 @@
         },
         "outdoor_temperature": {
           "name": "Lauko temperatūra"
+        },
+        "tank_temperature": {
+          "name": "Talpyklos temperatūra"
+        },
+        "pump_status": {
+          "name": "Siurblio būsena"
+        },
+        "direction": {
+          "name": "Kryptis"
+        },
+        "error_code": {
+          "name": "Klaidos kodas"
+        },
+        "dhw_cycles_today": {
+          "name": "Šiandienos karšto vandens ciklai"
+        },
+        "zone_cycles_today": {
+          "name": "Šiandienos zonos ciklai"
+        },
+        "defrost_cycles_today": {
+          "name": "Šiandienos atitirpinimo ciklai"
         }
       },
       "select": {

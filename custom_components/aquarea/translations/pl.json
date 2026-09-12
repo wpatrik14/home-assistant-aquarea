@@ -6,21 +6,35 @@
         },
         "error": {
             "cannot_connect": "Nie udało się połączyć",
-            "invalid_auth": "Niprawidłowa nazwa użytkownika lub hasło",
-            "unknown": "Wystąpił nieznany błąd"
+            "invalid_auth": "Niprawidłowa nazwa użytkownika lub hasło. Uwaga: ta integracja korzysta z konta Panasonic Comfort Cloud (tego samego co w aplikacji Comfort Cloud) — a nie z osobnego konta Aquarea Smart Cloud / Aquarea Home.",
+            "unknown": "Wystąpił nieznany błąd",
+            "api_error": "Błąd API: {api_error_msg}"
         },
         "step": {
             "user": {
-                "description": "Wprowadź swój identyfikator Panasonic ID i hasło:",
+                "description": "Wprowadź swój identyfikator Panasonic ID i hasło. Uwaga: zbyt krótki interwał odświeżania może spowodować zablokowanie Twojego adresu IP przez Panasonic Cloud.",
                 "data": {
                     "password": "Hasło",
-                    "username": "Nazwa użytkownika"
+                    "username": "Nazwa użytkownika",
+                    "scan_interval": "Interwał odświeżania stanu urządzenia (sekundy)",
+                    "consumption_interval": "Interwał odświeżania danych o zużyciu (minuty)"
                 }
             },
             "reauth": {
                 "description": "Wprowadź hasło dla swojego identyfikatora Panasonic ID {username}:",
                 "data": {
                     "password": "Hasło"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Uwaga: zbyt krótki interwał odświeżania może spowodować zablokowanie Twojego adresu IP przez Panasonic Cloud.",
+                "data": {
+                    "scan_interval": "Interwał odświeżania stanu urządzenia (sekundy)",
+                    "consumption_interval": "Interwał odświeżania danych o zużyciu (minuty)"
                 }
             }
         }
@@ -66,6 +80,27 @@
             },
             "outdoor_temperature": {
                 "name": "Temperatura zewnętrzna"
+            },
+            "tank_temperature": {
+                "name": "Temperatura zbiornika"
+            },
+            "pump_status": {
+                "name": "Status pompy"
+            },
+            "direction": {
+                "name": "Kierunek"
+            },
+            "error_code": {
+                "name": "Kod błędu"
+            },
+            "dhw_cycles_today": {
+                "name": "Cykle grzania C.W.U. dzisiaj"
+            },
+            "zone_cycles_today": {
+                "name": "Cykle strefy dzisiaj"
+            },
+            "defrost_cycles_today": {
+                "name": "Cykle odszraniania dzisiaj"
             }
         },
         "select": {
