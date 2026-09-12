@@ -12,7 +12,7 @@ This is a fork of the original integration by [cjaliaga](https://github.com/cjal
 
 The integration uses [aioaquarea](https://github.com/cjaliaga/aioaquarea) to communicate with the Panasonic Aquarea Smart Cloud service.
 
-This integration is currently in beta. Please report any issues you find and any feedback you may have. Thanks!
+This integration is actively maintained. Please report any issues you find and any feedback you may have. Thanks!
 
 ## ⚠️ As of March 18th, 2024 Panasonic changed the way to log into Aquarea Smart Cloud
 * Changes has been merged and released with version > 0.7.0 thanks to priceless [bimusiek](https://github.com/bimusiek) help.
