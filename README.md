@@ -5,6 +5,7 @@
 [![Validate with hassfest](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/hassfest.yaml)
 [![Validate with HACS](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/hacs.yaml/badge.svg)](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/hacs.yaml)
 [![Type check with mypy](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/mypy.yaml/badge.svg)](https://github.com/wpatrik14/home-assistant-aquarea/actions/workflows/mypy.yaml)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-FFDD00.svg?logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/wpatrik14e)
 
 Panasonic Aquarea Smart Cloud is a cloud service that allows you to control your Panasonic Aquarea heat pump from your smartphone. This integration allows you to control your heat pump from Home Assistant.
 
@@ -80,6 +81,10 @@ The minimum supported version of Home Assistant is **2024.12**
 ## Disclaimer
 
 THIS PROJECT IS NOT IN ANY WAY ASSOCIATED WITH OR RELATED TO PANASONIC. The information here and online is for educational and resource purposes only and therefore the developers do not endorse or condone any inappropriate use of it, and take no legal responsibility for the functionality or security of your devices.
+
+## Support this project
+
+If this integration saved you an evening of fighting with Panasonic's cloud API, consider [buying me a coffee](https://www.buymeacoffee.com/wpatrik14e) — it helps keep it maintained.
 
 ## Acknowledgements and alternatives
 
