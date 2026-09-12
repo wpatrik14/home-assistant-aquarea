@@ -159,6 +159,14 @@ def _is_defrosting(device: aioaquarea.Device) -> bool:
     return device.device_mode_status is aioaquarea.DeviceModeStatus.DEFROST
 
 
+def _current_error_info(device: aioaquarea.Device) -> tuple[str | None, str | None]:
+    """Returns (error_code, error_message) for the device's current fault, or (None, None)."""
+    current_error = device.current_error
+    if current_error is None:
+        return None, None
+    return current_error.error_code, current_error.error_message
+
+
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     data: dict[str, AquareaDataUpdateCoordinator] = hass.data[DOMAIN][config_entry.entry_id][DEVICES]
     entities: list[SensorEntity] = []
@@ -166,6 +174,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
         entities.append(OutdoorTemperatureSensor(coordinator))
         entities.append(PumpDirectionSensor(coordinator))
         entities.append(PumpStatusSensor(coordinator))
+        entities.append(ErrorCodeSensor(coordinator))
         if coordinator.device.has_tank:
             entities.append(TankTemperatureSensor(coordinator))
         entities.append(DailyEdgeCounterSensor(
@@ -290,6 +299,36 @@ class PumpStatusSensor(AquareaBaseEntity, SensorEntity):
     def _handle_coordinator_update(self) -> None:
         self._attr_native_value = "On" if self.coordinator.device.pump_duty == 1 else "Off"
         super()._handle_coordinator_update()
+
+class ErrorCodeSensor(AquareaBaseEntity, SensorEntity):
+    """Exposes the device's current fault code (e.g. H62), if any.
+
+    `binary_sensor.AquareaStatusBinarySensor` already reports *whether* the
+    device is in an error state; this sensor reports *which* error (issue #50
+    asked for the code, not just a boolean problem flag).
+    """
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:alert-circle-outline"
+
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = "error_code"
+        self._attr_unique_id = f"{super().unique_id}_error_code"
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        device = self.coordinator.device
+        if device is None:
+            super()._handle_coordinator_update()
+            return
+        error_code, error_message = _current_error_info(device)
+        self._attr_native_value = error_code
+        self._attr_extra_state_attributes = (
+            {"error_message": error_message} if error_message is not None else {}
+        )
+        super()._handle_coordinator_update()
+
 
 class EnergyAccumulatedConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
     entity_description: AquareaEnergyConsumptionSensorDescription
