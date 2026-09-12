@@ -1,0 +1,138 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Gerät ist bereits konfiguriert",
+            "reauth_no_username": "Erneute Authentifizierung nicht möglich: Für diesen Konfigurationseintrag ist kein Benutzername gespeichert. Entferne die Integration und füge sie erneut hinzu."
+        },
+        "error": {
+            "cannot_connect": "Verbindung fehlgeschlagen",
+            "invalid_auth": "Ungültiger Benutzername oder Passwort. Hinweis: Diese Integration verwendet dein Panasonic Comfort Cloud-Konto (dieselben Zugangsdaten wie in der Comfort Cloud-App) — nicht das separate Aquarea Smart Cloud / Aquarea Home-Konto.",
+            "unknown": "Unerwarteter Fehler",
+            "api_error": "API-Fehler: {api_error_msg}"
+        },
+        "step": {
+            "user": {
+                "description": "Bitte gib deine Panasonic-ID und dein Passwort ein. Achtung: Ein zu kurzes Aktualisierungsintervall kann dazu führen, dass deine IP-Adresse von der Panasonic Cloud gesperrt wird.",
+                "data": {
+                    "password": "Passwort",
+                    "username": "Benutzername",
+                    "scan_interval": "Aktualisierungsintervall des Gerätestatus (Sekunden)",
+                    "consumption_interval": "Aktualisierungsintervall der Verbrauchsdaten (Minuten)"
+                }
+            },
+            "reauth": {
+                "description": "Bitte gib das Passwort für deine Panasonic-ID {username} ein:",
+                "data": {
+                    "password": "Passwort"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Achtung: Ein zu kurzes Aktualisierungsintervall kann dazu führen, dass deine IP-Adresse von der Panasonic Cloud gesperrt wird.",
+                "data": {
+                    "scan_interval": "Aktualisierungsintervall des Gerätestatus (Sekunden)",
+                    "consumption_interval": "Aktualisierungsintervall der Verbrauchsdaten (Minuten)"
+                }
+            }
+        }
+    },
+    "entity": {
+      "binary_sensor": {
+        "defrost": {
+          "name": "Abtauen"
+        },
+        "status": {
+          "name": "Status"
+        }
+      },
+      "button": {
+        "request_defrost": {
+          "name": "Abtauen anfordern"
+        }
+      },
+      "sensor": {
+        "heating_accumulated_energy_consumption": {
+          "name": "Kumulierter Verbrauch Heizung"
+        },
+        "cooling_accumulated_energy_consumption": {
+          "name": "Kumulierter Verbrauch Kühlung"
+        },
+        "tank_accumulated_energy_consumption": {
+          "name": "Kumulierter Verbrauch Warmwasserspeicher"
+        },
+        "accumulated_energy_consumption": {
+          "name": "Kumulierter Verbrauch"
+        },
+        "heating_energy_consumption": {
+          "name": "Verbrauch Heizung"
+        },
+        "cooling_energy_consumption": {
+          "name": "Verbrauch Kühlung"
+        },
+        "tank_energy_consumption": {
+          "name": "Verbrauch Warmwasserspeicher"
+        },
+        "energy_consumption": {
+          "name": "Verbrauch"
+        },
+        "outdoor_temperature": {
+          "name": "Außentemperatur"
+        },
+        "tank_temperature": {
+          "name": "Speichertemperatur"
+        },
+        "pump_status": {
+          "name": "Pumpenstatus"
+        },
+        "direction": {
+          "name": "Richtung"
+        },
+        "error_code": {
+          "name": "Fehlercode"
+        },
+        "dhw_cycles_today": {
+          "name": "Warmwasserzyklen heute"
+        },
+        "zone_cycles_today": {
+          "name": "Zonenzyklen heute"
+        },
+        "defrost_cycles_today": {
+          "name": "Abtauzyklen heute"
+        }
+      },
+      "select": {
+        "quiet_mode": {
+          "name": "Leiser Modus",
+          "state": {
+            "level1": "Stufe 1",
+            "level2": "Stufe 2",
+            "level3": "Stufe 3",
+            "off": "Aus"
+          }
+        },
+        "powerful_time": {
+          "name": "Powerful-Modus",
+          "state": {
+            "on-30m": "30 Minuten ein",
+            "on-60m": "60 Minuten ein",
+            "on-90m": "90 Minuten ein",
+            "off": "Aus"
+          }
+        }
+      },
+      "switch": {
+        "force_dhw": {
+          "name": "Warmwasser erzwingen"
+        },
+        "force_heater": {
+          "name": "Heizung erzwingen"
+        },
+        "holiday_timer": {
+          "name": "Urlaubs-Timer"
+        }
+      }
+    }
+}

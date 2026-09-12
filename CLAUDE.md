@@ -97,4 +97,4 @@ All entities extend HA base classes and `CoordinatorEntity`. After sending a com
 - **One Panasonic account per HA instance** — the API does not support concurrent sessions from multiple clients on the same account.
 - The auth flow in `aioaquarea/auth.py` scrapes HTML pages; it is fragile to Panasonic server changes and includes app version strings that may need updating.
 - Energy data from the API is often delayed or unstable; the coordinator handles this with tiered intervals and caching.
-- Translations live in `custom_components/aquarea/translations/` (cs, en, es, it, lt, nl, pl, ru, sk).
+- Translations live in `custom_components/aquarea/translations/` (cs, de, en, es, hu, it, lt, nl, pl, ru, sk).

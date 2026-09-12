@@ -1,19 +1,23 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Zařízení je již nakonfigurováno"
+            "already_configured": "Zařízení je již nakonfigurováno",
+            "reauth_no_username": "Nelze se znovu ověřit: tento záznam konfigurace nemá uloženo uživatelské jméno. Odeberte integraci a přidejte ji znovu."
         },
         "error": {
             "cannot_connect": "Nepodařilo se připojit",
-            "invalid_auth": "Neplatné uživatelské jméno nebo heslo",
-            "unknown": "Neočekávaná chyba"
+            "invalid_auth": "Neplatné uživatelské jméno nebo heslo. Poznámka: tato integrace používá váš účet Panasonic Comfort Cloud (stejné přihlašovací údaje jako v aplikaci Comfort Cloud) — nikoli samostatný účet Aquarea Smart Cloud / Aquarea Home.",
+            "unknown": "Neočekávaná chyba",
+            "api_error": "Chyba API: {api_error_msg}"
         },
         "step": {
             "user": {
-                "description": "Zadejte své Panasonic ID a heslo:",
+                "description": "Zadejte své Panasonic ID a heslo. Upozornění: příliš krátký interval obnovování může vést k zablokování vaší IP adresy cloudem Panasonic.",
                 "data": {
                     "password": "Heslo",
-                    "username": "Uživatelské jméno"
+                    "username": "Uživatelské jméno",
+                    "scan_interval": "Interval obnovování stavu zařízení (sekundy)",
+                    "consumption_interval": "Interval obnovování dat o spotřebě (minuty)"
                 }
             },
             "reauth": {
@@ -24,13 +28,110 @@
             }
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Upozornění: příliš krátký interval obnovování může vést k zablokování vaší IP adresy cloudem Panasonic.",
+                "data": {
+                    "scan_interval": "Interval obnovování stavu zařízení (sekundy)",
+                    "consumption_interval": "Interval obnovování dat o spotřebě (minuty)"
+                }
+            }
+        }
+    },
     "entity": {
+      "binary_sensor": {
+        "defrost": {
+          "name": "Odmrazování"
+        },
+        "status": {
+          "name": "Stav"
+        }
+      },
+      "button": {
+        "request_defrost": {
+          "name": "Vyžádat odmrazení"
+        }
+      },
       "sensor": {
+        "heating_accumulated_energy_consumption": {
+          "name": "Kumulovaná spotřeba vytápění"
+        },
+        "cooling_accumulated_energy_consumption": {
+          "name": "Kumulovaná spotřeba chlazení"
+        },
+        "tank_accumulated_energy_consumption": {
+          "name": "Kumulovaná spotřeba ohřevu vody"
+        },
+        "accumulated_energy_consumption": {
+          "name": "Kumulovaná spotřeba"
+        },
+        "heating_energy_consumption": {
+          "name": "Spotřeba vytápění"
+        },
+        "cooling_energy_consumption": {
+          "name": "Spotřeba chlazení"
+        },
+        "tank_energy_consumption": {
+          "name": "Spotřeba ohřevu vody"
+        },
+        "energy_consumption": {
+          "name": "Spotřeba"
+        },
+        "outdoor_temperature": {
+          "name": "Venkovní teplota"
+        },
+        "tank_temperature": {
+          "name": "Teplota nádrže"
+        },
         "pump_status": {
           "name": "Stav čerpadla"
         },
         "direction": {
           "name": "Směr"
+        },
+        "error_code": {
+          "name": "Kód chyby"
+        },
+        "dhw_cycles_today": {
+          "name": "Dnešní cykly ohřevu TUV"
+        },
+        "zone_cycles_today": {
+          "name": "Dnešní cykly zóny"
+        },
+        "defrost_cycles_today": {
+          "name": "Dnešní cykly odmrazování"
+        }
+      },
+      "select": {
+        "quiet_mode": {
+          "name": "Tichý režim",
+          "state": {
+            "level1": "Úroveň 1",
+            "level2": "Úroveň 2",
+            "level3": "Úroveň 3",
+            "off": "Vypnuto"
+          }
+        },
+        "powerful_time": {
+          "name": "Výkonný režim",
+          "state": {
+            "on-30m": "Zapnuto na 30 minut",
+            "on-60m": "Zapnuto na 60 minut",
+            "on-90m": "Zapnuto na 90 minut",
+            "off": "Vypnuto"
+          }
+        }
+      },
+      "switch": {
+        "force_dhw": {
+          "name": "Vynutit ohřev TUV"
+        },
+        "force_heater": {
+          "name": "Vynutit topení"
+        },
+        "holiday_timer": {
+          "name": "Časovač dovolené"
         }
       }
     }

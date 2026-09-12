@@ -1,0 +1,138 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Az eszköz már konfigurálva van",
+            "reauth_no_username": "Nem sikerült újra hitelesíteni: ehhez a konfigurációs bejegyzéshez nincs tárolt felhasználónév. Távolítsd el az integrációt, és add hozzá újra."
+        },
+        "error": {
+            "cannot_connect": "Nem sikerült csatlakozni",
+            "invalid_auth": "Érvénytelen felhasználónév vagy jelszó. Megjegyzés: ez az integráció a Panasonic Comfort Cloud fiókodat használja (ugyanazt, mint a Comfort Cloud alkalmazás) — nem a különálló Aquarea Smart Cloud / Aquarea Home fiókot.",
+            "unknown": "Váratlan hiba",
+            "api_error": "API hiba: {api_error_msg}"
+        },
+        "step": {
+            "user": {
+                "description": "Add meg a Panasonic ID-det és a jelszavadat. Figyelem: a túl rövid frissítési időköz miatt a Panasonic Cloud letilthatja az IP-címedet.",
+                "data": {
+                    "password": "Jelszó",
+                    "username": "Felhasználónév",
+                    "scan_interval": "Eszközállapot frissítési időköze (másodperc)",
+                    "consumption_interval": "Fogyasztási adatok frissítési időköze (perc)"
+                }
+            },
+            "reauth": {
+                "description": "Add meg a jelszavadat a következő Panasonic ID-hoz: {username}:",
+                "data": {
+                    "password": "Jelszó"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Figyelem: a túl rövid frissítési időköz miatt a Panasonic Cloud letilthatja az IP-címedet.",
+                "data": {
+                    "scan_interval": "Eszközállapot frissítési időköze (másodperc)",
+                    "consumption_interval": "Fogyasztási adatok frissítési időköze (perc)"
+                }
+            }
+        }
+    },
+    "entity": {
+      "binary_sensor": {
+        "defrost": {
+          "name": "Leolvasztás"
+        },
+        "status": {
+          "name": "Állapot"
+        }
+      },
+      "button": {
+        "request_defrost": {
+          "name": "Leolvasztás kérése"
+        }
+      },
+      "sensor": {
+        "heating_accumulated_energy_consumption": {
+          "name": "Halmozott fűtési fogyasztás"
+        },
+        "cooling_accumulated_energy_consumption": {
+          "name": "Halmozott hűtési fogyasztás"
+        },
+        "tank_accumulated_energy_consumption": {
+          "name": "Halmozott tartály-fűtési fogyasztás"
+        },
+        "accumulated_energy_consumption": {
+          "name": "Halmozott fogyasztás"
+        },
+        "heating_energy_consumption": {
+          "name": "Fűtési fogyasztás"
+        },
+        "cooling_energy_consumption": {
+          "name": "Hűtési fogyasztás"
+        },
+        "tank_energy_consumption": {
+          "name": "Tartály-fűtési fogyasztás"
+        },
+        "energy_consumption": {
+          "name": "Fogyasztás"
+        },
+        "outdoor_temperature": {
+          "name": "Kültéri hőmérséklet"
+        },
+        "tank_temperature": {
+          "name": "Tartály hőmérséklete"
+        },
+        "pump_status": {
+          "name": "Szivattyú állapota"
+        },
+        "direction": {
+          "name": "Irány"
+        },
+        "error_code": {
+          "name": "Hibakód"
+        },
+        "dhw_cycles_today": {
+          "name": "Mai HMV fűtési ciklusok"
+        },
+        "zone_cycles_today": {
+          "name": "Mai zóna ciklusok"
+        },
+        "defrost_cycles_today": {
+          "name": "Mai leolvasztási ciklusok"
+        }
+      },
+      "select": {
+        "quiet_mode": {
+          "name": "Csendes mód",
+          "state": {
+            "level1": "1. szint",
+            "level2": "2. szint",
+            "level3": "3. szint",
+            "off": "Ki"
+          }
+        },
+        "powerful_time": {
+          "name": "Powerful mód",
+          "state": {
+            "on-30m": "Bekapcsolva 30 percre",
+            "on-60m": "Bekapcsolva 60 percre",
+            "on-90m": "Bekapcsolva 90 percre",
+            "off": "Ki"
+          }
+        }
+      },
+      "switch": {
+        "force_dhw": {
+          "name": "HMV kényszerítése"
+        },
+        "force_heater": {
+          "name": "Fűtés kényszerítése"
+        },
+        "holiday_timer": {
+          "name": "Szabadság-időzítő"
+        }
+      }
+    }
+}
