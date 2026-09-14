@@ -8,7 +8,6 @@ from aioaquarea.data import DeviceAction, DeviceDirection, OperationStatus
 from aioaquarea.errors import RequestFailedError
 
 from homeassistant.components.water_heater import (
-    STATE_HEAT_PUMP,
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
@@ -86,8 +85,6 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
 
     def _update_operation_state(self) -> None:
         if self.coordinator.device.tank.operation_status == OperationStatus.OFF:
-            # no-op: the base class declares _attr_state as None
-            self._attr_state = STATE_OFF  # type: ignore[assignment]
             self._attr_current_operation = STATE_OFF
             self._attr_icon = (
                 "mdi:water-boiler-alert"
@@ -98,8 +95,6 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
 
         # Device reports tank is on; treat the water heater as a heat pump device.
         self._attr_icon = "mdi:water-boiler"
-        # no-op: the base class declares _attr_state as None
-        self._attr_state = STATE_HEAT_PUMP  # type: ignore[assignment]
 
         # Determine if the device is actively heating the tank. Different device actions
         # from the library may be used depending on model/version; check several forms.
@@ -168,11 +163,9 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
             operation_mode,
         )
         if operation_mode == HEATING:
-            self._attr_state = STATE_HEAT_PUMP
             self._attr_current_operation = IDLE
             await self.coordinator.device.tank.turn_on()
         elif operation_mode == STATE_OFF:
-            self._attr_state = STATE_OFF
             self._attr_current_operation = STATE_OFF
             await self.coordinator.device.tank.turn_off()
 

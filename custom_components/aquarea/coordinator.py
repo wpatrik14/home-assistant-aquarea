@@ -25,7 +25,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
+class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
     """Class to manage fetching Aquarea data."""
 
     _device: aioaquarea.Device
@@ -86,8 +86,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator):
         """Return the last cached month consumption entries or None."""
         return getattr(self, "_month_consumption", None)
 
-    # should be DataUpdateCoordinator[None]: state is kept on the coordinator
-    async def _async_update_data(self) -> None:  # type: ignore[override]
+    async def _async_update_data(self) -> aioaquarea.Device:
         """Fetch data from Aquarea Smart Cloud Service with tiered intervals."""
         try:
             # Ensure we are logged in and token is valid

@@ -67,14 +67,16 @@ class AquareaQuietModeSelect(AquareaBaseEntity, SelectEntity):
         self._optimistic_option: str | None = None
 
     @property
-    def current_option(self) -> str:
-        """The current select option."""
+    def current_option(self) -> str | None:
+        """The current select option.
+
+        `QUIET_MODE_REVERSE_LOOKUP` covers every `QuietMode` member, so this
+        can't actually miss - but `.get()` is honestly `str | None`, matching
+        the base class, so there is nothing to guard against here.
+        """
         if self._optimistic_option is not None:
             return self._optimistic_option
-        # lookup can miss; should be str | None
-        return QUIET_MODE_REVERSE_LOOKUP.get(  # type: ignore[return-value]
-            self.coordinator.device.quiet_mode
-        )
+        return QUIET_MODE_REVERSE_LOOKUP.get(self.coordinator.device.quiet_mode)
 
     async def _schedule_refresh(self, delay: float = SELECT_DELAY) -> None:
         """Clear optimistic state and request a coordinator refresh after a short delay."""
@@ -121,14 +123,16 @@ class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
         return "mdi:fire-off" if self.coordinator.device.powerful_time is PowerfulTime.OFF else "mdi:fire"
 
     @property
-    def current_option(self) -> str:
-        """The current select option."""
+    def current_option(self) -> str | None:
+        """The current select option.
+
+        `POWERFUL_TIME_REVERSE_LOOKUP` covers every `PowerfulTime` member, so
+        this can't actually miss - but `.get()` is honestly `str | None`,
+        matching the base class, so there is nothing to guard against here.
+        """
         if self._optimistic_option is not None:
             return self._optimistic_option
-        # lookup can miss; should be str | None
-        return POWERFUL_TIME_REVERSE_LOOKUP.get(  # type: ignore[return-value]
-            self.coordinator.device.powerful_time
-        )
+        return POWERFUL_TIME_REVERSE_LOOKUP.get(self.coordinator.device.powerful_time)
 
     async def _schedule_refresh(self, delay: float = SELECT_DELAY) -> None:
         """Clear optimistic state and request a coordinator refresh after a short delay."""
