@@ -1,7 +1,7 @@
 """Adds Aquarea sensors."""
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 import logging
 from typing import Any, Self
 
@@ -553,10 +553,12 @@ class DailyEdgeCounterSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
         if restored is not None:
             try:
                 native = restored.native_value
-                self._attr_native_value = (
-                    # native_value may be a date or Decimal
-                    int(native) if native is not None else 0  # type: ignore[arg-type]
-                )
+                if native is None or isinstance(native, (date, datetime)):
+                    # int() doesn't accept a date/datetime; treat as unusable,
+                    # same outcome as the TypeError below used to produce.
+                    self._attr_native_value = 0
+                else:
+                    self._attr_native_value = int(native)
             except (TypeError, ValueError):
                 self._attr_native_value = 0
             self._attr_last_reset = restored.last_reset

@@ -45,6 +45,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     _username: str | None = None
     _session: aiohttp.ClientSession | None = None
+    _api_error_msg: str | None = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -167,8 +168,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except aioaquarea.errors.ApiError as err:
             _LOGGER.error("API error during setup: %s", err)
             errors["base"] = "api_error"
-            # api_error_msg is not a ConfigFlowContext key
-            self.context["api_error_msg"] = str(err)  # type: ignore[typeddict-unknown-key]
+            self._api_error_msg = str(err)
         except aioaquarea.errors.RequestFailedError:
             errors["base"] = "cannot_connect"
         except Exception:  # pylint: disable=broad-except
@@ -177,23 +177,22 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return errors
 
-    # override is narrower than the base signature
-    def async_show_form(  # type: ignore[override]
+    def async_show_form(
         self,
         *,
-        step_id: str,
+        step_id: str | None = None,
         data_schema: vol.Schema | None = None,
         errors: dict[str, str] | None = None,
-        description_placeholders: dict[str, str] | None = None,
+        description_placeholders: Mapping[str, str] | None = None,
         last_step: bool | None = None,
+        preview: str | None = None,
     ) -> ConfigFlowResult:
         """Show the form with dynamic error message if needed."""
         if errors and errors.get("base") == "api_error":
-            if description_placeholders is None:
-                description_placeholders = {}
-            msg = self.context.get("api_error_msg", "Unknown API error")
-            # context.get() returns object
-            description_placeholders["api_error_msg"] = msg  # type: ignore[assignment]
+            description_placeholders = {
+                **(description_placeholders or {}),
+                "api_error_msg": self._api_error_msg or "Unknown API error",
+            }
 
         return super().async_show_form(
             step_id=step_id,
@@ -201,6 +200,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
             description_placeholders=description_placeholders,
             last_step=last_step,
+            preview=preview,
         )
 
 
