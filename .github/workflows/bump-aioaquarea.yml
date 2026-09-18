@@ -5,6 +5,10 @@ on:
     - cron: "0 6 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   bump:
     name: Check and bump aioaquarea version
@@ -32,9 +36,10 @@ jobs:
 
       - name: Check if update is needed
         id: check
+        env:
+          LATEST: ${{ steps.pypi.outputs.latest }}
+          CURRENT: ${{ steps.current.outputs.version }}
         run: |
-          LATEST="${{ steps.pypi.outputs.latest }}"
-          CURRENT="${{ steps.current.outputs.version }}"
           echo "Latest: $LATEST, Current: $CURRENT"
           if python3 -c "from packaging.version import Version; exit(0 if Version('$LATEST') > Version('$CURRENT') else 1)"; then
             echo "update_needed=true" >> "$GITHUB_OUTPUT"
@@ -44,14 +49,16 @@ jobs:
 
       - name: Update manifest.json
         if: steps.check.outputs.update_needed == 'true'
+        env:
+          LATEST: ${{ steps.pypi.outputs.latest }}
         run: |
-          LATEST="${{ steps.pypi.outputs.latest }}"
           python3 -c "
-          import json, re
+          import json, os, re
           path = 'custom_components/aquarea/manifest.json'
+          latest = os.environ['LATEST']
           manifest = json.load(open(path))
           manifest['requirements'] = [
-              re.sub(r'aioaquarea>=[\d.]+', f'aioaquarea>=$LATEST', r)
+              re.sub(r'aioaquarea>=[\d.]+', f'aioaquarea>={latest}', r)
               for r in manifest['requirements']
           ]
           with open(path, 'w') as f:
