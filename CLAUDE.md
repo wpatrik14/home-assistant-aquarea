@@ -23,6 +23,7 @@ The GitHub Actions workflows validate:
 - **mypy** (`.github/workflows/mypy.yaml`) — static type checking of
   `custom_components/aquarea` against the Home Assistant version pinned in
   `requirements_typing.txt`
+- **tests** (`.github/workflows/tests.yaml`) — runs every `tests/test_*.py`
 
 ```bash
 pip install -r requirements_typing.txt
@@ -33,8 +34,10 @@ Known type errors are silenced with inline `# type: ignore[code]  # reason`
 comments so the gate stays green while the underlying issues are fixed one at a
 time; `warn_unused_ignores` reports any that become unnecessary.
 
-The two files in `tests/` are stdlib-only and run directly
-(`python3 tests/test_setup_entry_errors.py`), but no workflow executes them.
+The files in `tests/` are stdlib-only scripts, each run directly
+(`python3 tests/test_setup_entry_errors.py`) and exiting non-zero on failure.
+They need Python 3.14: they exec functions extracted from the integration
+without the module's imports, which relies on lazily evaluated annotations.
 
 ### Installing the library for Development
 ```bash

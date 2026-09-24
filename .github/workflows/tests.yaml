@@ -1,0 +1,35 @@
+name: Run tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: tests
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
+        with:
+          # 3.14, not the 3.12 minimum: the tests exec single functions
+          # extracted via AST without their module's imports, which only
+          # works with 3.14's lazily evaluated annotations (PEP 649).
+          python-version: "3.14"
+      # The tests are stdlib-only scripts, so nothing to install. Each one
+      # exits non-zero on failure; run them all, then fail if any did.
+      - name: Run tests
+        run: |
+          status=0
+          for test in tests/test_*.py; do
+            echo "::group::$test"
+            if ! python "$test"; then
+              status=1
+              echo "::error file=$test::$test failed"
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
