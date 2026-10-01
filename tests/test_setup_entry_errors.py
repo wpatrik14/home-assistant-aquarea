@@ -36,6 +36,7 @@ Assistant, aioaquarea, aiohttp or pytest installed:
 
     python3 tests/test_setup_entry_errors.py
 """
+import __future__
 import ast
 import asyncio
 import os
@@ -145,7 +146,15 @@ def _load_setup_entry(namespace_extra=None):
         "AquareaDataUpdateCoordinator": _Coordinator,
     }
     namespace.update(namespace_extra or {})
-    exec(compile(ast.Module([node], []), INIT, "exec"), namespace)
+    # __init__.py has `from __future__ import annotations`; compile with the
+    # same flag so its annotations are never evaluated, on any Python version.
+    exec(
+        compile(
+            ast.Module([node], []), INIT, "exec",
+            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+        ),
+        namespace,
+    )
     return namespace["async_setup_entry"]
 
 
