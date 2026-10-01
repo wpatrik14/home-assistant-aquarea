@@ -103,20 +103,21 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         The form is submitted back to this step (Home Assistant dispatches a
         submission to `async_step_<step_id>`), not to `async_step_reauth`.
         """
+        username = self._username
+        if username is None:
+            return self.async_abort(reason="reauth_no_username")
         errors = {}
 
         if user_input is not None:
-            errors = await self._validate_input(
-                self._username, user_input[CONF_PASSWORD]
-            )
+            errors = await self._validate_input(username, user_input[CONF_PASSWORD])
 
             if not errors:
                 # If we get here, we have a valid login
                 return await self.async_complete_reauth(
-                    self._username, user_input[CONF_PASSWORD]
+                    username, user_input[CONF_PASSWORD]
                 )
 
-        return await self.async_show_reauth_form(self._username, errors)
+        return await self.async_show_reauth_form(username, errors)
 
     async def async_complete_reauth(self, username: str, password: str) -> ConfigFlowResult:
         """Complete reauth."""
