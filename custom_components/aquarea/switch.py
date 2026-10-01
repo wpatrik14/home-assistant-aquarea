@@ -80,14 +80,24 @@ class AquareaForceDHWSwitch(AquareaBaseEntity, SwitchEntity):
         """Turn on Force DHW."""
         self._optimistic_is_on = True
         self.async_write_ha_state()
-        await self.coordinator.device.set_force_dhw(aioaquarea.ForceDHW.ON)
+        try:
+            await self.coordinator.device.set_force_dhw(aioaquarea.ForceDHW.ON)
+        except Exception:
+            self._optimistic_is_on = None
+            self.async_write_ha_state()
+            raise
         self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off Force DHW."""
         self._optimistic_is_on = False
         self.async_write_ha_state()
-        await self.coordinator.device.set_force_dhw(aioaquarea.ForceDHW.OFF)
+        try:
+            await self.coordinator.device.set_force_dhw(aioaquarea.ForceDHW.OFF)
+        except Exception:
+            self._optimistic_is_on = None
+            self.async_write_ha_state()
+            raise
         self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
 
 
@@ -130,14 +140,24 @@ class AquareaForceHeaterSwitch(AquareaBaseEntity, SwitchEntity):
         """Turn on Force heater."""
         self._optimistic_is_on = True
         self.async_write_ha_state()
-        await self.coordinator.device.set_force_heater(aioaquarea.ForceHeater.ON)
+        try:
+            await self.coordinator.device.set_force_heater(aioaquarea.ForceHeater.ON)
+        except Exception:
+            self._optimistic_is_on = None
+            self.async_write_ha_state()
+            raise
         self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off Force heater."""
         self._optimistic_is_on = False
         self.async_write_ha_state()
-        await self.coordinator.device.set_force_heater(aioaquarea.ForceHeater.OFF)
+        try:
+            await self.coordinator.device.set_force_heater(aioaquarea.ForceHeater.OFF)
+        except Exception:
+            self._optimistic_is_on = None
+            self.async_write_ha_state()
+            raise
         self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
 
 class AquareaHolidayTimerSwitch(AquareaBaseEntity, SwitchEntity):
@@ -179,12 +199,22 @@ class AquareaHolidayTimerSwitch(AquareaBaseEntity, SwitchEntity):
         """Turn on Holiday Timer."""
         self._optimistic_is_on = True
         self.async_write_ha_state()
-        await self.coordinator.device.set_holiday_timer(aioaquarea.HolidayTimer.ON)
+        try:
+            await self.coordinator.device.set_holiday_timer(aioaquarea.HolidayTimer.ON)
+        except Exception:
+            self._optimistic_is_on = None
+            self.async_write_ha_state()
+            raise
         self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off Holiday Timer."""
         self._optimistic_is_on = False
         self.async_write_ha_state()
-        await self.coordinator.device.set_holiday_timer(aioaquarea.HolidayTimer.OFF)
+        try:
+            await self.coordinator.device.set_holiday_timer(aioaquarea.HolidayTimer.OFF)
+        except Exception:
+            self._optimistic_is_on = None
+            self.async_write_ha_state()
+            raise
         self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
