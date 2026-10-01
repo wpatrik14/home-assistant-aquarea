@@ -140,6 +140,15 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF, HVACMode.COOL, HVACMode.AUTO]
         self._attr_hvac_mode = HVACMode.OFF
 
+    async def async_added_to_hass(self) -> None:
+        """Fill in the state from the data the coordinator already has.
+
+        CoordinatorEntity only subscribes to future updates, so without this
+        every zone would report "off" with no temperatures until the next poll.
+        """
+        await super().async_added_to_hass()
+        self._handle_coordinator_update()
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
