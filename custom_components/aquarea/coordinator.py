@@ -142,7 +142,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                 raise ConfigEntryAuthFailed from err
             else:
                 raise UpdateFailed(f"Authentication error: {err}") from err
-        except aioaquarea.errors.RequestFailedError as err:
+        except aioaquarea.ClientError as err:
+            # Covers RequestFailedError, non-auth ApiError and InvalidData,
+            # which share only this base class. Anything else would reach
+            # Home Assistant's generic handler and log a traceback every poll.
             raise UpdateFailed(
                 f"Error communicating with Aquarea Smart Cloud API: {err}"
             ) from err
