@@ -96,24 +96,14 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
         # Device reports tank is on; treat the water heater as a heat pump device.
         self._attr_icon = "mdi:water-boiler"
 
-        # Determine if the device is actively heating the tank. Different device actions
-        # from the library may be used depending on model/version; check several forms.
-        current_action = getattr(self.coordinator.device, "current_action", None)
-        current_direction = getattr(self.coordinator.device, "current_direction", None)
-        is_heating = False
-
-        if current_direction == DeviceDirection.WATER:
-            is_heating = True
-        else:
-            try:
-                if current_action in (DeviceAction.HEATING_WATER, DeviceAction.HEATING, getattr(DeviceAction, "WATER_HEATING", None)):
-                    is_heating = True
-                else:
-                    action_name = str(current_action).upper()
-                    if "HEAT" in action_name or "WATER" in action_name or "TANK" in action_name:
-                        is_heating = True
-            except (AttributeError, TypeError):
-                is_heating = False
+        # The tank is heating only when the pump is directed at the water.
+        # DeviceAction.HEATING means space heating (direction PUMP), not the tank.
+        is_heating = (
+            getattr(self.coordinator.device, "current_direction", None)
+            == DeviceDirection.WATER
+            or getattr(self.coordinator.device, "current_action", None)
+            == DeviceAction.HEATING_WATER
+        )
 
         self._attr_current_operation = HEATING if is_heating else IDLE
 

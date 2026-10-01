@@ -225,6 +225,30 @@ def main():
     )
     check("tank ON idle -> _attr_state was never touched", wh._attr_state == POISON)
 
+    # Space heating (pump directed at the zones) must not mark the tank heating.
+    wh = _FakeWaterHeater(_FakeCoordinator(_FakeDevice(
+        operation_status=OperationStatus.ON,
+        current_direction=DeviceDirection.PUMP,
+        current_action=DeviceAction.HEATING,
+    )))
+    wh._update_operation_state()
+    check(
+        "tank ON, space heating (PUMP/HEATING) -> state is IDLE",
+        wh.state == IDLE,
+        f"got={wh.state!r}",
+    )
+
+    wh = _FakeWaterHeater(_FakeCoordinator(_FakeDevice(
+        operation_status=OperationStatus.ON,
+        current_action=DeviceAction.HEATING_WATER,
+    )))
+    wh._update_operation_state()
+    check(
+        "tank ON, action HEATING_WATER -> state is HEATING",
+        wh.state == HEATING,
+        f"got={wh.state!r}",
+    )
+
     # --- async_set_operation_mode ------------------------------------------
     wh = _FakeWaterHeater(_FakeCoordinator(_FakeDevice(operation_status=OperationStatus.ON)))
     _run(wh.async_set_operation_mode(HEATING))
