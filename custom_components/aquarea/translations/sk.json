@@ -20,7 +20,7 @@
                     "consumption_interval": "Interval obnovovania údajov o spotrebe (minúty)"
                 }
             },
-            "reauth": {
+            "reauth_confirm": {
                 "description": "Zadajte heslo pre svoje Panasonic ID {username}:",
                 "data": {
                     "password": "Heslo"

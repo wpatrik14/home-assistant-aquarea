@@ -8,6 +8,12 @@
           "password": "[%key:common::config_flow::data::password%]",
           "consumption_interval": "Accumulated (monthly) consumption refresh interval (minutes)"
         }
+      },
+      "reauth_confirm": {
+        "description": "Please enter the password for your Panasonic ID {username}:",
+        "data": {
+          "password": "[%key:common::config_flow::data::password%]"
+        }
       }
     },
     "error": {
@@ -18,6 +24,7 @@
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
       "reauth_no_username": "Could not reauthenticate: this configuration entry has no stored username. Remove the integration and add it again."
     }
   },

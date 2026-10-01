@@ -27,6 +27,7 @@ aioaquarea, aiohttp or pytest installed:
 
     python3 tests/test_reauth_username.py
 """
+import __future__
 import ast
 import asyncio
 import os
@@ -49,7 +50,9 @@ def _load_methods():
         n for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "AquareaConfigFlow"
     )
-    wanted = ("_try_get_username", "async_step_reauth")
+    wanted = (
+        "_try_get_username", "async_step_reauth", "async_step_reauth_confirm",
+    )
     nodes = {
         n.name: n
         for n in cls.body
@@ -61,11 +64,20 @@ def _load_methods():
         "CONF_PASSWORD": CONF_PASSWORD,
     }
     module = ast.Module([nodes[name] for name in wanted], [])
-    exec(compile(module, CONFIG_FLOW, "exec"), namespace)
-    return namespace["_try_get_username"], namespace["async_step_reauth"]
+    # config_flow.py has `from __future__ import annotations`; compile with the
+    # same flag so its annotations are never evaluated, on any Python version.
+    module = ast.fix_missing_locations(module)
+    exec(
+        compile(
+            module, CONFIG_FLOW, "exec",
+            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+        ),
+        namespace,
+    )
+    return tuple(namespace[name] for name in wanted)
 
 
-_try_get_username, async_step_reauth = _load_methods()
+_try_get_username, async_step_reauth, async_step_reauth_confirm = _load_methods()
 
 
 # --- fake flow handler ----------------------------------------------------
@@ -76,8 +88,9 @@ class _Abort:
 
 
 class _Form:
-    def __init__(self, username, errors):
+    def __init__(self, username, errors, step_id="reauth_confirm"):
         self.type = "form"
+        self.step_id = step_id
         self.username = username
         self.errors = errors
 
@@ -85,22 +98,26 @@ class _Form:
 class _FakeFlow:
     """Stands in for AquareaConfigFlow with just what the two methods touch."""
 
-    def __init__(self, *, cached=None, init_data=None, unique_id=None):
+    def __init__(
+        self, *, cached=None, init_data=None, unique_id=None, validate_errors=None
+    ):
         self._username = cached
         self.init_data = init_data
         self.unique_id = unique_id
         self._validated_with = None
+        self._validate_errors = validate_errors or {}
 
     # bound copies of the extracted methods
     _try_get_username = _try_get_username
     async_step_reauth = async_step_reauth
+    async_step_reauth_confirm = async_step_reauth_confirm
 
     def async_abort(self, *, reason):
         return _Abort(reason)
 
     async def _validate_input(self, username, password):
         self._validated_with = (username, password)
-        return {}
+        return self._validate_errors
 
     async def async_complete_reauth(self, username, password):
         return ("complete", username, password)
@@ -171,12 +188,30 @@ def main():
         f"got={getattr(result, 'username', result)!r}",
     )
 
+    # Home Assistant submits the form to `async_step_<step_id>`, so the form
+    # must be shown by `reauth_confirm` and the password handled there.
     flow = _FakeFlow(cached="cached-user")
-    result = _run(flow.async_step_reauth({}, {CONF_PASSWORD: "pw"}))
+    result = _run(flow.async_step_reauth({}))
     check(
-        "reauth validates with the resolved username, never None",
-        result == ("complete", "cached-user", "pw"),
-        f"got={result!r}",
+        "reauth entry shows the reauth_confirm form",
+        isinstance(result, _Form) and result.step_id == "reauth_confirm",
+        f"got={getattr(result, 'step_id', result)!r}",
+    )
+    result = _run(flow.async_step_reauth_confirm({CONF_PASSWORD: "pw"}))
+    check(
+        "submitting the form validates with the resolved username, never None",
+        result == ("complete", "cached-user", "pw")
+        and flow._validated_with == ("cached-user", "pw"),
+        f"got={result!r}, validated={flow._validated_with!r}",
+    )
+
+    flow = _FakeFlow(cached="cached-user", validate_errors={"base": "invalid_auth"})
+    _run(flow.async_step_reauth({}))
+    result = _run(flow.async_step_reauth_confirm({CONF_PASSWORD: "bad"}))
+    check(
+        "wrong password re-shows the form with the error",
+        isinstance(result, _Form) and result.errors == {"base": "invalid_auth"},
+        f"got={getattr(result, 'errors', result)!r}",
     )
 
     print()

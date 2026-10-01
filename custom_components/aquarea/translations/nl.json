@@ -20,7 +20,7 @@
                     "consumption_interval": "Vernieuwingsinterval verbruiksgegevens (minuten)"
                 }
             },
-            "reauth": {
+            "reauth_confirm": {
                 "description": "Voer het wachtwoord voor uw Panasonic ID {username} in:",
                 "data": {
                     "password": "Wachtwoord"

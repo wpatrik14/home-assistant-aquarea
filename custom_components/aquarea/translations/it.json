@@ -20,7 +20,7 @@
                   "consumption_interval": "Intervallo di aggiornamento dei dati di consumo (minuti)"
               }
           },
-          "reauth": {
+          "reauth_confirm": {
               "description": "Inserire la password del tuo ID Panasonic {username}:",
               "data": {
                   "password": "Password"

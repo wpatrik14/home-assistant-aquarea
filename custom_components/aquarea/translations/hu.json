@@ -20,7 +20,7 @@
                     "consumption_interval": "Fogyasztási adatok frissítési időköze (perc)"
                 }
             },
-            "reauth": {
+            "reauth_confirm": {
                 "description": "Add meg a jelszavadat a következő Panasonic ID-hoz: {username}:",
                 "data": {
                     "password": "Jelszó"
