@@ -20,7 +20,7 @@
                     "consumption_interval": "Suvartojimo duomenų atnaujinimo intervalas (minutėmis)"
                 }
             },
-            "reauth": {
+            "reauth_confirm": {
                 "description": "Įveskite slatažodį Panasonic ID vartotojui {username}:",
                 "data": {
                     "password": "Slaptažodis"

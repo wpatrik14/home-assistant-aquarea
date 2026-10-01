@@ -86,7 +86,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_reauth(self, entry_data: Mapping[str, Any], user_input=None):
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]):
         """Perform reauth upon an API authentication error."""
         username = self._try_get_username(entry_data)
         if username is None:
@@ -95,18 +95,28 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # instead of letting None reach the API client as invalid_auth.
             return self.async_abort(reason="reauth_no_username")
         self._username = username
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None):
+        """Ask for the new password and validate it.
+
+        The form is submitted back to this step (Home Assistant dispatches a
+        submission to `async_step_<step_id>`), not to `async_step_reauth`.
+        """
         errors = {}
 
         if user_input is not None:
-            errors = await self._validate_input(username, user_input[CONF_PASSWORD])
+            errors = await self._validate_input(
+                self._username, user_input[CONF_PASSWORD]
+            )
 
             if not errors:
                 # If we get here, we have a valid login
                 return await self.async_complete_reauth(
-                    username, user_input[CONF_PASSWORD]
+                    self._username, user_input[CONF_PASSWORD]
                 )
 
-        return await self.async_show_reauth_form(username, errors)
+        return await self.async_show_reauth_form(self._username, errors)
 
     async def async_complete_reauth(self, username: str, password: str) -> ConfigFlowResult:
         """Complete reauth."""
@@ -127,7 +137,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Show the reauth form."""
         return self.async_show_form(
-            step_id="reauth",
+            step_id="reauth_confirm",
             description_placeholders={"username": username},
             data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),
             errors=errors,
