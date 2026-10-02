@@ -174,13 +174,23 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._api = aioaquarea.Client(self._session, username, password)
         try:
             await self._api.login()
-        except aioaquarea.AuthenticationError:
-            errors["base"] = "invalid_auth"
+        except aioaquarea.AuthenticationError as err:
+            # SESSION_CLOSED and TOKEN_EXPIRED are transient; telling the user
+            # their (correct) password is wrong would send them the wrong way.
+            if err.error_code in (
+                aioaquarea.AuthenticationErrorCodes.SESSION_CLOSED,
+                aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED,
+            ):
+                errors["base"] = "cannot_connect"
+            else:
+                errors["base"] = "invalid_auth"
         except aioaquarea.errors.ApiError as err:
             _LOGGER.error("API error during setup: %s", err)
             errors["base"] = "api_error"
             self._api_error_msg = str(err)
-        except aioaquarea.errors.RequestFailedError:
+        except (aioaquarea.errors.RequestFailedError, aiohttp.ClientError, TimeoutError):
+            # aioaquarea does not wrap network failures (DNS, connection
+            # resets, timeouts); without this they would surface as "unknown".
             errors["base"] = "cannot_connect"
         except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected error during setup")
