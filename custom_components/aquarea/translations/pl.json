@@ -15,8 +15,7 @@
             "user": {
                 "data": {
                     "password": "Hasło",
-                    "username": "Nazwa użytkownika",
-                    "scan_interval": "Interwał odświeżania stanu urządzenia (sekundy)"
+                    "username": "Nazwa użytkownika"
                 }
             },
             "reauth_confirm": {
@@ -32,7 +31,6 @@
             "init": {
                 "description": "Uwaga: zbyt krótki interwał odświeżania może spowodować zablokowanie Twojego adresu IP przez Panasonic Cloud.",
                 "data": {
-                    "scan_interval": "Interwał odświeżania stanu urządzenia (sekundy)",
                     "consumption_interval": "Interwał odświeżania danych o zużyciu (minuty)"
                 }
             }

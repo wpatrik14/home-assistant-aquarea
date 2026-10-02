@@ -16,7 +16,6 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN,
-    CONF_SCAN_INTERVAL,
     CONF_CONSUMPTION_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_CONSUMPTION_INTERVAL,

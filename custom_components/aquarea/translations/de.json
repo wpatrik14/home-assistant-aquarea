@@ -15,8 +15,7 @@
             "user": {
                 "data": {
                     "password": "Passwort",
-                    "username": "Benutzername",
-                    "scan_interval": "Aktualisierungsintervall des Gerätestatus (Sekunden)"
+                    "username": "Benutzername"
                 }
             },
             "reauth_confirm": {
@@ -32,7 +31,6 @@
             "init": {
                 "description": "Achtung: Ein zu kurzes Aktualisierungsintervall kann dazu führen, dass deine IP-Adresse von der Panasonic Cloud gesperrt wird.",
                 "data": {
-                    "scan_interval": "Aktualisierungsintervall des Gerätestatus (Sekunden)",
                     "consumption_interval": "Aktualisierungsintervall der Verbrauchsdaten (Minuten)"
                 }
             }

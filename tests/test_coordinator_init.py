@@ -60,7 +60,6 @@ def _load():
         "timedelta": timedelta,
         "DOMAIN": "aquarea",
         "CONF_USERNAME": "username",
-        "CONF_SCAN_INTERVAL": "scan_interval",
         "CONF_CONSUMPTION_INTERVAL": "consumption_interval",
         "DEFAULT_SCAN_INTERVAL": 60,
         "DEFAULT_CONSUMPTION_INTERVAL": 60,

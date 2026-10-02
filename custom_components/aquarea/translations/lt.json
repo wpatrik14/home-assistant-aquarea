@@ -15,8 +15,7 @@
             "user": {
                 "data": {
                     "password": "Slaptažodis",
-                    "username": "Prisijungimo vardas",
-                    "scan_interval": "Įrenginio būsenos atnaujinimo intervalas (sekundėmis)"
+                    "username": "Prisijungimo vardas"
                 }
             },
             "reauth_confirm": {
@@ -32,7 +31,6 @@
             "init": {
                 "description": "Įspėjimas: per trumpas atnaujinimo intervalas gali sukelti jūsų IP adreso blokavimą Panasonic Cloud.",
                 "data": {
-                    "scan_interval": "Įrenginio būsenos atnaujinimo intervalas (sekundėmis)",
                     "consumption_interval": "Suvartojimo duomenų atnaujinimo intervalas (minutėmis)"
                 }
             }

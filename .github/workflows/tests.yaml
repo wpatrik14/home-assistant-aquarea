@@ -9,16 +9,20 @@ permissions:
 
 jobs:
   tests:
-    name: tests
+    name: tests (Python ${{ matrix.python-version }})
     runs-on: "ubuntu-latest"
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.12 is the oldest Python the 2024.12 minimum Home Assistant runs
+        # on. The scripts compile extracted code with the module's own
+        # `from __future__ import annotations` flag, so they run on all three.
+        python-version: ["3.12", "3.13", "3.14"]
     steps:
       - uses: "actions/checkout@v4"
       - uses: "actions/setup-python@v5"
         with:
-          # 3.14, not the 3.12 minimum: the tests exec single functions
-          # extracted via AST without their module's imports, which only
-          # works with 3.14's lazily evaluated annotations (PEP 649).
-          python-version: "3.14"
+          python-version: ${{ matrix.python-version }}
       # The tests are stdlib-only scripts, so nothing to install. Each one
       # exits non-zero on failure; run them all, then fail if any did.
       - name: Run tests

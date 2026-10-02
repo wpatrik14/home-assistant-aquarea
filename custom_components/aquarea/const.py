@@ -2,7 +2,6 @@
 
 DOMAIN = "aquarea"
 
-CONF_SCAN_INTERVAL = "scan_interval"
 CONF_CONSUMPTION_INTERVAL = "consumption_interval"
 
 DEFAULT_SCAN_INTERVAL = 60
