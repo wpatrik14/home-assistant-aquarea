@@ -254,6 +254,38 @@ async def test_reauth_falls_back_to_unique_id(
     }
 
 
+async def test_reauth_entry_without_unique_id(
+    hass: HomeAssistant, mock_aquarea_client: AsyncMock, mock_setup_entry: AsyncMock
+) -> None:
+    """An entry with a stored username but no unique ID completes reauth.
+
+    Entries from very old versions can lack a unique ID. Looking the entry up
+    by unique ID found nothing there, and the flow failed on an assert after
+    the new password had already been validated.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=None,
+        data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
+    )
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reauth_flow(hass)
+    assert result["step_id"] == "reauth_confirm"
+    assert result["description_placeholders"]["username"] == USERNAME
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_PASSWORD: NEW_PASSWORD}
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert entry.data == {
+        CONF_USERNAME: USERNAME,
+        CONF_PASSWORD: NEW_PASSWORD,
+    }
+
 async def test_reauth_without_username_aborts(
     hass: HomeAssistant, mock_aquarea_client: AsyncMock
 ) -> None:

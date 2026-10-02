@@ -121,8 +121,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_complete_reauth(self, username: str, password: str) -> ConfigFlowResult:
         """Complete reauth."""
-        entry = await self.async_set_unique_id(self.unique_id)
-        assert entry
+        entry = self._get_reauth_entry()
         changed = self.hass.config_entries.async_update_entry(
             entry,
             data={
