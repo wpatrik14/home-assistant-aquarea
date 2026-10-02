@@ -68,13 +68,7 @@ class AquareaForceDHWSwitch(AquareaBaseEntity, SwitchEntity):
         """Schedule a single coordinator refresh after a short delay."""
         await asyncio.sleep(delay)
         self._optimistic_is_on = None
-        try:
-            await self.coordinator.async_request_refresh(force_fetch=True)
-        except aioaquarea.errors.RequestFailedError:
-            _LOGGER.exception(
-                "Delayed refresh failed for device %s",
-                getattr(self.coordinator.device, "device_id", "unknown"),
-            )
+        await self.coordinator.async_request_refresh(force_fetch=True)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on Force DHW."""
@@ -86,7 +80,7 @@ class AquareaForceDHWSwitch(AquareaBaseEntity, SwitchEntity):
             self._optimistic_is_on = None
             self.async_write_ha_state()
             raise
-        self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
+        self._start_delayed_refresh(self._schedule_refresh(SWITCH_DELAY))
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off Force DHW."""
@@ -98,7 +92,7 @@ class AquareaForceDHWSwitch(AquareaBaseEntity, SwitchEntity):
             self._optimistic_is_on = None
             self.async_write_ha_state()
             raise
-        self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
+        self._start_delayed_refresh(self._schedule_refresh(SWITCH_DELAY))
 
 
 class AquareaForceHeaterSwitch(AquareaBaseEntity, SwitchEntity):
@@ -128,13 +122,7 @@ class AquareaForceHeaterSwitch(AquareaBaseEntity, SwitchEntity):
         """Schedule a single coordinator refresh after a short delay."""
         await asyncio.sleep(delay)
         self._optimistic_is_on = None
-        try:
-            await self.coordinator.async_request_refresh(force_fetch=True)
-        except aioaquarea.errors.RequestFailedError:
-            _LOGGER.exception(
-                "Delayed refresh failed for device %s",
-                getattr(self.coordinator.device, "device_id", "unknown"),
-            )
+        await self.coordinator.async_request_refresh(force_fetch=True)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on Force heater."""
@@ -146,7 +134,7 @@ class AquareaForceHeaterSwitch(AquareaBaseEntity, SwitchEntity):
             self._optimistic_is_on = None
             self.async_write_ha_state()
             raise
-        self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
+        self._start_delayed_refresh(self._schedule_refresh(SWITCH_DELAY))
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off Force heater."""
@@ -158,7 +146,7 @@ class AquareaForceHeaterSwitch(AquareaBaseEntity, SwitchEntity):
             self._optimistic_is_on = None
             self.async_write_ha_state()
             raise
-        self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
+        self._start_delayed_refresh(self._schedule_refresh(SWITCH_DELAY))
 
 class AquareaHolidayTimerSwitch(AquareaBaseEntity, SwitchEntity):
     """Representation of an Aquarea switch."""
@@ -187,13 +175,7 @@ class AquareaHolidayTimerSwitch(AquareaBaseEntity, SwitchEntity):
         """Schedule a single coordinator refresh after a short delay."""
         await asyncio.sleep(delay)
         self._optimistic_is_on = None
-        try:
-            await self.coordinator.async_request_refresh(force_fetch=True)
-        except aioaquarea.errors.RequestFailedError:
-            _LOGGER.exception(
-                "Delayed refresh failed for device %s",
-                getattr(self.coordinator.device, "device_id", "unknown"),
-            )
+        await self.coordinator.async_request_refresh(force_fetch=True)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on Holiday Timer."""
@@ -205,7 +187,7 @@ class AquareaHolidayTimerSwitch(AquareaBaseEntity, SwitchEntity):
             self._optimistic_is_on = None
             self.async_write_ha_state()
             raise
-        self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
+        self._start_delayed_refresh(self._schedule_refresh(SWITCH_DELAY))
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off Holiday Timer."""
@@ -217,4 +199,4 @@ class AquareaHolidayTimerSwitch(AquareaBaseEntity, SwitchEntity):
             self._optimistic_is_on = None
             self.async_write_ha_state()
             raise
-        self.hass.async_create_task(self._schedule_refresh(SWITCH_DELAY))
+        self._start_delayed_refresh(self._schedule_refresh(SWITCH_DELAY))

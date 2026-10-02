@@ -106,7 +106,7 @@ class AquareaQuietModeSelect(AquareaBaseEntity, SelectEntity):
             self._optimistic_option = None
             self.async_write_ha_state()
             raise
-        self.hass.async_create_task(self._schedule_refresh())
+        self._start_delayed_refresh(self._schedule_refresh())
 
 class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
     """Representation of an Aquarea select entity to configure the device's powerful time."""
@@ -167,4 +167,4 @@ class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
             self._optimistic_option = None
             self.async_write_ha_state()
             raise
-        self.hass.async_create_task(self._schedule_refresh())
+        self._start_delayed_refresh(self._schedule_refresh())

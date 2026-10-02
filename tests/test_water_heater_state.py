@@ -136,9 +136,7 @@ class _FakeCoordinator:
 
 
 class _FakeHass:
-    def async_create_task(self, coro):
-        # _schedule_refresh isn't under test here; discard without awaiting.
-        coro.close()
+    pass
 
 
 class _FakeWaterHeater:
@@ -174,8 +172,11 @@ class _FakeWaterHeater:
 
     async def _schedule_refresh(self, delay=10.0):
         # Not under test here; async_set_operation_mode hands this to
-        # hass.async_create_task(), which discards it without awaiting.
+        # _start_delayed_refresh(), which discards it without awaiting.
         pass
+
+    def _start_delayed_refresh(self, coro):
+        coro.close()
 
 
 def _run(coro):

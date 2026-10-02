@@ -5,7 +5,6 @@ import asyncio
 import logging
 
 from aioaquarea.data import DeviceAction, DeviceDirection, OperationStatus
-from aioaquarea.errors import RequestFailedError
 
 from homeassistant.components.water_heater import (
     WaterHeaterEntity,
@@ -116,13 +115,7 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
     async def _schedule_refresh(self, delay: float = 10.0) -> None:
         """Schedule a single coordinator refresh after a short delay."""
         await asyncio.sleep(delay)
-        try:
-            await self.coordinator.async_request_refresh(force_fetch=True)
-        except RequestFailedError:
-            _LOGGER.exception(
-                "Delayed refresh failed for device %s",
-                getattr(self.coordinator.device, "device_id", "unknown"),
-            )
+        await self.coordinator.async_request_refresh(force_fetch=True)
 
     async def async_turn_on(self, **kwargs) -> None:
         await self.async_set_operation_mode(HEATING)
@@ -144,7 +137,7 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
 
             await self.coordinator.device.tank.set_target_temperature(int(temperature))
 
-            self.hass.async_create_task(self._schedule_refresh(WATER_HEATER_DELAY))
+            self._start_delayed_refresh(self._schedule_refresh(WATER_HEATER_DELAY))
 
     async def async_set_operation_mode(self, operation_mode):
         _LOGGER.debug(
@@ -161,4 +154,4 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
 
         self.async_write_ha_state()
 
-        self.hass.async_create_task(self._schedule_refresh(WATER_HEATER_DELAY))
+        self._start_delayed_refresh(self._schedule_refresh(WATER_HEATER_DELAY))

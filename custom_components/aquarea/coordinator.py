@@ -77,6 +77,11 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         return self.data if self.data is not None else self._device
 
     @property
+    def entry(self) -> ConfigEntry:
+        """Return the config entry this coordinator belongs to."""
+        return self._entry
+
+    @property
     def device_info(self) -> aioaquarea.data.DeviceInfo:
         """Return the device info."""
         return self._device_info

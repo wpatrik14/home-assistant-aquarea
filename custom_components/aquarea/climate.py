@@ -198,13 +198,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         seconds so the entity state updates shortly after the command.
         """
         await asyncio.sleep(delay)
-        try:
-            await self.coordinator.async_request_refresh(force_fetch=True)
-        except aioaquarea.errors.RequestFailedError:
-            _LOGGER.exception(
-                "Delayed refresh failed for device %s",
-                getattr(self.coordinator.device, "device_id", "unknown"),
-            )
+        await self.coordinator.async_request_refresh(force_fetch=True)
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode.
@@ -235,7 +229,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             raise
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(CLIMATE_DELAY_LONG))
+        self._start_delayed_refresh(self._schedule_refresh(CLIMATE_DELAY_LONG))
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature if supported by the zone.
@@ -272,7 +266,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
                 raise
 
             # Schedule a single delayed refresh (non-blocking)
-            self.hass.async_create_task(self._schedule_refresh(CLIMATE_DELAY_SHORT))
+            self._start_delayed_refresh(self._schedule_refresh(CLIMATE_DELAY_SHORT))
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new target preset mode.
@@ -304,7 +298,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             raise
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(CLIMATE_DELAY_LONG))
+        self._start_delayed_refresh(self._schedule_refresh(CLIMATE_DELAY_LONG))
 
     async def async_turn_on(self) -> None:
         """Turn the entity on and schedule a delayed refresh."""
@@ -326,7 +320,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             raise
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(CLIMATE_DELAY_LONG))
+        self._start_delayed_refresh(self._schedule_refresh(CLIMATE_DELAY_LONG))
 
     async def async_turn_off(self) -> None:
         """Turn the entity off and schedule a delayed refresh."""
@@ -348,4 +342,4 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             raise
 
         # Schedule a single delayed refresh (non-blocking)
-        self.hass.async_create_task(self._schedule_refresh(CLIMATE_DELAY_LONG))
+        self._start_delayed_refresh(self._schedule_refresh(CLIMATE_DELAY_LONG))
