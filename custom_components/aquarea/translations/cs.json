@@ -2,6 +2,7 @@
     "config": {
         "abort": {
             "already_configured": "Zařízení je již nakonfigurováno",
+            "reauth_successful": "Opětovné ověření bylo úspěšné",
             "reauth_no_username": "Nelze se znovu ověřit: tento záznam konfigurace nemá uloženo uživatelské jméno. Odeberte integraci a přidejte ji znovu."
         },
         "error": {

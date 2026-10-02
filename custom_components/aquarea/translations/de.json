@@ -2,6 +2,7 @@
     "config": {
         "abort": {
             "already_configured": "Gerät ist bereits konfiguriert",
+            "reauth_successful": "Die erneute Authentifizierung war erfolgreich",
             "reauth_no_username": "Erneute Authentifizierung nicht möglich: Für diesen Konfigurationseintrag ist kein Benutzername gespeichert. Entferne die Integration und füge sie erneut hinzu."
         },
         "error": {

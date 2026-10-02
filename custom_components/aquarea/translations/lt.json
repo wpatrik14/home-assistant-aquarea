@@ -2,6 +2,7 @@
     "config": {
         "abort": {
             "already_configured": "Įrenginys jau nustatytas",
+            "reauth_successful": "Pakartotinis autentifikavimas pavyko",
             "reauth_no_username": "Nepavyko iš naujo autentifikuoti: šiame konfigūracijos įraše nėra išsaugoto vartotojo vardo. Pašalinkite integraciją ir pridėkite ją iš naujo."
         },
         "error": {

@@ -2,6 +2,7 @@
     "config": {
         "abort": {
             "already_configured": "Zariadenie je už nakonfigurované",
+            "reauth_successful": "Opätovné overenie bolo úspešné",
             "reauth_no_username": "Nie je možné znova overiť: tento konfiguračný záznam nemá uložené používateľské meno. Odstráňte integráciu a pridajte ju znova."
         },
         "error": {
