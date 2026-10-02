@@ -243,7 +243,21 @@ class AquareaAccumulatedSensorExtraStoredData(AquareaSensorExtraStoredData):
         data["accumulated_period_being_processed"] = self.accumulated_period_being_processed
         return data
 
-class OutdoorTemperatureSensor(AquareaBaseEntity, SensorEntity):
+class AquareaStateSensor(AquareaBaseEntity, SensorEntity):
+    """A sensor whose value is read straight from the current device data."""
+
+    async def async_added_to_hass(self) -> None:
+        """Fill in the value from the data the coordinator already has.
+
+        CoordinatorEntity only subscribes to future updates, so without this
+        the sensor would be unknown until the next poll after every restart
+        or reload.
+        """
+        await super().async_added_to_hass()
+        self._handle_coordinator_update()
+
+
+class OutdoorTemperatureSensor(AquareaStateSensor):
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_translation_key = "outdoor_temperature"
@@ -259,7 +273,7 @@ class OutdoorTemperatureSensor(AquareaBaseEntity, SensorEntity):
         self._attr_native_value = self.coordinator.device.temperature_outdoor
         super()._handle_coordinator_update()
 
-class TankTemperatureSensor(AquareaBaseEntity, SensorEntity):
+class TankTemperatureSensor(AquareaStateSensor):
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_translation_key = "tank_temperature"
@@ -275,7 +289,7 @@ class TankTemperatureSensor(AquareaBaseEntity, SensorEntity):
         self._attr_native_value = self.coordinator.device.tank.temperature
         super()._handle_coordinator_update()
 
-class PumpDirectionSensor(AquareaBaseEntity, SensorEntity):
+class PumpDirectionSensor(AquareaStateSensor):
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_translation_key = "direction"
@@ -284,10 +298,12 @@ class PumpDirectionSensor(AquareaBaseEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
+        if self.coordinator.device is None:
+            return
         self._attr_native_value = self.coordinator.device.current_direction.name
         super()._handle_coordinator_update()
 
-class PumpStatusSensor(AquareaBaseEntity, SensorEntity):
+class PumpStatusSensor(AquareaStateSensor):
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_translation_key = "pump_status"
@@ -296,10 +312,12 @@ class PumpStatusSensor(AquareaBaseEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
+        if self.coordinator.device is None:
+            return
         self._attr_native_value = "On" if self.coordinator.device.pump_duty == 1 else "Off"
         super()._handle_coordinator_update()
 
-class ErrorCodeSensor(AquareaBaseEntity, SensorEntity):
+class ErrorCodeSensor(AquareaStateSensor):
     """Exposes the device's current fault code (e.g. H62), if any.
 
     `binary_sensor.AquareaStatusBinarySensor` already reports *whether* the
