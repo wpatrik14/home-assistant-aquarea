@@ -13,12 +13,10 @@
         },
         "step": {
             "user": {
-                "description": "Įveskite savo Panasonic ID ir slaptažodį. Įspėjimas: per trumpas atnaujinimo intervalas gali sukelti jūsų IP adreso blokavimą Panasonic Cloud.",
                 "data": {
                     "password": "Slaptažodis",
                     "username": "Prisijungimo vardas",
-                    "scan_interval": "Įrenginio būsenos atnaujinimo intervalas (sekundėmis)",
-                    "consumption_interval": "Suvartojimo duomenų atnaujinimo intervalas (minutėmis)"
+                    "scan_interval": "Įrenginio būsenos atnaujinimo intervalas (sekundėmis)"
                 }
             },
             "reauth_confirm": {

@@ -13,12 +13,10 @@
         },
         "step": {
             "user": {
-                "description": "Escribe tu ID de Panasonic y contraseña. Aviso: un intervalo de actualización demasiado corto puede provocar que tu IP sea bloqueada por Panasonic Cloud.",
                 "data": {
                     "password": "Contraseña",
                     "username": "Usuario",
-                    "scan_interval": "Intervalo de actualización del estado del dispositivo (segundos)",
-                    "consumption_interval": "Intervalo de actualización de los datos de consumo (minutos)"
+                    "scan_interval": "Intervalo de actualización del estado del dispositivo (segundos)"
                 }
             },
             "reauth_confirm": {

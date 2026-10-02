@@ -28,11 +28,7 @@ from .conftest import PASSWORD, USERNAME
 
 NEW_PASSWORD = "another-placeholder"
 
-USER_INPUT = {
-    CONF_USERNAME: USERNAME,
-    CONF_PASSWORD: PASSWORD,
-    CONF_CONSUMPTION_INTERVAL: 30,
-}
+USER_INPUT = {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
 
 
 @pytest.fixture
@@ -98,6 +94,8 @@ async def test_user_step_creates_entry(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
+    # Only what is needed to connect; the consumption interval is an option.
+    assert set(result["data_schema"].schema) == {CONF_USERNAME, CONF_PASSWORD}
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], USER_INPUT
@@ -191,7 +189,6 @@ async def test_reauth_updates_password(
     assert mock_config_entry.data == {
         CONF_USERNAME: USERNAME,
         CONF_PASSWORD: NEW_PASSWORD,
-        CONF_CONSUMPTION_INTERVAL: 60,
     }
     mock_aquarea_client.login.assert_awaited_once()
 
@@ -274,7 +271,7 @@ async def test_reauth_without_username_aborts(
 async def test_options_flow(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
-    """The options form defaults to the setup value and stores the new one."""
+    """The options form defaults to 60 minutes and stores the new value."""
     mock_config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
@@ -290,6 +287,27 @@ async def test_options_flow(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert mock_config_entry.options == {CONF_CONSUMPTION_INTERVAL: 15}
+
+
+async def test_options_flow_defaults_to_legacy_setup_value(
+    hass: HomeAssistant,
+) -> None:
+    """Entries created when the interval was asked at setup keep that value.
+
+    It sits in their data, not their options, so the form must default to it.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=USERNAME.lower(),
+        data={**USER_INPUT, CONF_CONSUMPTION_INTERVAL: 45},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    schema = result["data_schema"].schema
+    default = next(key for key in schema if key == CONF_CONSUMPTION_INTERVAL).default()
+    assert default == 45
 
 
 async def test_options_flow_defaults_to_current_option(

@@ -2,16 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "description": "Warning: Setting the refresh interval too low can cause your IP to be banned from Panasonic Cloud.",
         "data": {
           "username": "[%key:common::config_flow::data::username%]",
-          "password": "[%key:common::config_flow::data::password%]",
-          "consumption_interval": "Accumulated (monthly) consumption refresh interval (minutes)"
+          "password": "[%key:common::config_flow::data::password%]"
         },
         "data_description": {
           "username": "Your Panasonic ID, the same login as the Panasonic Comfort Cloud app.",
-          "password": "The password for that Panasonic ID.",
-          "consumption_interval": "How often to fetch energy consumption from the Panasonic cloud, in minutes (minimum 10). Device state is refreshed every minute regardless of this setting."
+          "password": "The password for that Panasonic ID."
         }
       },
       "reauth_confirm": {

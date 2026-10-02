@@ -277,3 +277,39 @@ async def test_poll_updates_entities(
 
     assert mock_aquarea_client.get_device.await_count == polls + 1
     assert hass.states.get("sensor.heat_pump_outdoor_temperature").state == "3"
+
+
+@pytest.mark.parametrize(
+    ("data", "options", "expected"),
+    [
+        pytest.param({}, {}, 60, id="default"),
+        pytest.param({}, {CONF_CONSUMPTION_INTERVAL: 15}, 15, id="option"),
+        # Entries created while the interval was still asked at setup.
+        pytest.param({CONF_CONSUMPTION_INTERVAL: 45}, {}, 45, id="legacy_data"),
+        pytest.param(
+            {CONF_CONSUMPTION_INTERVAL: 45},
+            {CONF_CONSUMPTION_INTERVAL: 15},
+            15,
+            id="option_over_legacy_data",
+        ),
+    ],
+)
+async def test_consumption_interval_source(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    data: dict,
+    options: dict,
+    expected: int,
+) -> None:
+    """The option wins, then a value from the entry data, then 60 minutes."""
+    mock_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_config_entry, data={**mock_config_entry.data, **data}, options=options
+    )
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    [coordinator] = mock_config_entry.runtime_data.values()
+    assert coordinator.consumption_interval == expected
