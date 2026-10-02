@@ -15,8 +15,7 @@
             "user": {
                 "data": {
                     "password": "Wachtwoord",
-                    "username": "Gebruikersnaam",
-                    "scan_interval": "Vernieuwingsinterval apparaatstatus (seconden)"
+                    "username": "Gebruikersnaam"
                 }
             },
             "reauth_confirm": {
@@ -32,7 +31,6 @@
             "init": {
                 "description": "Waarschuwing: een te kort vernieuwingsinterval kan ertoe leiden dat uw IP-adres door Panasonic Cloud wordt geblokkeerd.",
                 "data": {
-                    "scan_interval": "Vernieuwingsinterval apparaatstatus (seconden)",
                     "consumption_interval": "Vernieuwingsinterval verbruiksgegevens (minuten)"
                 }
             }

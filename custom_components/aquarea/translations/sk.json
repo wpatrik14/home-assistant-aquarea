@@ -15,8 +15,7 @@
             "user": {
                 "data": {
                     "password": "Heslo",
-                    "username": "Používateľské meno",
-                    "scan_interval": "Interval obnovovania stavu zariadenia (sekundy)"
+                    "username": "Používateľské meno"
                 }
             },
             "reauth_confirm": {
@@ -32,7 +31,6 @@
             "init": {
                 "description": "Upozornenie: príliš krátky interval obnovovania môže spôsobiť zablokovanie vašej IP adresy cloudom Panasonic.",
                 "data": {
-                    "scan_interval": "Interval obnovovania stavu zariadenia (sekundy)",
                     "consumption_interval": "Interval obnovovania údajov o spotrebe (minúty)"
                 }
             }

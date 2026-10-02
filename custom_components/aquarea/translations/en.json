@@ -15,8 +15,7 @@
             "user": {
                 "data": {
                     "password": "Password",
-                    "username": "Username",
-                    "scan_interval": "Device state refresh interval (seconds)"
+                    "username": "Username"
                 },
                 "data_description": {
                     "username": "Your Panasonic ID, the same login as the Panasonic Comfort Cloud app.",
@@ -39,7 +38,6 @@
             "init": {
                 "description": "Warning: Setting the refresh interval too low can cause your IP to be banned from Panasonic Cloud.",
                 "data": {
-                    "scan_interval": "Device state refresh interval (seconds)",
                     "consumption_interval": "Consumption data refresh interval (minutes)"
                 },
                 "data_description": {

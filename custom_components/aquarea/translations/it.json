@@ -15,8 +15,7 @@
           "user": {
               "data": {
                   "password": "Password",
-                  "username": "Nome utente",
-                  "scan_interval": "Intervallo di aggiornamento dello stato del dispositivo (secondi)"
+                  "username": "Nome utente"
               }
           },
           "reauth_confirm": {
@@ -32,7 +31,6 @@
           "init": {
               "description": "Attenzione: un intervallo di aggiornamento troppo breve può causare il blocco del tuo IP da parte di Panasonic Cloud.",
               "data": {
-                  "scan_interval": "Intervallo di aggiornamento dello stato del dispositivo (secondi)",
                   "consumption_interval": "Intervallo di aggiornamento dei dati di consumo (minuti)"
               }
           }
