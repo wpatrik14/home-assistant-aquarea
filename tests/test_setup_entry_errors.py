@@ -139,8 +139,6 @@ def _load_setup_entry(namespace_extra=None):
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "ConfigEntryNotReady": ConfigEntryNotReady,
         "DOMAIN": "aquarea",
-        "CLIENT": "client",
-        "DEVICES": "devices",
         "PLATFORMS": ["sensor"],
         "_LOGGER": _NullLogger(),
         "AquareaDataUpdateCoordinator": _Coordinator,
