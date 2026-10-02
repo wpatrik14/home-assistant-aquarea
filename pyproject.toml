@@ -19,3 +19,9 @@ testpaths = ["tests/ha"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "--cov=custom_components/aquarea --cov-report=term-missing"
+
+[tool.coverage.report]
+# CI additionally requires 100% for config_flow.py (the Bronze
+# config-flow-test-coverage rule), via `coverage report --include=...`.
+show_missing = true
