@@ -1,6 +1,7 @@
 """The Aquarea Smart Cloud integration."""
 from __future__ import annotations
 
+from collections.abc import Coroutine
 from typing import Any
 import logging
 
@@ -130,6 +131,17 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
             model=self.coordinator.device_info.model,
             name=self.coordinator.device_info.name,
             sw_version=self.coordinator.device_info.firmware_version,
+        )
+
+    def _start_delayed_refresh(self, refresh: Coroutine[Any, Any, None]) -> None:
+        """Run a delayed post-command refresh as a background task of the entry.
+
+        Home Assistant cancels an entry's background tasks when it unloads, so
+        a refresh still sleeping when the entry is reloaded or removed does
+        not outlive it.
+        """
+        self.coordinator.entry.async_create_background_task(
+            self.hass, refresh, name=f"{DOMAIN} delayed refresh {self.entity_id}"
         )
 
     async def async_added_to_hass(self) -> None:

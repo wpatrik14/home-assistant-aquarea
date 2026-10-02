@@ -125,6 +125,12 @@ def _make(cls):
         {a: getattr(obj, a, None) for a in OPTIMISTIC}
     )
     obj._schedule_refresh = lambda *a, **k: asyncio.sleep(0)
+
+    def _start_delayed_refresh(coro):
+        obj.hass.tasks += 1
+        coro.close()
+
+    obj._start_delayed_refresh = _start_delayed_refresh
     for attr in OPTIMISTIC:
         setattr(obj, attr, None)
     return obj
