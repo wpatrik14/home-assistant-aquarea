@@ -22,6 +22,8 @@ asyncio_default_fixture_loop_scope = "function"
 addopts = "--cov=custom_components/aquarea --cov-report=term-missing"
 
 [tool.coverage.report]
+# Overall floor for tests/ha/: raise it when coverage goes up, never lower it.
 # CI additionally requires 100% for config_flow.py (the Bronze
 # config-flow-test-coverage rule), via `coverage report --include=...`.
+fail_under = 69
 show_missing = true
