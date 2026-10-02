@@ -2,6 +2,7 @@
   "config": {
       "abort": {
           "already_configured": "Il dispositivo è già configurato",
+          "reauth_successful": "La riautenticazione è stata eseguita correttamente",
           "reauth_no_username": "Impossibile ri-autenticare: questa voce di configurazione non ha un nome utente salvato. Rimuovi l'integrazione e aggiungila di nuovo."
       },
       "error": {

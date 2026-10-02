@@ -2,6 +2,7 @@
     "config": {
         "abort": {
             "already_configured": "Az eszköz már konfigurálva van",
+            "reauth_successful": "Az újrahitelesítés sikeres volt",
             "reauth_no_username": "Nem sikerült újra hitelesíteni: ehhez a konfigurációs bejegyzéshez nincs tárolt felhasználónév. Távolítsd el az integrációt, és add hozzá újra."
         },
         "error": {

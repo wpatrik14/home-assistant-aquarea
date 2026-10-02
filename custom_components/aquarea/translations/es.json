@@ -2,6 +2,7 @@
     "config": {
         "abort": {
             "already_configured": "El dispositivo ya está configurado",
+            "reauth_successful": "La reautenticación se ha realizado correctamente",
             "reauth_no_username": "No se pudo volver a autenticar: esta entrada de configuración no tiene un nombre de usuario guardado. Elimina la integración y vuelve a añadirla."
         },
         "error": {
