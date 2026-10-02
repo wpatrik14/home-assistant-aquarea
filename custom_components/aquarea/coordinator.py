@@ -61,6 +61,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=entry,
             name=f"{DOMAIN}-{entry.data[CONF_USERNAME]}-{device_info.device_id}",
             update_interval=timedelta(seconds=scan_interval),
         )
