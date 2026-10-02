@@ -13,12 +13,10 @@
         },
         "step": {
             "user": {
-                "description": "Voer uw Panasonic ID en wachtwoord in. Waarschuwing: een te kort vernieuwingsinterval kan ertoe leiden dat uw IP-adres door Panasonic Cloud wordt geblokkeerd.",
                 "data": {
                     "password": "Wachtwoord",
                     "username": "Gebruikersnaam",
-                    "scan_interval": "Vernieuwingsinterval apparaatstatus (seconden)",
-                    "consumption_interval": "Vernieuwingsinterval verbruiksgegevens (minuten)"
+                    "scan_interval": "Vernieuwingsinterval apparaatstatus (seconden)"
                 }
             },
             "reauth_confirm": {

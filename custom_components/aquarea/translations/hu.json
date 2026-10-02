@@ -13,12 +13,10 @@
         },
         "step": {
             "user": {
-                "description": "Add meg a Panasonic ID-det és a jelszavadat. Figyelem: a túl rövid frissítési időköz miatt a Panasonic Cloud letilthatja az IP-címedet.",
                 "data": {
                     "password": "Jelszó",
                     "username": "Felhasználónév",
-                    "scan_interval": "Eszközállapot frissítési időköze (másodperc)",
-                    "consumption_interval": "Fogyasztási adatok frissítési időköze (perc)"
+                    "scan_interval": "Eszközállapot frissítési időköze (másodperc)"
                 }
             },
             "reauth_confirm": {

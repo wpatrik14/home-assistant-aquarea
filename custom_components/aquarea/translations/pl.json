@@ -13,12 +13,10 @@
         },
         "step": {
             "user": {
-                "description": "Wprowadź swój identyfikator Panasonic ID i hasło. Uwaga: zbyt krótki interwał odświeżania może spowodować zablokowanie Twojego adresu IP przez Panasonic Cloud.",
                 "data": {
                     "password": "Hasło",
                     "username": "Nazwa użytkownika",
-                    "scan_interval": "Interwał odświeżania stanu urządzenia (sekundy)",
-                    "consumption_interval": "Interwał odświeżania danych o zużyciu (minuty)"
+                    "scan_interval": "Interwał odświeżania stanu urządzenia (sekundy)"
                 }
             },
             "reauth_confirm": {

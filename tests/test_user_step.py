@@ -46,7 +46,6 @@ import types
 
 CONF_USERNAME = "username"
 CONF_PASSWORD = "password"
-CONF_CONSUMPTION_INTERVAL = "consumption_interval"
 
 CONFIG_FLOW = os.path.join(
     os.path.dirname(__file__),
@@ -268,7 +267,6 @@ def _submit(flow, user_input):
 USER_INPUT = {
     CONF_USERNAME: "Someone@Example.com",
     CONF_PASSWORD: "secret",
-    CONF_CONSUMPTION_INTERVAL: 60,
 }
 
 

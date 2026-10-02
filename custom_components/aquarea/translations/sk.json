@@ -13,12 +13,10 @@
         },
         "step": {
             "user": {
-                "description": "Zadajte svoje ID Panasonic a heslo. Upozornenie: príliš krátky interval obnovovania môže spôsobiť zablokovanie vašej IP adresy cloudom Panasonic.",
                 "data": {
                     "password": "Heslo",
                     "username": "Používateľské meno",
-                    "scan_interval": "Interval obnovovania stavu zariadenia (sekundy)",
-                    "consumption_interval": "Interval obnovovania údajov o spotrebe (minúty)"
+                    "scan_interval": "Interval obnovovania stavu zariadenia (sekundy)"
                 }
             },
             "reauth_confirm": {

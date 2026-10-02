@@ -27,13 +27,13 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Only what is needed to connect. The consumption interval is an option
+# (options flow below); entries created before it moved there still carry it
+# in their data, and the coordinator and the options form fall back to it.
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_USERNAME): str,
         vol.Required(CONF_PASSWORD): str,
-        vol.Required(
-            CONF_CONSUMPTION_INTERVAL, default=DEFAULT_CONSUMPTION_INTERVAL
-        ): vol.All(vol.Coerce(int), vol.Range(min=10)),
     }
 )
 
