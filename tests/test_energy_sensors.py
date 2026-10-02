@@ -10,10 +10,17 @@ entry per day, `data_time` as `YYYYMMDD` or `YYYY-MM-DD`):
   When `total_consumption` is unusable it falls back to heat + cool + tank.
   An empty or missing list makes the value unknown.
 - `EnergyConsumptionSensor` (today) reports today's entry. With no list, or no
-  entry for today, it keeps its previous value.
+  entry for today, it keeps its previous value while that value belongs to
+  today; once the value it holds is from an earlier day it drops to 0 for
+  the new day. Before that, yesterday's total stayed on the "today" sensor
+  until the cloud published an entry for the new day, which can take hours.
+  The drop happens only on a day change, never mid-day: these sensors are
+  TOTAL_INCREASING, so a transient 0 within a day would be read as a meter
+  reset and the day's consumption counted twice in long-term statistics.
+  A value with no recorded period (unknown day) is kept as is.
 
-These describe current behaviour; they were listed as missing coverage in the
-audit (wpatrik14/fleet-backlog#88). The real `_handle_coordinator_update`
+The behaviour was listed as missing coverage, and the stale "today" value as
+a bug, in the audit (wpatrik14/fleet-backlog#88). The real `_handle_coordinator_update`
 methods are loaded out of sensor.py via AST into classes built on a stub base.
 
 Intentionally dependency-free (stdlib only):
@@ -212,11 +219,39 @@ def main():
     check("today total: falls back to heat+cool+tank",
           obj._attr_native_value == 1.75, f"value={obj._attr_native_value}")
 
+    yesterday_start = datetime(2026, 10, 13, tzinfo=TZ)
     for label, month in (("no list", None), ("no entry for today", MONTH[:2])):
-        obj = _update(Today, ConsumptionType.HEAT, month)
-        check(f"today with {label}: keeps previous value",
-              obj._attr_native_value == "previous" and obj.writes == 1,
-              f"value={obj._attr_native_value!r}")
+        for period, expected_value, expected_period, why in (
+            (None, "previous", None, "unknown day: keeps previous value"),
+            (today_start, "previous", today_start, "value is today's: keeps it"),
+            (yesterday_start, 0, today_start, "value is yesterday's: 0 for today"),
+        ):
+            obj = Today(ConsumptionType.HEAT, month)
+            obj._period_being_processed = period
+            obj._handle_coordinator_update()
+            check(f"today with {label}, {why}",
+                  obj._attr_native_value == expected_value
+                  and obj._period_being_processed == expected_period
+                  and obj.writes == 1,
+                  f"value={obj._attr_native_value!r} "
+                  f"period={obj._period_being_processed}")
+
+    # The day after, before the cloud has an entry for it: yesterday's value
+    # (written at 23:55) must not carry over past midnight.
+    _Clock.now = datetime(2026, 10, 14, 23, 55, tzinfo=TZ)
+    obj = _update(Today, ConsumptionType.HEAT, MONTH[:3])
+    _Clock.now = datetime(2026, 10, 15, 0, 5, tzinfo=TZ)
+    obj.coordinator.month_consumption = MONTH[:3]
+    obj._handle_coordinator_update()
+    check("today across midnight with no new entry: 0 for the new day",
+          obj._attr_native_value == 0
+          and obj._period_being_processed == datetime(2026, 10, 15, tzinfo=TZ),
+          f"value={obj._attr_native_value!r} period={obj._period_being_processed}")
+    obj.coordinator.month_consumption = [*MONTH[:3], _day("20261015", heat=0.75)]
+    obj._handle_coordinator_update()
+    check("today, entry for the new day appears: its value",
+          obj._attr_native_value == 0.75, f"value={obj._attr_native_value!r}")
+    _Clock.now = datetime(2026, 10, 14, 12, 0, tzinfo=TZ)
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")
