@@ -19,12 +19,20 @@
                     "username": "Username",
                     "scan_interval": "Device state refresh interval (seconds)",
                     "consumption_interval": "Consumption data refresh interval (minutes)"
+                },
+                "data_description": {
+                    "username": "Your Panasonic ID, the same login as the Panasonic Comfort Cloud app.",
+                    "password": "The password for that Panasonic ID.",
+                    "consumption_interval": "How often to fetch energy consumption from the Panasonic cloud, in minutes (minimum 10). Device state is refreshed every minute regardless of this setting."
                 }
             },
             "reauth_confirm": {
                 "description": "Please enter the password for your Panasonic ID {username}:",
                 "data": {
                     "password": "Password"
+                },
+                "data_description": {
+                    "password": "The current password for this Panasonic ID."
                 }
             }
         }
@@ -36,6 +44,9 @@
                 "data": {
                     "scan_interval": "Device state refresh interval (seconds)",
                     "consumption_interval": "Consumption data refresh interval (minutes)"
+                },
+                "data_description": {
+                    "consumption_interval": "How often to fetch energy consumption from the Panasonic cloud, in minutes (minimum 10). Device state is refreshed every minute regardless of this setting."
                 }
             }
         }
