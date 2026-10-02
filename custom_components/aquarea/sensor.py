@@ -467,13 +467,10 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        month_consumption = self.coordinator.month_consumption
-        if not month_consumption:
-            super()._handle_coordinator_update()
-            return
-
         now = dt_util.now()
         today = now.date()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        month_consumption = self.coordinator.month_consumption or []
         today_entry = None
         for c in month_consumption:
             dt_str = c.data_time
@@ -491,6 +488,15 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                 break
 
         if today_entry is None:
+            # The cloud publishes the new day's entry late, sometimes hours
+            # after midnight. Until then a value from an earlier day must not
+            # stand in for today's, so start the day at 0. Only on a day
+            # change, never within a day: these sensors are TOTAL_INCREASING,
+            # and a transient drop to 0 would count as a meter reset.
+            previous = self._period_being_processed
+            if previous is not None and previous < today_start:
+                self._period_being_processed = today_start
+                self._attr_native_value = 0
             super()._handle_coordinator_update()
             return
 
@@ -510,7 +516,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
             super()._handle_coordinator_update()
             return
 
-        self._period_being_processed = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        self._period_being_processed = today_start
         self._attr_native_value = reported_val
         super()._handle_coordinator_update()
 
