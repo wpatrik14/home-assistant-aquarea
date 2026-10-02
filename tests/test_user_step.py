@@ -8,10 +8,19 @@ configured, then tries to log in via `_validate_input` and either creates the
 entry or re-shows the form with an error. `_validate_input` maps aioaquarea
 exceptions to the error keys in strings.json:
 
-    AuthenticationError -> invalid_auth
-    ApiError            -> api_error   (message shown via `api_error_msg`)
-    RequestFailedError  -> cannot_connect
-    anything else       -> unknown
+    AuthenticationError, wrong credentials  -> invalid_auth
+    AuthenticationError, session closed or
+        token expired (transient)           -> cannot_connect
+    AuthenticationError, any other code     -> invalid_auth
+    ApiError                                -> api_error   (message shown via `api_error_msg`)
+    RequestFailedError                      -> cannot_connect
+    aiohttp.ClientError, TimeoutError       -> cannot_connect
+    anything else                           -> unknown
+
+Before, every AuthenticationError said "invalid authentication", so a
+transient SESSION_CLOSED/TOKEN_EXPIRED told the user their correct password
+was wrong. Network failures (aiohttp.ClientError, TimeoutError), which
+aioaquarea does not wrap, ended up as "unknown" with a logged traceback.
 
 The order of those `except` clauses matters: in aioaquarea,
 `AuthenticationError` is a *subclass* of `ApiError`, so catching `ApiError`
@@ -93,9 +102,28 @@ class _FakeClient:
         self.logged_in = True
 
 
+class AuthenticationErrorCodes:
+    SESSION_CLOSED = "1001-0001"
+    INVALID_USERNAME_OR_PASSWORD = "1001-1401"
+    INVALID_CREDENTIALS = "1000-1401"
+    API_ERROR = "API_ERROR"
+    TOKEN_EXPIRED = "TOKEN_EXPIRED"
+
+
+class _AiohttpClientError(Exception):
+    """Stands in for aiohttp.ClientError."""
+
+
+class _AiohttpConnectorError(_AiohttpClientError):
+    """Stands in for aiohttp.ClientConnectorError (a ClientError subclass)."""
+
+
+aiohttp = types.SimpleNamespace(ClientError=_AiohttpClientError)
+
 aioaquarea = types.SimpleNamespace(
     Client=_FakeClient,
     AuthenticationError=AuthenticationError,
+    AuthenticationErrorCodes=AuthenticationErrorCodes,
     errors=types.SimpleNamespace(
         ApiError=ApiError,
         AuthenticationError=AuthenticationError,
@@ -201,6 +229,7 @@ def _load_flow_class():
     namespace = {
         "_ConfigFlow": _ConfigFlow,
         "aioaquarea": aioaquarea,
+        "aiohttp": aiohttp,
         "async_create_clientsession": _create_clientsession,
         "STEP_USER_DATA_SCHEMA": STEP_USER_DATA_SCHEMA,
         "CONF_USERNAME": CONF_USERNAME,
@@ -304,6 +333,24 @@ def main():
         ("AuthenticationError -> invalid_auth (not api_error)",
          AuthenticationError("1001-1401", "Invalid username or password"),
          "invalid_auth"),
+        ("AuthenticationError, invalid credentials -> invalid_auth",
+         AuthenticationError("1000-1401", "Invalid credentials"),
+         "invalid_auth"),
+        ("AuthenticationError, other code -> invalid_auth",
+         AuthenticationError("API_ERROR", "Error in login: status 401"),
+         "invalid_auth"),
+        ("AuthenticationError, session closed -> cannot_connect",
+         AuthenticationError("1001-0001", "Session closed"),
+         "cannot_connect"),
+        ("AuthenticationError, token expired -> cannot_connect",
+         AuthenticationError("TOKEN_EXPIRED", "Token expired"),
+         "cannot_connect"),
+        ("aiohttp.ClientError -> cannot_connect",
+         _AiohttpConnectorError("dns failure"),
+         "cannot_connect"),
+        ("TimeoutError -> cannot_connect",
+         TimeoutError(),
+         "cannot_connect"),
         ("ApiError -> api_error",
          ApiError("5000-0001", "Service unavailable"),
          "api_error"),
