@@ -2,10 +2,10 @@
 
 Background
 ----------
-Unloading the entry unloads every platform and, only if that succeeded,
-drops the entry's coordinators from `hass.data[DOMAIN]`. If a platform fails
-to unload, the data must stay, because the entities that are still loaded
-read their coordinator from it. Other entries' data is never touched.
+Unloading the entry unloads every platform and reports whether that
+succeeded. The coordinators live in the entry's `runtime_data`, which Home
+Assistant manages, so there is no `hass.data` to clean up any more. The
+pytest suite (tests/ha/test_init.py) checks the unload end to end.
 
 These describe current behaviour; they were listed as missing coverage in the
 audit (wpatrik14/fleet-backlog#88). The real `async_unload_entry` is loaded
@@ -62,10 +62,7 @@ class _ConfigEntries:
 
 
 def _hass(result):
-    return types.SimpleNamespace(
-        config_entries=_ConfigEntries(result),
-        data={DOMAIN: {"entry-1": {"devices": {}}, "entry-2": {"devices": {}}}},
-    )
+    return types.SimpleNamespace(config_entries=_ConfigEntries(result), data={})
 
 
 def main():
@@ -84,15 +81,11 @@ def main():
     check("unloads every platform of this entry",
           hass.config_entries.calls == [(entry, PLATFORMS)],
           f"calls={hass.config_entries.calls}")
-    check("drops this entry's data, keeps the other entry",
-          set(hass.data[DOMAIN]) == {"entry-2"}, f"data={hass.data[DOMAIN]}")
+    check("leaves hass.data alone", hass.data == {}, f"data={hass.data}")
 
     hass = _hass(False)
     result = asyncio.run(async_unload_entry(hass, entry))
     check("failed platform unload returns False", result is False, f"got={result!r}")
-    check("failed platform unload keeps the data",
-          set(hass.data[DOMAIN]) == {"entry-1", "entry-2"},
-          f"data={hass.data[DOMAIN]}")
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

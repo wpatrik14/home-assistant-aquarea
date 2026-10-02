@@ -5,13 +5,11 @@ import logging
 from aioaquarea import PowerfulTime, QuietMode
 
 from homeassistant.components.select import SelectEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import AquareaBaseEntity
-from .const import DEVICES, DOMAIN
-from .coordinator import AquareaDataUpdateCoordinator
+from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 
 SELECT_DELAY = 10.0
 
@@ -37,14 +35,12 @@ POWERFUL_TIME_REVERSE_LOOKUP = {v: k for k, v in POWERFUL_TIME_LOOKUP.items()}
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: AquareaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Aquarea select entities from config entry."""
 
-    data: dict[str, AquareaDataUpdateCoordinator] = hass.data[DOMAIN][
-        config_entry.entry_id
-    ][DEVICES]
+    data: dict[str, AquareaDataUpdateCoordinator] = config_entry.runtime_data
 
     entities: list[SelectEntity] = []
 

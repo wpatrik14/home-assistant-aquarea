@@ -6,14 +6,12 @@ import logging
 import aiohttp
 import aioaquarea
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-from .const import CLIENT, DEVICES, DOMAIN
-from .coordinator import AquareaDataUpdateCoordinator
+from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,41 +26,40 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-def _create_client(hass: HomeAssistant, entry: ConfigEntry) -> aioaquarea.Client:
+def _create_client(hass: HomeAssistant, entry: AquareaConfigEntry) -> aioaquarea.Client:
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
     session = async_create_clientsession(hass)
     return aioaquarea.Client(session, username, password)
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_update_listener(hass: HomeAssistant, entry: AquareaConfigEntry) -> None:
     """Reload the entry when its options (or data) change."""
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
     """Set up Aquarea Smart Cloud from a config entry."""
 
     client = _create_client(hass, entry)
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
-        CLIENT: client,
-        DEVICES: dict[str, AquareaDataUpdateCoordinator](),
-    }
+    coordinators: dict[str, AquareaDataUpdateCoordinator] = {}
 
     try:
         await client.login()
         # Get all the devices, we will filter the disabled ones later
         devices = await client.get_devices()
 
-        # We create a Coordinator per Device and store it in the hass.data[DOMAIN] dict to be able to access it from the platform
+        # One coordinator per device; the platforms read them from the
+        # entry's runtime_data.
         for device in devices:
             coordinator = AquareaDataUpdateCoordinator(
                 hass=hass, entry=entry, client=client, device_info=device
             )
-            hass.data[DOMAIN][entry.entry_id][DEVICES][device.device_id] = coordinator
+            coordinators[device.device_id] = coordinator
             _LOGGER.debug("Performing first refresh for device %s", device.device_id)
             await coordinator.async_config_entry_first_refresh()
 
+        entry.runtime_data = coordinators
         _LOGGER.debug("Forwarding entry setups for platforms")
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -100,9 +97,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
-
-    return unload_ok
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

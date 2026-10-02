@@ -6,13 +6,11 @@ from typing import Any
 import aioaquarea
 
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import AquareaBaseEntity
-from .const import DEVICES, DOMAIN
-from .coordinator import AquareaDataUpdateCoordinator
+from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,14 +19,12 @@ SWITCH_DELAY = 10.0
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: AquareaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Aquarea binary sensors from config entry."""
 
-    data: dict[str, AquareaDataUpdateCoordinator] = hass.data[DOMAIN][
-        config_entry.entry_id
-    ][DEVICES]
+    data: dict[str, AquareaDataUpdateCoordinator] = config_entry.runtime_data
 
     entities: list[SwitchEntity] = []
 

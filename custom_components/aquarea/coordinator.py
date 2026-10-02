@@ -25,6 +25,10 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+# The entry's runtime data: one coordinator per device, keyed by device ID.
+type AquareaConfigEntry = ConfigEntry[dict[str, AquareaDataUpdateCoordinator]]
+
+
 class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
     """Class to manage fetching Aquarea data."""
 

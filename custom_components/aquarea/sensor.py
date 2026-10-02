@@ -14,7 +14,6 @@ from homeassistant.components.sensor import (
     SensorExtraStoredData,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfEnergy, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
@@ -23,8 +22,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from .entity import AquareaBaseEntity
-from .const import DEVICES, DOMAIN
-from .coordinator import AquareaDataUpdateCoordinator
+from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -166,8 +164,8 @@ def _current_error_info(device: aioaquarea.Device) -> tuple[str | None, str | No
     return current_error.error_code, current_error.error_message
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    data: dict[str, AquareaDataUpdateCoordinator] = hass.data[DOMAIN][config_entry.entry_id][DEVICES]
+async def async_setup_entry(hass: HomeAssistant, config_entry: AquareaConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+    data: dict[str, AquareaDataUpdateCoordinator] = config_entry.runtime_data
     entities: list[SensorEntity] = []
     for coordinator in data.values():
         entities.append(OutdoorTemperatureSensor(coordinator))

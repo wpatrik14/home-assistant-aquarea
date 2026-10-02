@@ -1,8 +1,6 @@
 """Constants for the Aquarea Smart Cloud integration."""
 
 DOMAIN = "aquarea"
-DEVICES = "devices"
-CLIENT = "client"
 
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_CONSUMPTION_INTERVAL = "consumption_interval"
