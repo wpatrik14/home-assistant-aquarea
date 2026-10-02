@@ -123,7 +123,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Complete reauth."""
         entry = await self.async_set_unique_id(self.unique_id)
         assert entry
-        self.hass.config_entries.async_update_entry(
+        changed = self.hass.config_entries.async_update_entry(
             entry,
             data={
                 **entry.data,
@@ -131,6 +131,13 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_PASSWORD: password,
             },
         )
+        # A loaded entry whose data changed is reloaded by its update listener
+        # (`_async_update_listener` in __init__.py). Otherwise nothing would
+        # reload it: an entry whose setup failed on the old password has no
+        # listener, and Home Assistant does not reload entries when a reauth
+        # flow ends, so it would stay in setup_error until a restart.
+        if not changed or entry.state is not config_entries.ConfigEntryState.LOADED:
+            self.hass.config_entries.async_schedule_reload(entry.entry_id)
         return self.async_abort(reason="reauth_successful")
 
     async def async_show_reauth_form(

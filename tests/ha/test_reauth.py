@@ -10,7 +10,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import aioaquarea
-import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
@@ -23,13 +22,6 @@ from custom_components.aquarea.const import DOMAIN
 NEW_PASSWORD = "another-placeholder"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Entry stays in setup_error after a successful reauth: "
-        "https://github.com/wpatrik14/home-assistant-aquarea/issues/89"
-    ),
-)
 async def test_reauth_after_failed_setup_loads_entry(
     hass: HomeAssistant,
     mock_aquarea_client: AsyncMock,
