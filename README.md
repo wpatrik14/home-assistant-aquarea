@@ -74,6 +74,19 @@ The minimum supported version of Home Assistant is **2024.12**
    - Go to "Settings" >> "Devices & Services", click "+ ADD INTEGRATION" and select "Aquarea Smart Cloud"
 4. Follow the configuration steps. You'll need to provide your Panasonic ID and your password. The integration will discover the devices associated to your Panasonic ID.
 
+## Removing the integration
+
+This integration follows standard integration removal; no extra steps are required in Home Assistant.
+
+1. Go to **Settings** > **Devices & services** and select **Aquarea Smart Cloud**.
+2. Next to the entry, select the three dots **⋮** menu, then **Delete**.
+
+To also remove the files:
+- **HACS:** open HACS, find **Aquarea Smart Cloud**, select the three dots **⋮** menu, then **Remove**, and restart Home Assistant.
+- **Manual installation:** delete the `custom_components/aquarea` folder from your config folder and restart Home Assistant.
+
+If you created a second Panasonic account just for Home Assistant (see [Remarks](#remarks)), you can remove it from the `Users` -> `Userlist` of your main account once you no longer need it.
+
 ## Disclaimer
 
 THIS PROJECT IS NOT IN ANY WAY ASSOCIATED WITH OR RELATED TO PANASONIC. The information here and online is for educational and resource purposes only and therefore the developers do not endorse or condone any inappropriate use of it, and take no legal responsibility for the functionality or security of your devices.
