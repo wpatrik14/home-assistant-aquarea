@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import AquareaBaseEntity
+from .entity import AquareaBaseEntity
 from .const import DEVICES, DOMAIN
 from .coordinator import AquareaDataUpdateCoordinator
 

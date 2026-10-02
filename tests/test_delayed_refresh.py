@@ -21,7 +21,7 @@ Checks:
 - static (AST): no `async_create_task` call left in the four platforms, every
   `_schedule_refresh(...)` call is passed to `_start_delayed_refresh`, and no
   `_schedule_refresh` catches `RequestFailedError`;
-- behaviour: the real `_start_delayed_refresh` (loaded from __init__.py via
+- behaviour: the real `_start_delayed_refresh` (loaded from entity.py via
   AST) hands the coroutine to the entry's `async_create_background_task`.
 
 Intentionally dependency-free (stdlib only):
@@ -82,7 +82,7 @@ def _static_findings(filename):
 
 
 def _load_helper():
-    tree = _tree("__init__.py")
+    tree = _tree("entity.py")
     cls = next(
         n for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "AquareaBaseEntity"
@@ -102,7 +102,7 @@ def _load_helper():
     namespace = {"DOMAIN": "aquarea"}
     exec(
         compile(
-            module, "__init__.py", "exec",
+            module, "entity.py", "exec",
             flags=__future__.annotations.compiler_flag, dont_inherit=True,
         ),
         namespace,

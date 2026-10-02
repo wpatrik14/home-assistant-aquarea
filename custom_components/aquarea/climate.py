@@ -28,7 +28,7 @@ from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTempera
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import AquareaBaseEntity
+from .entity import AquareaBaseEntity
 from .const import DEVICES, DOMAIN
 from .coordinator import AquareaDataUpdateCoordinator
 
