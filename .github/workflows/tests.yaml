@@ -52,3 +52,7 @@ jobs:
         run: pip install -r requirements_test.txt
       - name: Run pytest
         run: pytest
+      # Home Assistant's Bronze quality rule asks for full test coverage of
+      # the config flow. pytest has written .coverage; check that file alone.
+      - name: Require 100% coverage of config_flow.py
+        run: coverage report --include=custom_components/aquarea/config_flow.py --fail-under=100
