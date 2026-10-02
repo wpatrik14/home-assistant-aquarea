@@ -1,0 +1,32 @@
+name: pytest canary
+
+# Early warning for the next Home Assistant release: runs the pytest suite
+# against the newest pytest-homeassistant-custom-component (and so the newest
+# Home Assistant it pins, betas included) and the newest aioaquarea, instead of
+# the exact pins in requirements_test.txt. A failure here blocks nothing; it
+# shows what the next Dependabot bump of the pin will run into.
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: pytest (newest Home Assistant)
+    runs-on: "ubuntu-latest"
+    continue-on-error: true
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.14"
+      - name: Install the newest test harness
+        run: pip install --upgrade pytest-homeassistant-custom-component aioaquarea
+      - name: Show the versions under test
+        run: pip show homeassistant pytest-homeassistant-custom-component aioaquarea | grep -E "^(Name|Version):"
+      - name: Run pytest
+        run: pytest

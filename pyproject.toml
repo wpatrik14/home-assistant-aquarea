@@ -8,3 +8,14 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 module = "aioaquarea.*"
 ignore_missing_imports = true
+
+# pytest suite in tests/ha/, run with pytest-homeassistant-custom-component
+# (requirements_test.txt). The stdlib scripts directly in tests/ are not pytest
+# modules: each one is run as `python tests/test_<name>.py` and builds its own
+# stand-ins (a few replace modules in sys.modules), so pytest must not collect
+# them.
+[tool.pytest.ini_options]
+testpaths = ["tests/ha"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

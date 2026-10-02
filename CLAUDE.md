@@ -23,7 +23,11 @@ The GitHub Actions workflows validate:
 - **mypy** (`.github/workflows/mypy.yaml`) — static type checking of
   `custom_components/aquarea` against the Home Assistant version pinned in
   `requirements_typing.txt`
-- **tests** (`.github/workflows/tests.yaml`) — runs every `tests/test_*.py`
+- **tests** (`.github/workflows/tests.yaml`) — runs every `tests/test_*.py`,
+  and in a second job the pytest suite in `tests/ha/`
+- **pytest canary** (`.github/workflows/pytest-canary.yaml`) — weekly run of
+  `tests/ha/` against the newest pytest-homeassistant-custom-component instead
+  of the pin; `continue-on-error`, an early warning only
 
 ```bash
 pip install -r requirements_typing.txt
@@ -38,6 +42,22 @@ The files in `tests/` are stdlib-only scripts, each run directly
 (`python3 tests/test_setup_entry_errors.py`) and exiting non-zero on failure.
 They need Python 3.14: they exec functions extracted from the integration
 without the module's imports, which relies on lazily evaluated annotations.
+
+`tests/ha/` is a pytest suite on pytest-homeassistant-custom-component: a real
+`hass`, Home Assistant's flow manager and `MockConfigEntry`, with
+`aioaquarea.Client` replaced by an `AsyncMock` (`tests/ha/conftest.py`). It
+runs against the one Home Assistant version pinned in `requirements_test.txt`
+(Dependabot bumps the pin weekly), not the 2024.12 minimum.
+
+```bash
+pip install -r requirements_test.txt
+pytest
+```
+
+It needs Python >= 3.14 and does not run on native Windows: Home Assistant's
+test runner imports `fcntl`, so collection fails there. Use WSL2 or a
+container, e.g.
+`docker run --rm -v "$PWD:/w" -w /w python:3.14-slim sh -c "pip install -r requirements_test.txt && pytest"`.
 
 ### Installing the library for Development
 ```bash

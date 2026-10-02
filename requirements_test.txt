@@ -1,0 +1,13 @@
+# Test dependencies for the pytest suite in tests/ha/.
+#
+# Pinned exactly: pytest-homeassistant-custom-component packages Home
+# Assistant core's private test API, which can change between releases. Each
+# plugin release pins one homeassistant version (0.13.367 pins 2026.9.4), plus
+# pytest, pytest-asyncio and pytest-cov, so they are not listed here.
+# Dependabot proposes every bump as a PR, and CI on that PR shows whether the
+# new Home Assistant release breaks a test.
+#
+# The plugin does not install the manifest's requirements, so aioaquarea is
+# pinned here too. Needs Python >= 3.14 (Home Assistant 2026.9 requires it).
+pytest-homeassistant-custom-component==0.13.367
+aioaquarea==1.0.7

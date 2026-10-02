@@ -87,6 +87,24 @@ To also remove the files:
 
 If you created a second Panasonic account just for Home Assistant (see [Remarks](#remarks)), you can remove it from the `Users` -> `Userlist` of your main account once you no longer need it.
 
+## Running the tests
+
+There are two test suites, and CI runs both:
+
+- `tests/test_*.py`: stdlib-only scripts, each run directly (`python3 tests/test_user_step.py`). They need Python 3.14 and nothing else.
+- `tests/ha/`: a pytest suite on Home Assistant's own test harness ([pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component)). The Panasonic cloud is mocked, so no account is needed.
+
+  ```bash
+  pip install -r requirements_test.txt
+  pytest
+  ```
+
+  It needs Python 3.14 and **does not run on native Windows**: Home Assistant's test runner imports `fcntl`, so test collection fails there. On Windows, use WSL2 or a container:
+
+  ```bash
+  docker run --rm -v "$PWD:/w" -w /w python:3.14-slim sh -c "pip install -r requirements_test.txt && pytest"
+  ```
+
 ## Disclaimer
 
 THIS PROJECT IS NOT IN ANY WAY ASSOCIATED WITH OR RELATED TO PANASONIC. The information here and online is for educational and resource purposes only and therefore the developers do not endorse or condone any inappropriate use of it, and take no legal responsibility for the functionality or security of your devices.
