@@ -5,8 +5,12 @@
 
 version: 2
 updates:
+  # Covers requirements_typing.txt and requirements_test.txt. Both pin Home
+  # Assistant exactly (the test one through pytest-homeassistant-custom-component),
+  # and each bump arrives as a PR whose CI shows whether the new release breaks
+  # the type check or a test.
   - package-ecosystem: "pip"
     directory: "/"  # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "weekly"
     open-pull-requests-limit: 10

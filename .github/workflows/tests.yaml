@@ -33,3 +33,22 @@ jobs:
             echo "::endgroup::"
           done
           exit "$status"
+
+  # The pytest suite in tests/ha/, on Home Assistant's own test harness
+  # (pytest-homeassistant-custom-component). It runs next to the stdlib
+  # scripts above, against the Home Assistant version pinned in
+  # requirements_test.txt.
+  pytest:
+    name: pytest
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.14"
+          cache: "pip"
+          cache-dependency-path: "requirements_test.txt"
+      - name: Install Home Assistant's test harness
+        run: pip install -r requirements_test.txt
+      - name: Run pytest
+        run: pytest
