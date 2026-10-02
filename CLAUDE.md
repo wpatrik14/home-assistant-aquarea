@@ -50,6 +50,9 @@ runs against the one Home Assistant version pinned in `requirements_test.txt`
 (Dependabot bumps the pin weekly), not the 2024.12 minimum.
 CI requires 100% line coverage of `config_flow.py`; drive new flow paths
 through `hass.config_entries.flow` (`async_init` / `async_configure`).
+The overall coverage floor is `fail_under` in `pyproject.toml`: raise it when
+coverage goes up, never lower it. Running a subset of the tests trips it, so
+add `--no-cov` there.
 
 ```bash
 pip install -r requirements_test.txt
