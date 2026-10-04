@@ -15,6 +15,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_options_reload.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -34,7 +35,8 @@ def _tree():
 
 def _find(tree, name):
     return next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == name
     )
 
@@ -46,8 +48,11 @@ def _listener():
     namespace = {}
     exec(
         compile(
-            module, INIT, "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            module,
+            INIT,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )
@@ -71,8 +76,11 @@ def main():
         config_entries=types.SimpleNamespace(async_reload=async_reload)
     )
     asyncio.run(_listener()(hass, types.SimpleNamespace(entry_id="abc")))
-    check("update listener reloads the changed entry", reloaded == ["abc"],
-          f"got={reloaded!r}")
+    check(
+        "update listener reloads the changed entry",
+        reloaded == ["abc"],
+        f"got={reloaded!r}",
+    )
 
     src = ast.unparse(_find(_tree(), "async_setup_entry"))
     check(

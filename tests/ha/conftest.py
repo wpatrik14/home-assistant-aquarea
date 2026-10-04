@@ -7,6 +7,7 @@ credentials below are placeholders, and the plugin blocks sockets during tests
 (pytest-socket), so an unmocked call fails the test instead of reaching the
 network.
 """
+
 from __future__ import annotations
 
 from collections.abc import Generator

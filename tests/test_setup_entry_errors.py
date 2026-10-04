@@ -36,6 +36,7 @@ Assistant, aioaquarea, aiohttp or pytest installed:
 
     python3 tests/test_setup_entry_errors.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -45,7 +46,10 @@ import types
 
 INIT = os.path.join(
     os.path.dirname(__file__),
-    "..", "custom_components", "aquarea", "__init__.py",
+    "..",
+    "custom_components",
+    "aquarea",
+    "__init__.py",
 )
 
 
@@ -130,7 +134,8 @@ def _load_setup_entry(namespace_extra=None):
     with open(INIT, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     node = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.AsyncFunctionDef) and n.name == "async_setup_entry"
     )
     namespace = {
@@ -149,8 +154,11 @@ def _load_setup_entry(namespace_extra=None):
     # same flag so its annotations are never evaluated, on any Python version.
     exec(
         compile(
-            ast.Module([node], []), INIT, "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            ast.Module([node], []),
+            INIT,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )
@@ -234,9 +242,7 @@ def _run(client):
     ("raised", exception_instance).
     """
     hass = _Hass()
-    setup_entry = _load_setup_entry(
-        {"_create_client": lambda hass, entry: client}
-    )
+    setup_entry = _load_setup_entry({"_create_client": lambda hass, entry: client})
     try:
         result = asyncio.run(setup_entry(hass, _Entry()))
     except BaseException as err:  # noqa: BLE001 - we classify it below
@@ -257,9 +263,11 @@ def main():
         # --- Bug 1: transient errors must be retryable, not fatal -----------
         (
             "DNS failure on login -> ConfigEntryNotReady",
-            _Client(login_exc=ClientConnectorDNSError(
-                "Cannot connect to host accsmart.panasonic.com:443"
-            )),
+            _Client(
+                login_exc=ClientConnectorDNSError(
+                    "Cannot connect to host accsmart.panasonic.com:443"
+                )
+            ),
             ("raises", ConfigEntryNotReady),
         ),
         (
@@ -292,7 +300,6 @@ def main():
             _Client(devices_exc=ApiError("500", "boom")),
             ("raises", ConfigEntryNotReady),
         ),
-
         # --- Bug 2: unlisted auth codes must not be swallowed ---------------
         (
             "auth SESSION_CLOSED -> ConfigEntryNotReady",
@@ -309,7 +316,6 @@ def main():
             _Client(login_exc=_auth_error(C.TOKEN_EXPIRED)),
             ("raises", ConfigEntryNotReady),
         ),
-
         # --- regression guards: existing behaviour must be preserved -------
         (
             "auth INVALID_CREDENTIALS -> ConfigEntryAuthFailed",

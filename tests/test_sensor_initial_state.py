@@ -19,6 +19,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_sensor_initial_state.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -55,7 +56,10 @@ def _find_method(classes, name):
     if cls is None:
         return None
     for node in cls.body:
-        if isinstance(node, ast.AsyncFunctionDef) and node.name == "async_added_to_hass":
+        if (
+            isinstance(node, ast.AsyncFunctionDef)
+            and node.name == "async_added_to_hass"
+        ):
             return node
     for base in cls.bases:
         if isinstance(base, ast.Name):
@@ -71,15 +75,22 @@ def _load(tree, name):
     if node is None:
         return None
     flow = ast.ClassDef(
-        name="Extracted", bases=[ast.Name("_Base", ast.Load())],
-        keywords=[], body=[node], decorator_list=[], type_params=[],
+        name="Extracted",
+        bases=[ast.Name("_Base", ast.Load())],
+        keywords=[],
+        body=[node],
+        decorator_list=[],
+        type_params=[],
     )
     module = ast.fix_missing_locations(ast.Module([flow], []))
     namespace = {"_Base": _Base}
     exec(
         compile(
-            module, SENSOR, "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            module,
+            SENSOR,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )
@@ -100,13 +111,19 @@ def main():
     for name in SENSORS:
         cls = _load(tree, name)
         if cls is None:
-            check(f"{name} applies data on add", False,
-                  "no async_added_to_hass in sensor.py")
+            check(
+                f"{name} applies data on add",
+                False,
+                "no async_added_to_hass in sensor.py",
+            )
             continue
         obj = cls()
         asyncio.run(obj.async_added_to_hass())
-        check(f"{name} applies data on add",
-              obj.calls == ["subscribe", "apply data"], f"calls={obj.calls}")
+        check(
+            f"{name} applies data on add",
+            obj.calls == ["subscribe", "apply data"],
+            f"calls={obj.calls}",
+        )
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

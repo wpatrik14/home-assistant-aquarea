@@ -26,6 +26,7 @@ Assistant, aioaquarea, or pytest installed:
 
     python3 tests/test_water_heater_state.py
 """
+
 import ast
 import asyncio
 import os
@@ -34,7 +35,10 @@ from enum import IntEnum
 
 WATER_HEATER = os.path.join(
     os.path.dirname(__file__),
-    "..", "custom_components", "aquarea", "water_heater.py",
+    "..",
+    "custom_components",
+    "aquarea",
+    "water_heater.py",
 )
 
 STATE_OFF = "off"  # matches homeassistant.const.STATE_OFF
@@ -72,15 +76,13 @@ def _load_methods():
     with open(WATER_HEATER, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     cls = next(
-        n for n in tree.body
-        if isinstance(n, ast.ClassDef) and n.name == "WaterHeater"
+        n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "WaterHeater"
     )
     wanted = ("_update_operation_state", "async_set_operation_mode")
     nodes = {
         n.name: n
         for n in cls.body
-        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and n.name in wanted
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name in wanted
     }
     namespace = {
         "OperationStatus": OperationStatus,
@@ -192,7 +194,9 @@ def main():
         print(f"[{'PASS' if ok else 'FAIL'}] {name:<62} {detail}")
 
     # --- _update_operation_state -----------------------------------------
-    wh = _FakeWaterHeater(_FakeCoordinator(_FakeDevice(operation_status=OperationStatus.OFF)))
+    wh = _FakeWaterHeater(
+        _FakeCoordinator(_FakeDevice(operation_status=OperationStatus.OFF))
+    )
     wh._update_operation_state()
     check(
         "tank OFF -> state is STATE_OFF via current_operation",
@@ -201,10 +205,14 @@ def main():
     )
     check("tank OFF -> _attr_state was never touched", wh._attr_state == POISON)
 
-    wh = _FakeWaterHeater(_FakeCoordinator(_FakeDevice(
-        operation_status=OperationStatus.ON,
-        current_direction=DeviceDirection.WATER,
-    )))
+    wh = _FakeWaterHeater(
+        _FakeCoordinator(
+            _FakeDevice(
+                operation_status=OperationStatus.ON,
+                current_direction=DeviceDirection.WATER,
+            )
+        )
+    )
     wh._update_operation_state()
     check(
         "tank ON, direction WATER -> state is HEATING",
@@ -213,11 +221,15 @@ def main():
     )
     check("tank ON heating -> _attr_state was never touched", wh._attr_state == POISON)
 
-    wh = _FakeWaterHeater(_FakeCoordinator(_FakeDevice(
-        operation_status=OperationStatus.ON,
-        current_direction=DeviceDirection.IDLE,
-        current_action=DeviceAction.IDLE,
-    )))
+    wh = _FakeWaterHeater(
+        _FakeCoordinator(
+            _FakeDevice(
+                operation_status=OperationStatus.ON,
+                current_direction=DeviceDirection.IDLE,
+                current_action=DeviceAction.IDLE,
+            )
+        )
+    )
     wh._update_operation_state()
     check(
         "tank ON, not heating -> state is IDLE",
@@ -227,11 +239,15 @@ def main():
     check("tank ON idle -> _attr_state was never touched", wh._attr_state == POISON)
 
     # Space heating (pump directed at the zones) must not mark the tank heating.
-    wh = _FakeWaterHeater(_FakeCoordinator(_FakeDevice(
-        operation_status=OperationStatus.ON,
-        current_direction=DeviceDirection.PUMP,
-        current_action=DeviceAction.HEATING,
-    )))
+    wh = _FakeWaterHeater(
+        _FakeCoordinator(
+            _FakeDevice(
+                operation_status=OperationStatus.ON,
+                current_direction=DeviceDirection.PUMP,
+                current_action=DeviceAction.HEATING,
+            )
+        )
+    )
     wh._update_operation_state()
     check(
         "tank ON, space heating (PUMP/HEATING) -> state is IDLE",
@@ -239,10 +255,14 @@ def main():
         f"got={wh.state!r}",
     )
 
-    wh = _FakeWaterHeater(_FakeCoordinator(_FakeDevice(
-        operation_status=OperationStatus.ON,
-        current_action=DeviceAction.HEATING_WATER,
-    )))
+    wh = _FakeWaterHeater(
+        _FakeCoordinator(
+            _FakeDevice(
+                operation_status=OperationStatus.ON,
+                current_action=DeviceAction.HEATING_WATER,
+            )
+        )
+    )
     wh._update_operation_state()
     check(
         "tank ON, action HEATING_WATER -> state is HEATING",
@@ -251,7 +271,9 @@ def main():
     )
 
     # --- async_set_operation_mode ------------------------------------------
-    wh = _FakeWaterHeater(_FakeCoordinator(_FakeDevice(operation_status=OperationStatus.ON)))
+    wh = _FakeWaterHeater(
+        _FakeCoordinator(_FakeDevice(operation_status=OperationStatus.ON))
+    )
     _run(wh.async_set_operation_mode(HEATING))
     check(
         "set_operation_mode(HEATING) -> tank.turn_on() called",
@@ -259,12 +281,18 @@ def main():
     )
     check(
         "set_operation_mode(HEATING) -> state reflects the new current_operation",
-        wh.state == wh._attr_current_operation and wh._attr_current_operation is not None,
+        wh.state == wh._attr_current_operation
+        and wh._attr_current_operation is not None,
         f"state={wh.state!r} current_operation={wh._attr_current_operation!r}",
     )
-    check("set_operation_mode(HEATING) -> _attr_state was never touched", wh._attr_state == POISON)
+    check(
+        "set_operation_mode(HEATING) -> _attr_state was never touched",
+        wh._attr_state == POISON,
+    )
 
-    wh = _FakeWaterHeater(_FakeCoordinator(_FakeDevice(operation_status=OperationStatus.ON)))
+    wh = _FakeWaterHeater(
+        _FakeCoordinator(_FakeDevice(operation_status=OperationStatus.ON))
+    )
     _run(wh.async_set_operation_mode(STATE_OFF))
     check(
         "set_operation_mode(STATE_OFF) -> tank.turn_off() called",
@@ -275,7 +303,10 @@ def main():
         wh.state == STATE_OFF,
         f"got={wh.state!r}",
     )
-    check("set_operation_mode(STATE_OFF) -> _attr_state was never touched", wh._attr_state == POISON)
+    check(
+        "set_operation_mode(STATE_OFF) -> _attr_state was never touched",
+        wh._attr_state == POISON,
+    )
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

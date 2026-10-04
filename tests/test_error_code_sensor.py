@@ -23,6 +23,7 @@ Assistant, aioaquarea, or pytest installed:
 
     python3 tests/test_error_code_sensor.py
 """
+
 import ast
 import os
 import sys
@@ -31,7 +32,10 @@ from dataclasses import dataclass
 
 SENSOR = os.path.join(
     os.path.dirname(__file__),
-    "..", "custom_components", "aquarea", "sensor.py",
+    "..",
+    "custom_components",
+    "aquarea",
+    "sensor.py",
 )
 
 
@@ -52,7 +56,8 @@ def _load_detector():
     with open(SENSOR, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     node = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.FunctionDef) and n.name == "_current_error_info"
     )
     namespace = {"aioaquarea": aioaquarea}
@@ -88,7 +93,9 @@ def main():
         got = current_error_info(dev)
         ok = got == expected
         failures += not ok
-        print(f"[{'PASS' if ok else 'FAIL'}] {name:<28} expected={expected!s:<35} got={got}")
+        print(
+            f"[{'PASS' if ok else 'FAIL'}] {name:<28} expected={expected!s:<35} got={got}"
+        )
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

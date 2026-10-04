@@ -20,6 +20,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_consumption_rollover.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -82,16 +83,22 @@ def _load():
     with open(COORDINATOR, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     cls = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "AquareaDataUpdateCoordinator"
     )
     node = next(
-        n for n in cls.body
+        n
+        for n in cls.body
         if isinstance(n, ast.AsyncFunctionDef) and n.name == "_async_update_data"
     )
     flow = ast.ClassDef(
-        name="Extracted", bases=[], keywords=[], body=[node],
-        decorator_list=[], type_params=[],
+        name="Extracted",
+        bases=[],
+        keywords=[],
+        body=[node],
+        decorator_list=[],
+        type_params=[],
     )
     module = ast.fix_missing_locations(ast.Module([flow], []))
     namespace = {
@@ -103,13 +110,17 @@ def _load():
         ),
         "timedelta": timedelta,
         "DateType": types.SimpleNamespace(MONTH="month"),
-        "_LOGGER": types.SimpleNamespace(debug=lambda *a, **k: None,
-                                         warning=lambda *a, **k: None),
+        "_LOGGER": types.SimpleNamespace(
+            debug=lambda *a, **k: None, warning=lambda *a, **k: None
+        ),
     }
     exec(
         compile(
-            module, COORDINATOR, "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            module,
+            COORDINATOR,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )
@@ -149,8 +160,9 @@ def main():
     _poll(obj, 2026, 10, 14, 12, 0)
     _poll(obj, 2026, 10, 14, 12, 30)
     calls = obj._client.consumption_calls
-    check("same day within interval -> one fetch", calls == ["20261001"],
-          f"calls={calls}")
+    check(
+        "same day within interval -> one fetch", calls == ["20261001"], f"calls={calls}"
+    )
 
     # Interval elapsed: refetched (unchanged behaviour).
     _poll(obj, 2026, 10, 14, 13, 0)
@@ -161,11 +173,11 @@ def main():
     _poll(obj, 2026, 10, 14, 23, 50)
     _poll(obj, 2026, 10, 15, 0, 1)
     calls = obj._client.consumption_calls
-    check("day rollover -> refetch", calls == ["20261001", "20261001"],
-          f"calls={calls}")
+    check(
+        "day rollover -> refetch", calls == ["20261001", "20261001"], f"calls={calls}"
+    )
     _poll(obj, 2026, 10, 15, 0, 2)
-    check("no extra fetch after the rollover fetch", len(calls) == 2,
-          f"calls={calls}")
+    check("no extra fetch after the rollover fetch", len(calls) == 2, f"calls={calls}")
 
     # Month rollover: refetched with the new month's date string, and the
     # cache holds the new month's data.
@@ -173,18 +185,25 @@ def main():
     _poll(obj, 2026, 10, 31, 23, 55)
     _poll(obj, 2026, 11, 1, 0, 1)
     calls = obj._client.consumption_calls
-    check("month rollover -> refetch for the new month",
-          calls == ["20261001", "20261101"], f"calls={calls}")
-    check("cache holds the new month", obj._month_consumption == ["20261101"],
-          f"cache={obj._month_consumption}")
+    check(
+        "month rollover -> refetch for the new month",
+        calls == ["20261001", "20261101"],
+        f"calls={calls}",
+    )
+    check(
+        "cache holds the new month",
+        obj._month_consumption == ["20261101"],
+        f"cache={obj._month_consumption}",
+    )
 
     # Year rollover.
     obj = _coordinator()
     _poll(obj, 2026, 12, 31, 23, 59)
     _poll(obj, 2027, 1, 1, 0, 0)
     calls = obj._client.consumption_calls
-    check("year rollover -> refetch", calls == ["20261201", "20270101"],
-          f"calls={calls}")
+    check(
+        "year rollover -> refetch", calls == ["20261201", "20270101"], f"calls={calls}"
+    )
 
     # A failed rollover fetch is retried on the next tick, and the old cache is
     # kept meanwhile (accumulated sensors keep their value instead of dropping
@@ -193,14 +212,20 @@ def main():
     _poll(obj, 2026, 10, 31, 23, 55)
     obj._client.fail = True
     _poll(obj, 2026, 11, 1, 0, 1)
-    check("failed fetch keeps the previous cache",
-          obj._month_consumption == ["20261001"], f"cache={obj._month_consumption}")
+    check(
+        "failed fetch keeps the previous cache",
+        obj._month_consumption == ["20261001"],
+        f"cache={obj._month_consumption}",
+    )
     obj._client.fail = False
     _poll(obj, 2026, 11, 1, 0, 2)
     calls = obj._client.consumption_calls
-    check("failed fetch retried next tick",
-          calls == ["20261001", "20261101", "20261101"]
-          and obj._month_consumption == ["20261101"], f"calls={calls}")
+    check(
+        "failed fetch retried next tick",
+        calls == ["20261001", "20261101", "20261101"]
+        and obj._month_consumption == ["20261101"],
+        f"calls={calls}",
+    )
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

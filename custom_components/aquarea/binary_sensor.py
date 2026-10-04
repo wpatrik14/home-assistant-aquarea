@@ -1,4 +1,5 @@
 """Binary sensors for the Aquarea integration."""
+
 import logging
 
 import aioaquarea
@@ -52,6 +53,7 @@ class AquareaStatusBinarySensor(AquareaBaseEntity, BinarySensorEntity):
         """Return true if the binary sensor is on."""
         return self.coordinator.device.is_on_error
 
+
 class AquareaDefrostBinarySensor(AquareaBaseEntity, BinarySensorEntity):
     """Representation of a Aquarea sensor that indicates if the device is on defrost mode."""
 
@@ -71,4 +73,7 @@ class AquareaDefrostBinarySensor(AquareaBaseEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if the binary sensor is on."""
-        return self.coordinator.device.device_mode_status is aioaquarea.DeviceModeStatus.DEFROST
+        return (
+            self.coordinator.device.device_mode_status
+            is aioaquarea.DeviceModeStatus.DEFROST
+        )

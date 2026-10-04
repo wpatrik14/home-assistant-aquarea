@@ -19,6 +19,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_translations.py
 """
+
 import glob
 import json
 import os
@@ -54,26 +55,37 @@ def main():
             have = translation.get("config", {}).get(section, {})
             missing = sorted(wanted - set(have))
             empty = sorted(k for k in wanted & set(have) if not str(have[k]).strip())
-            check(f"{name}: config.{section} complete", not missing and not empty,
-                  f"missing={missing} empty={empty}")
+            check(
+                f"{name}: config.{section} complete",
+                not missing and not empty,
+                f"missing={missing} empty={empty}",
+            )
 
         for flow in FLOWS:
             steps = strings.get(flow, {}).get("step", {})
             have_steps = translation.get(flow, {}).get("step", {})
             extra_steps = sorted(set(have_steps) - set(steps))
-            check(f"{name}: {flow} steps known", not extra_steps, f"extra={extra_steps}")
+            check(
+                f"{name}: {flow} steps known", not extra_steps, f"extra={extra_steps}"
+            )
             for step_id, step in steps.items():
                 have = have_steps.get(step_id, {})
                 wanted = set(step.get("data", {}))
                 got = set(have.get("data", {}))
-                check(f"{name}: {flow}.{step_id} fields", wanted == got,
-                      f"missing={sorted(wanted - got)} extra={sorted(got - wanted)}")
+                check(
+                    f"{name}: {flow}.{step_id} fields",
+                    wanted == got,
+                    f"missing={sorted(wanted - got)} extra={sorted(got - wanted)}",
+                )
                 stray = sorted(
                     set(have.get("data_description", {}))
                     - set(step.get("data_description", {}))
                 )
-                check(f"{name}: {flow}.{step_id} descriptions", not stray,
-                      f"extra={stray}")
+                check(
+                    f"{name}: {flow}.{step_id} descriptions",
+                    not stray,
+                    f"extra={stray}",
+                )
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

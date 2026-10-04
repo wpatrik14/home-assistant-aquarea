@@ -1,4 +1,5 @@
 """Defines the water heater entity to control the Aquarea water tank."""
+
 from __future__ import annotations
 
 import asyncio

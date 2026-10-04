@@ -5,6 +5,7 @@ entities and devices Home Assistant ends up with, and the flows it starts. So
 they keep passing when code moves between modules (entity.py) or the entry's
 data moves (`hass.data` to `entry.runtime_data`), which is what they guard.
 """
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -156,9 +157,7 @@ async def test_setup_entry_invalid_credentials_start_reauth(
             id="token_expired",
         ),
         pytest.param(aioaquarea.ApiError("E1", "maintenance"), id="api_error"),
-        pytest.param(
-            aioaquarea.RequestFailedError("bad gateway"), id="request_failed"
-        ),
+        pytest.param(aioaquarea.RequestFailedError("bad gateway"), id="request_failed"),
         pytest.param(aiohttp.ClientError(), id="aiohttp_error"),
         pytest.param(TimeoutError(), id="timeout"),
     ],

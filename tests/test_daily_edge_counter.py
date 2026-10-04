@@ -17,6 +17,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_daily_edge_counter.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -65,19 +66,25 @@ def _load():
     with open(SENSOR, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     cls = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "DailyEdgeCounterSensor"
     )
     wanted = ("async_added_to_hass", "_handle_coordinator_update")
     methods = [
-        n for n in cls.body
+        n
+        for n in cls.body
         if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name in wanted
     ]
     for m in methods:
         m.decorator_list = []
     flow = ast.ClassDef(
-        name="Extracted", bases=[ast.Name("_Base", ast.Load())],
-        keywords=[], body=methods, decorator_list=[], type_params=[],
+        name="Extracted",
+        bases=[ast.Name("_Base", ast.Load())],
+        keywords=[],
+        body=methods,
+        decorator_list=[],
+        type_params=[],
     )
     module = ast.fix_missing_locations(ast.Module([flow], []))
     namespace = {
@@ -89,8 +96,11 @@ def _load():
     }
     exec(
         compile(
-            module, SENSOR, "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            module,
+            SENSOR,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )
@@ -132,56 +142,82 @@ def main():
 
     # Fresh entity: starts at 0 with today's midnight as last reset.
     obj = _added()
-    check("fresh: value 0, last reset today's midnight",
-          obj._attr_native_value == 0 and obj._attr_last_reset == midnight,
-          f"value={obj._attr_native_value} reset={obj._attr_last_reset}")
+    check(
+        "fresh: value 0, last reset today's midnight",
+        obj._attr_native_value == 0 and obj._attr_last_reset == midnight,
+        f"value={obj._attr_native_value} reset={obj._attr_last_reset}",
+    )
 
     # Counts rising edges only.
     _feed(obj, False, True, True, False, True, False)
-    check("counts rising edges only", obj._attr_native_value == 2,
-          f"value={obj._attr_native_value}")
+    check(
+        "counts rising edges only",
+        obj._attr_native_value == 2,
+        f"value={obj._attr_native_value}",
+    )
 
     # Restore within the same day keeps the count and the last state, so an
     # edge that was in progress at restart is not counted twice.
     obj = _added(_restored(3, midnight, True))
     _feed(obj, True)
-    check("restore same day: count and last state kept",
-          obj._attr_native_value == 3 and obj._last_state is True,
-          f"value={obj._attr_native_value}")
+    check(
+        "restore same day: count and last state kept",
+        obj._attr_native_value == 3 and obj._last_state is True,
+        f"value={obj._attr_native_value}",
+    )
     _feed(obj, False, True)
-    check("restore same day: next edge counted", obj._attr_native_value == 4,
-          f"value={obj._attr_native_value}")
+    check(
+        "restore same day: next edge counted",
+        obj._attr_native_value == 4,
+        f"value={obj._attr_native_value}",
+    )
 
     # Restore from yesterday: first update of the day resets.
     yesterday = midnight - timedelta(days=1)
     obj = _added(_restored(7, yesterday, False))
     _feed(obj, False)
-    check("restore from yesterday: reset on first update",
-          obj._attr_native_value == 0 and obj._attr_last_reset == midnight,
-          f"value={obj._attr_native_value} reset={obj._attr_last_reset}")
+    check(
+        "restore from yesterday: reset on first update",
+        obj._attr_native_value == 0 and obj._attr_last_reset == midnight,
+        f"value={obj._attr_native_value} reset={obj._attr_last_reset}",
+    )
 
     # Unusable restored values fall back to 0.
-    for label, value in (("None", None), ("a date", date(2026, 10, 14)),
-                         ("a non-number", "abc")):
+    for label, value in (
+        ("None", None),
+        ("a date", date(2026, 10, 14)),
+        ("a non-number", "abc"),
+    ):
         obj = _added(_restored(value, midnight, False))
-        check(f"restored {label} -> 0", obj._attr_native_value == 0,
-              f"value={obj._attr_native_value!r}")
+        check(
+            f"restored {label} -> 0",
+            obj._attr_native_value == 0,
+            f"value={obj._attr_native_value!r}",
+        )
 
     # Midnight rollover while running.
     _Clock.now = datetime(2026, 10, 14, 23, 59, tzinfo=TZ)
     obj = _added()
     _feed(obj, True, False, True)
-    check("before midnight: 2 cycles", obj._attr_native_value == 2,
-          f"value={obj._attr_native_value}")
+    check(
+        "before midnight: 2 cycles",
+        obj._attr_native_value == 2,
+        f"value={obj._attr_native_value}",
+    )
     _Clock.now = datetime(2026, 10, 15, 0, 1, tzinfo=TZ)
     _feed(obj, True)
-    check("after midnight: reset, an ongoing cycle is not re-counted",
-          obj._attr_native_value == 0
-          and obj._attr_last_reset == datetime(2026, 10, 15, 0, 0, tzinfo=TZ),
-          f"value={obj._attr_native_value} reset={obj._attr_last_reset}")
+    check(
+        "after midnight: reset, an ongoing cycle is not re-counted",
+        obj._attr_native_value == 0
+        and obj._attr_last_reset == datetime(2026, 10, 15, 0, 0, tzinfo=TZ),
+        f"value={obj._attr_native_value} reset={obj._attr_last_reset}",
+    )
     _feed(obj, False, True)
-    check("after midnight: new cycle counted", obj._attr_native_value == 1,
-          f"value={obj._attr_native_value}")
+    check(
+        "after midnight: new cycle counted",
+        obj._attr_native_value == 1,
+        f"value={obj._attr_native_value}",
+    )
 
     # A detector failure skips counting but still writes state.
     _Clock.now = datetime(2026, 10, 14, 12, 0, tzinfo=TZ)
@@ -192,9 +228,11 @@ def main():
 
     obj._detector = _broken
     obj._handle_coordinator_update()
-    check("detector failure: no count, state still written",
-          obj._attr_native_value == 0 and obj.writes == 1,
-          f"value={obj._attr_native_value} writes={obj.writes}")
+    check(
+        "detector failure: no count, state still written",
+        obj._attr_native_value == 0 and obj.writes == 1,
+        f"value={obj._attr_native_value} writes={obj.writes}",
+    )
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

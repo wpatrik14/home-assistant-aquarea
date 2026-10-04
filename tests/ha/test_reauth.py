@@ -5,6 +5,7 @@ whole path a user takes when Panasonic rejects the stored password: setup
 fails, Home Assistant starts a reauth flow, the user enters the new password,
 and the entry must end up loaded, without restarting Home Assistant.
 """
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock

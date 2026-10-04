@@ -1,4 +1,5 @@
 """Coordinator for Aquarea."""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -54,7 +55,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
 
         # Main device and zones are fixed at 1 minute
         scan_interval = DEFAULT_SCAN_INTERVAL
-        
+
         # Monthly consumption is configurable
         self.consumption_interval = entry.options.get(
             CONF_CONSUMPTION_INTERVAL,
@@ -110,10 +111,12 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
             _LOGGER.debug("Fetching device and zones data from Cloud API (1m interval)")
             self._device = await self._client.get_device(
                 device_info=self._device_info,
-                consumption_refresh_interval=timedelta(minutes=15), # Not used by library for fetching, but kept for compatibility
+                consumption_refresh_interval=timedelta(
+                    minutes=15
+                ),  # Not used by library for fetching, but kept for compatibility
                 timezone=dt_util.get_time_zone(self.hass.config.time_zone),
             )
-            
+
             try:
                 await self._device.refresh_data()
             except aioaquarea.AuthenticationError:
@@ -140,7 +143,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
             )
 
             if fetch_monthly:
-                _LOGGER.debug("Fetching monthly consumption data from Cloud API (%sm interval)", self.consumption_interval)
+                _LOGGER.debug(
+                    "Fetching monthly consumption data from Cloud API (%sm interval)",
+                    self.consumption_interval,
+                )
                 month_date_str = now.strftime("%Y%m01")
                 try:
                     self._month_consumption = await self._client.get_device_consumption(

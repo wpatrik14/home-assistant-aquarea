@@ -27,6 +27,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_climate_mappers.py
 """
+
 import __future__
 import ast
 import enum
@@ -98,25 +99,35 @@ def _load():
     with open(CLIMATE, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     funcs = [
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.FunctionDef) and n.name.startswith("get_")
     ]
     lookups = [
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, (ast.Assign, ast.AnnAssign))
-        and "SPECIAL_STATUS" in ast.unparse(n.targets[0] if isinstance(n, ast.Assign) else n.target)
+        and "SPECIAL_STATUS"
+        in ast.unparse(n.targets[0] if isinstance(n, ast.Assign) else n.target)
     ]
     cls = next(
-        n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "HeatPumpClimate"
+        n
+        for n in tree.body
+        if isinstance(n, ast.ClassDef) and n.name == "HeatPumpClimate"
     )
     method = next(
-        n for n in cls.body
+        n
+        for n in cls.body
         if isinstance(n, ast.FunctionDef) and n.name == "_handle_coordinator_update"
     )
     method.decorator_list = []
     flow = ast.ClassDef(
-        name="Extracted", bases=[ast.Name("_Base", ast.Load())], keywords=[],
-        body=[method], decorator_list=[], type_params=[],
+        name="Extracted",
+        bases=[ast.Name("_Base", ast.Load())],
+        keywords=[],
+        body=[method],
+        decorator_list=[],
+        type_params=[],
     )
     namespace = {
         "_Base": _Base,
@@ -134,8 +145,10 @@ def _load():
     exec(
         compile(
             ast.fix_missing_locations(ast.Module([*lookups, *funcs, flow], [])),
-            CLIMATE, "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            CLIMATE,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )
@@ -147,9 +160,15 @@ NS = _load()
 
 def _zone(status=OperationStatus.ON, supports=True):
     return types.SimpleNamespace(
-        operation_status=status, temperature=21, supports_set_temperature=supports,
-        heat_min=20, heat_max=55, cool_min=5, cool_max=20,
-        heat_target_temperature=45, cool_target_temperature=18,
+        operation_status=status,
+        temperature=21,
+        supports_set_temperature=supports,
+        heat_min=20,
+        heat_max=55,
+        cool_min=5,
+        cool_max=20,
+        heat_target_temperature=45,
+        cool_target_temperature=18,
     )
 
 
@@ -162,8 +181,11 @@ def _climate(mode, zone, action=None, special=None, support_special=True):
             ExtendedOperationMode.AUTO_COOL: DeviceAction.COOLING,
         }.get(mode, DeviceAction.OFF)
     device = types.SimpleNamespace(
-        mode=mode, operation_status=OperationStatus.ON, current_action=action,
-        zones={1: zone}, support_special_status=support_special,
+        mode=mode,
+        operation_status=OperationStatus.ON,
+        current_action=action,
+        zones={1: zone},
+        support_special_status=support_special,
         special_status=special,
     )
     obj = NS["Extracted"]()
@@ -186,94 +208,156 @@ def main():
 
     # --- get_hvac_mode_from_ext_op_mode -----------------------------------
     hvac_mode = NS["get_hvac_mode_from_ext_op_mode"]
-    for mode, expected in ((E.HEAT, HVACMode.HEAT), (E.COOL, HVACMode.COOL),
-                           (E.AUTO_HEAT, HVACMode.AUTO), (E.AUTO_COOL, HVACMode.AUTO),
-                           (E.OFF, HVACMode.OFF)):
+    for mode, expected in (
+        (E.HEAT, HVACMode.HEAT),
+        (E.COOL, HVACMode.COOL),
+        (E.AUTO_HEAT, HVACMode.AUTO),
+        (E.AUTO_COOL, HVACMode.AUTO),
+        (E.OFF, HVACMode.OFF),
+    ):
         got = hvac_mode(mode, S.ON, S.ON)
-        check(f"hvac mode: zone on, {mode.name} -> {expected}", got == expected,
-              f"got={got}")
+        check(
+            f"hvac mode: zone on, {mode.name} -> {expected}",
+            got == expected,
+            f"got={got}",
+        )
     got = hvac_mode(E.HEAT, S.OFF, S.ON)
-    check("hvac mode: zone off -> off, whatever the device mode",
-          got == HVACMode.OFF, f"got={got}")
+    check(
+        "hvac mode: zone off -> off, whatever the device mode",
+        got == HVACMode.OFF,
+        f"got={got}",
+    )
 
-    check("direction-based action mapper removed (superseded by ext action)",
-          "get_hvac_action_from_device_direction" not in NS)
+    check(
+        "direction-based action mapper removed (superseded by ext action)",
+        "get_hvac_action_from_device_direction" not in NS,
+    )
 
     # --- get_hvac_action_from_ext_action ----------------------------------
     ext_action = NS["get_hvac_action_from_ext_action"]
-    for act, expected in ((DeviceAction.OFF, HVACAction.OFF),
-                          (DeviceAction.HEATING, HVACAction.HEATING),
-                          (DeviceAction.COOLING, HVACAction.COOLING),
-                          (DeviceAction.IDLE, HVACAction.IDLE),
-                          (DeviceAction.HEATING_WATER, HVACAction.IDLE)):
+    for act, expected in (
+        (DeviceAction.OFF, HVACAction.OFF),
+        (DeviceAction.HEATING, HVACAction.HEATING),
+        (DeviceAction.COOLING, HVACAction.COOLING),
+        (DeviceAction.IDLE, HVACAction.IDLE),
+        (DeviceAction.HEATING_WATER, HVACAction.IDLE),
+    ):
         got = ext_action(act)
         check(f"ext action: {act.name} -> {expected}", got == expected, f"got={got}")
 
     # --- get_update_operation_mode_from_hvac_mode -------------------------
     update_mode = NS["get_update_operation_mode_from_hvac_mode"]
-    for mode, expected in ((HVACMode.HEAT, UpdateOperationMode.HEAT),
-                           (HVACMode.COOL, UpdateOperationMode.COOL),
-                           (HVACMode.AUTO, UpdateOperationMode.AUTO),
-                           (HVACMode.OFF, UpdateOperationMode.OFF)):
+    for mode, expected in (
+        (HVACMode.HEAT, UpdateOperationMode.HEAT),
+        (HVACMode.COOL, UpdateOperationMode.COOL),
+        (HVACMode.AUTO, UpdateOperationMode.AUTO),
+        (HVACMode.OFF, UpdateOperationMode.OFF),
+    ):
         got = update_mode(mode)
         check(f"update mode: {mode} -> {expected.name}", got == expected, f"got={got}")
 
     # --- _handle_coordinator_update ---------------------------------------
     obj = _climate(E.HEAT, _zone())
-    check("heat: mode, action, heat limits and target, state written",
-          (obj._attr_hvac_mode, obj._attr_hvac_action, obj._attr_min_temp,
-           obj._attr_max_temp, obj._attr_target_temperature,
-           obj._attr_current_temperature, obj._attr_icon, obj.writes)
-          == (HVACMode.HEAT, HVACAction.HEATING, 20, 55, 45, 21, "mdi:hvac", 1),
-          f"got={vars(obj)}")
+    check(
+        "heat: mode, action, heat limits and target, state written",
+        (
+            obj._attr_hvac_mode,
+            obj._attr_hvac_action,
+            obj._attr_min_temp,
+            obj._attr_max_temp,
+            obj._attr_target_temperature,
+            obj._attr_current_temperature,
+            obj._attr_icon,
+            obj.writes,
+        )
+        == (HVACMode.HEAT, HVACAction.HEATING, 20, 55, 45, 21, "mdi:hvac", 1),
+        f"got={vars(obj)}",
+    )
 
     for mode in (E.COOL, E.AUTO_COOL):
         obj = _climate(mode, _zone())
-        check(f"{mode.name}: cool limits and target",
-              (obj._attr_min_temp, obj._attr_max_temp, obj._attr_target_temperature)
-              == (5, 20, 18), f"got={vars(obj)}")
+        check(
+            f"{mode.name}: cool limits and target",
+            (obj._attr_min_temp, obj._attr_max_temp, obj._attr_target_temperature)
+            == (5, 20, 18),
+            f"got={vars(obj)}",
+        )
 
     obj = _climate(E.AUTO_HEAT, _zone())
-    check("AUTO_HEAT, pump heating: auto, action heating, heat limits",
-          (obj._attr_hvac_mode, obj._attr_hvac_action, obj._attr_min_temp,
-           obj._attr_max_temp) == (HVACMode.AUTO, HVACAction.HEATING, 20, 55),
-          f"got={vars(obj)}")
+    check(
+        "AUTO_HEAT, pump heating: auto, action heating, heat limits",
+        (
+            obj._attr_hvac_mode,
+            obj._attr_hvac_action,
+            obj._attr_min_temp,
+            obj._attr_max_temp,
+        )
+        == (HVACMode.AUTO, HVACAction.HEATING, 20, 55),
+        f"got={vars(obj)}",
+    )
 
     obj = _climate(E.AUTO_COOL, _zone())
-    check("AUTO_COOL, pump cooling: auto, action cooling",
-          (obj._attr_hvac_mode, obj._attr_hvac_action)
-          == (HVACMode.AUTO, HVACAction.COOLING), f"got={vars(obj)}")
+    check(
+        "AUTO_COOL, pump cooling: auto, action cooling",
+        (obj._attr_hvac_mode, obj._attr_hvac_action)
+        == (HVACMode.AUTO, HVACAction.COOLING),
+        f"got={vars(obj)}",
+    )
 
     for mode in (E.HEAT, E.AUTO_HEAT):
         for act in (DeviceAction.IDLE, DeviceAction.HEATING_WATER):
             obj = _climate(mode, _zone(), action=act)
-            check(f"{mode.name}, device {act.name}: zone action idle",
-                  obj._attr_hvac_action == HVACAction.IDLE, f"got={vars(obj)}")
+            check(
+                f"{mode.name}, device {act.name}: zone action idle",
+                obj._attr_hvac_action == HVACAction.IDLE,
+                f"got={vars(obj)}",
+            )
 
     obj = _climate(E.HEAT, _zone(supports=False))
-    check("zone can't set temperature: limits locked to current",
-          (obj._attr_min_temp, obj._attr_max_temp) == (21, 21), f"got={vars(obj)}")
+    check(
+        "zone can't set temperature: limits locked to current",
+        (obj._attr_min_temp, obj._attr_max_temp) == (21, 21),
+        f"got={vars(obj)}",
+    )
 
     obj = _climate(E.OFF, _zone())
-    check("device off: off, action off, limits locked, off icon",
-          (obj._attr_hvac_mode, obj._attr_hvac_action, obj._attr_min_temp,
-           obj._attr_max_temp, obj._attr_icon)
-          == (HVACMode.OFF, HVACAction.OFF, 21, 21, "mdi:hvac-off"),
-          f"got={vars(obj)}")
+    check(
+        "device off: off, action off, limits locked, off icon",
+        (
+            obj._attr_hvac_mode,
+            obj._attr_hvac_action,
+            obj._attr_min_temp,
+            obj._attr_max_temp,
+            obj._attr_icon,
+        )
+        == (HVACMode.OFF, HVACAction.OFF, 21, 21, "mdi:hvac-off"),
+        f"got={vars(obj)}",
+    )
 
     obj = _climate(E.HEAT, _zone(status=S.OFF))
-    check("zone off on a device heating another zone: off, action off",
-          (obj._attr_hvac_mode, obj._attr_hvac_action)
-          == (HVACMode.OFF, HVACAction.OFF), f"got={vars(obj)}")
+    check(
+        "zone off on a device heating another zone: off, action off",
+        (obj._attr_hvac_mode, obj._attr_hvac_action) == (HVACMode.OFF, HVACAction.OFF),
+        f"got={vars(obj)}",
+    )
 
-    for special, expected in ((SpecialStatus.ECO, "eco"),
-                              (SpecialStatus.COMFORT, "comfort"), (None, "none")):
+    for special, expected in (
+        (SpecialStatus.ECO, "eco"),
+        (SpecialStatus.COMFORT, "comfort"),
+        (None, "none"),
+    ):
         obj = _climate(E.HEAT, _zone(), special=special)
-        check(f"preset follows special status {special}",
-              obj._attr_preset_mode == expected, f"got={obj._attr_preset_mode!r}")
+        check(
+            f"preset follows special status {special}",
+            obj._attr_preset_mode == expected,
+            f"got={obj._attr_preset_mode!r}",
+        )
     obj = _climate(E.HEAT, _zone(), special=SpecialStatus.ECO, support_special=False)
-    check("preset untouched when special status is unsupported",
-          obj._attr_preset_mode == "untouched", f"got={obj._attr_preset_mode!r}")
+    check(
+        "preset untouched when special status is unsupported",
+        obj._attr_preset_mode == "untouched",
+        f"got={obj._attr_preset_mode!r}",
+    )
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")
