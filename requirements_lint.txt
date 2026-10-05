@@ -1,0 +1,3 @@
+# Pinned so a new ruff release arrives as a dependabot PR rather than as a
+# surprise red build. Keep required-version in pyproject.toml in step.
+ruff==0.16.9
