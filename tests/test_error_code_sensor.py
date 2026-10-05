@@ -25,10 +25,10 @@ Assistant, aioaquarea, or pytest installed:
 """
 
 import ast
+from dataclasses import dataclass
 import os
 import sys
 import types
-from dataclasses import dataclass
 
 SENSOR = os.path.join(
     os.path.dirname(__file__),

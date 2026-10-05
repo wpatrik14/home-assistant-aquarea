@@ -6,7 +6,6 @@ import asyncio
 import logging
 
 from aioaquarea.data import DeviceAction, DeviceDirection, OperationStatus
-
 from homeassistant.components.water_heater import (
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
@@ -20,9 +19,9 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import AquareaBaseEntity
 from .const import HEATING, IDLE
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
+from .entity import AquareaBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 

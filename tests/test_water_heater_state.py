@@ -29,9 +29,9 @@ Assistant, aioaquarea, or pytest installed:
 
 import ast
 import asyncio
+from enum import IntEnum
 import os
 import sys
-from enum import IntEnum
 
 WATER_HEATER = os.path.join(
     os.path.dirname(__file__),

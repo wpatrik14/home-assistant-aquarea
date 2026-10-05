@@ -12,15 +12,14 @@ from __future__ import annotations
 from collections.abc import Generator
 from unittest.mock import AsyncMock, patch
 
-import aiohttp
 import aioaquarea
-import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-
+import aiohttp
 from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_USER
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aquarea.config_flow import AquareaConfigFlow
 from custom_components.aquarea.const import CONF_CONSUMPTION_INTERVAL, DOMAIN

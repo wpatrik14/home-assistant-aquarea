@@ -8,21 +8,15 @@ from typing import Any
 
 import aioaquarea
 import aiohttp
-import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
+import voluptuous as vol
 
-from homeassistant.core import callback
-
-from .const import (
-    DOMAIN,
-    CONF_CONSUMPTION_INTERVAL,
-    DEFAULT_CONSUMPTION_INTERVAL,
-)
+from .const import CONF_CONSUMPTION_INTERVAL, DEFAULT_CONSUMPTION_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 

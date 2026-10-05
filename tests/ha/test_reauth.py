@@ -11,12 +11,11 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import aioaquarea
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
 from homeassistant.const import CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aquarea.const import DOMAIN
 

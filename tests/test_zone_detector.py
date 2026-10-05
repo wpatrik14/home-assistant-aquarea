@@ -23,10 +23,10 @@ Assistant, aioaquarea, or pytest installed:
 """
 
 import ast
+from enum import IntEnum
 import os
 import sys
 import types
-from enum import IntEnum
 
 SENSOR = os.path.join(
     os.path.dirname(__file__),

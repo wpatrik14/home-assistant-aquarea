@@ -29,6 +29,7 @@ Intentionally dependency-free (stdlib only):
 """
 
 import __future__
+
 import ast
 import enum
 import os

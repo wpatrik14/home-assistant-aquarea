@@ -7,7 +7,6 @@ import logging
 
 import aioaquarea
 from aioaquarea.statistics import DateType
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_USERNAME
 from homeassistant.core import HomeAssistant
@@ -16,10 +15,10 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    DOMAIN,
     CONF_CONSUMPTION_INTERVAL,
-    DEFAULT_SCAN_INTERVAL,
     DEFAULT_CONSUMPTION_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -163,8 +162,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                 aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
             ):
                 raise ConfigEntryAuthFailed from err
-            else:
-                raise UpdateFailed(f"Authentication error: {err}") from err
+            raise UpdateFailed(f"Authentication error: {err}") from err
         except aioaquarea.ClientError as err:
             # Covers RequestFailedError, non-auth ApiError and InvalidData,
             # which share only this base class. Anything else would reach
