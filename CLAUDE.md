@@ -47,7 +47,7 @@ without the module's imports, which relies on lazily evaluated annotations.
 `hass`, Home Assistant's flow manager and `MockConfigEntry`, with
 `aioaquarea.Client` replaced by an `AsyncMock` (`tests/ha/conftest.py`). It
 runs against the one Home Assistant version pinned in `requirements_test.txt`
-(Dependabot bumps the pin weekly), not the 2024.12 minimum.
+(Dependabot bumps the pin weekly), not the 2025.8 minimum.
 CI requires 100% line coverage of `config_flow.py`; drive new flow paths
 through `hass.config_entries.flow` (`async_init` / `async_configure`).
 The overall coverage floor is `fail_under` in `pyproject.toml`: raise it when
@@ -116,9 +116,10 @@ All entities extend HA base classes and `CoordinatorEntity`. After sending a com
 | `button.py` | One-shot actions (refresh, force DHW, defrost) |
 
 ### Minimum Requirements
-- Home Assistant 2024.12.0+ — the options flow relies on the framework-supplied
-  `OptionsFlow.config_entry` property, added in 2024.12
-- Python 3.12+ (required by Home Assistant 2024.12)
+- Home Assistant 2025.8.0+ — the options flow uses `OptionsFlowWithReload` and
+  the reauth flow `async_update_reload_and_abort`, so no update listener is
+  needed
+- Python 3.13+ (required by Home Assistant 2025.8)
 
 ## Key Constraints
 

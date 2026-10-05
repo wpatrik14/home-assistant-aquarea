@@ -31,7 +31,7 @@ show_missing = true
 [tool.ruff]
 # Adapted from home-assistant/core's pyproject.toml (dev, 2026-10-02).
 required-version = ">=0.16.9"
-target-version = "py312"  # the 2024.12 floor
+target-version = "py313"  # the 2025.8 floor
 
 [tool.ruff.lint]
 select = [

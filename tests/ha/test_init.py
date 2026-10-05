@@ -248,11 +248,13 @@ async def test_options_change_reloads_entry(
     await _setup(hass, mock_config_entry)
     assert mock_aquarea_client.login.await_count == 1
 
-    hass.config_entries.async_update_entry(
-        mock_config_entry, options={CONF_CONSUMPTION_INTERVAL: 15}
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={CONF_CONSUMPTION_INTERVAL: 15}
     )
     await hass.async_block_till_done()
 
+    assert mock_config_entry.options == {CONF_CONSUMPTION_INTERVAL: 15}
     assert mock_config_entry.state is ConfigEntryState.LOADED
     assert mock_aquarea_client.login.await_count == 2
 
