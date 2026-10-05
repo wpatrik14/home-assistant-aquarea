@@ -142,8 +142,9 @@ class _FakeHass:
 
 
 class _FakeWaterHeater:
-    """Mirrors WaterHeaterEntity's real state resolution: `state` calls
-    `current_operation`, which reads `_attr_current_operation` - exactly as
+    """Mirrors WaterHeaterEntity's real state resolution.
+
+    `state` calls `current_operation`, which reads `_attr_current_operation` - exactly as
     `@final def state(self): return self.current_operation` does in HA's
     own water_heater/__init__.py. `_attr_state` is deliberately NOT part of
     this chain, matching the real base class.

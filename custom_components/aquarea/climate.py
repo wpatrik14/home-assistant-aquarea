@@ -260,7 +260,9 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
                 str(temperature),
             )
             _LOGGER.debug(
-                f"Attempting to set temperature for zone {zone.zone_id} to {temperature}"
+                "Attempting to set temperature for zone %s to %s",
+                zone.zone_id,
+                temperature,
             )
 
             # Optimistic update

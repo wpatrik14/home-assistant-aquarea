@@ -372,6 +372,9 @@ async def test_defensive_branches_unreachable_through_flow_manager(
     assert (await flow.async_step_reauth_confirm())["reason"] == "reauth_no_username"
 
     flow.init_data = {CONF_USERNAME: "from-init-data"}
-    assert flow._try_get_username({}) == "from-init-data"
+    assert flow._try_get_username({}) == "from-init-data"  # noqa: SLF001
     # Now known, so it wins over anything in entry_data.
-    assert flow._try_get_username({CONF_USERNAME: "other"}) == "from-init-data"
+    assert (
+        flow._try_get_username({CONF_USERNAME: "other"})  # noqa: SLF001
+        == "from-init-data"
+    )

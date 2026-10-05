@@ -37,11 +37,13 @@ async def async_setup_entry(
 
     data: dict[str, AquareaDataUpdateCoordinator] = config_entry.runtime_data
 
-    entities: list[WaterHeater] = []
-    for coordinator in data.values():
-        if coordinator.device.has_tank:
-            entities.append(WaterHeater(coordinator))
-    async_add_entities(entities)
+    async_add_entities(
+        [
+            WaterHeater(coordinator)
+            for coordinator in data.values()
+            if coordinator.device.has_tank
+        ]
+    )
 
 
 class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):

@@ -479,11 +479,10 @@ class EnergyAccumulatedConsumptionSensor(
                                 + (c.cool_consumption or 0.0)
                                 + (c.tank_consumption or 0.0)
                             )
-                except (ValueError, TypeError) as e:
+                except (ValueError, TypeError):
                     _LOGGER.exception(
-                        "Failed to parse month consumption item date: %s, error: %s",
+                        "Failed to parse month consumption item date: %s",
                         getattr(c, "data_time", None),
-                        e,
                     )
 
             ctype = self.entity_description.consumption_type

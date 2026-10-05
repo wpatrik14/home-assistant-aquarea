@@ -152,10 +152,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                         self._device.long_id, DateType.MONTH, month_date_str
                     )
                     self._last_monthly_fetch_time = now
-                except Exception as ex:
+                except Exception as ex:  # noqa: BLE001 - deliberate: warn and keep the cached month data
                     _LOGGER.warning("Failed to fetch month consumption: %s", ex)
 
-            return self._device
+            return self._device  # noqa: TRY300 - the handlers below cover the whole fetch
         except aioaquarea.AuthenticationError as err:
             if err.error_code in (
                 aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
