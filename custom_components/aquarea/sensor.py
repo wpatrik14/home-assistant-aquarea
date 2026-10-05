@@ -29,6 +29,8 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass(frozen=True, kw_only=True)
 class AquareaEnergyConsumptionSensorDescription(SensorEntityDescription):
+    """Describes an energy consumption sensor and which consumption it reports."""
+
     consumption_type: aioaquarea.ConsumptionType
     exists_fn: Callable[[AquareaDataUpdateCoordinator], bool] = lambda _: True
 
@@ -171,6 +173,7 @@ async def async_setup_entry(
     config_entry: AquareaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Set up the Aquarea sensors from a config entry."""
     data: dict[str, AquareaDataUpdateCoordinator] = config_entry.runtime_data
     entities: list[SensorEntity] = []
     for coordinator in data.values():
@@ -226,10 +229,13 @@ async def async_setup_entry(
 
 @dataclass
 class AquareaSensorExtraStoredData(SensorExtraStoredData):
+    """Restorable sensor data plus the period the value belongs to."""
+
     period_being_processed: datetime | None = None
 
     @classmethod
     def from_dict(cls, restored: dict[str, Any]) -> Self | None:
+        """Rebuild the stored data from a restored dict."""
         sensor_data = super().from_dict(restored)
         if sensor_data is None:
             return None
@@ -244,6 +250,7 @@ class AquareaSensorExtraStoredData(SensorExtraStoredData):
         )
 
     def as_dict(self) -> dict[str, Any]:
+        """Return the stored data as a dict."""
         data = super().as_dict()
         if self.period_being_processed is not None:
             data["period_being_processed"] = dt_util.as_local(
@@ -254,10 +261,13 @@ class AquareaSensorExtraStoredData(SensorExtraStoredData):
 
 @dataclass
 class AquareaAccumulatedSensorExtraStoredData(AquareaSensorExtraStoredData):
+    """Restorable data of an accumulated sensor, with the running sum of its period."""
+
     accumulated_period_being_processed: float | None = None
 
     @classmethod
     def from_dict(cls, restored: dict[str, Any]) -> Self | None:
+        """Rebuild the stored data from a restored dict."""
         sensor_data = super().from_dict(restored)
         if sensor_data is None:
             return None
@@ -271,6 +281,7 @@ class AquareaAccumulatedSensorExtraStoredData(AquareaSensorExtraStoredData):
         )
 
     def as_dict(self) -> dict[str, Any]:
+        """Return the stored data as a dict."""
         data = super().as_dict()
         data["accumulated_period_being_processed"] = (
             self.accumulated_period_being_processed
@@ -293,7 +304,10 @@ class AquareaStateSensor(AquareaBaseEntity, SensorEntity):
 
 
 class OutdoorTemperatureSensor(AquareaStateSensor):
+    """Outdoor temperature reported by the heat pump."""
+
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_translation_key = "outdoor_temperature"
         self._attr_unique_id = f"{super().unique_id}_outdoor_temperature"
@@ -310,7 +324,10 @@ class OutdoorTemperatureSensor(AquareaStateSensor):
 
 
 class TankTemperatureSensor(AquareaStateSensor):
+    """Temperature of the hot water tank."""
+
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_translation_key = "tank_temperature"
         self._attr_unique_id = f"{super().unique_id}_tank_temperature"
@@ -327,7 +344,10 @@ class TankTemperatureSensor(AquareaStateSensor):
 
 
 class PumpDirectionSensor(AquareaStateSensor):
+    """Direction the pump is currently directed at, e.g. space or water."""
+
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_translation_key = "direction"
         self._attr_unique_id = f"{super().unique_id}_direction"
@@ -342,7 +362,10 @@ class PumpDirectionSensor(AquareaStateSensor):
 
 
 class PumpStatusSensor(AquareaStateSensor):
+    """Whether the pump is running: On when its duty is 1, otherwise Off."""
+
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_translation_key = "pump_status"
         self._attr_unique_id = f"{super().unique_id}_pump_status"
@@ -370,6 +393,7 @@ class ErrorCodeSensor(AquareaStateSensor):
     _attr_icon = "mdi:alert-circle-outline"
 
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_translation_key = "error_code"
         self._attr_unique_id = f"{super().unique_id}_error_code"
@@ -391,6 +415,8 @@ class ErrorCodeSensor(AquareaStateSensor):
 class EnergyAccumulatedConsumptionSensor(
     AquareaBaseEntity, SensorEntity, RestoreEntity
 ):
+    """Energy consumed so far in the current month, restored across restarts."""
+
     entity_description: AquareaEnergyConsumptionSensorDescription
 
     def __init__(
@@ -398,6 +424,7 @@ class EnergyAccumulatedConsumptionSensor(
         description: AquareaEnergyConsumptionSensorDescription,
         coordinator: AquareaDataUpdateCoordinator,
     ) -> None:
+        """Initialize the sensor from its description."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{super().unique_id}_{description.key}"
         self._period_being_processed: datetime | None = None
@@ -405,6 +432,7 @@ class EnergyAccumulatedConsumptionSensor(
         self.entity_description = description
 
     async def async_added_to_hass(self) -> None:
+        """Restore the last value and period before the first update."""
         sensor_data = await self.async_get_last_sensor_data()
         if sensor_data is not None:
             self._attr_native_value = sensor_data.native_value
@@ -420,6 +448,7 @@ class EnergyAccumulatedConsumptionSensor(
 
     @property
     def extra_restore_state_data(self) -> AquareaAccumulatedSensorExtraStoredData:
+        """Return the data to restore after a restart."""
         return AquareaAccumulatedSensorExtraStoredData(
             self.native_value,
             self.native_unit_of_measurement,
@@ -430,6 +459,7 @@ class EnergyAccumulatedConsumptionSensor(
     async def async_get_last_sensor_data(
         self,
     ) -> AquareaAccumulatedSensorExtraStoredData | None:
+        """Return the restored sensor data, or None if there is none."""
         if (restored_last_extra_data := await self.async_get_last_extra_data()) is None:
             return None
         return AquareaAccumulatedSensorExtraStoredData.from_dict(
@@ -438,6 +468,7 @@ class EnergyAccumulatedConsumptionSensor(
 
     @property
     def period_being_processed(self) -> datetime | None:
+        """Return the month the current value belongs to."""
         return self._period_being_processed
 
     @callback
@@ -505,6 +536,8 @@ class EnergyAccumulatedConsumptionSensor(
 
 
 class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
+    """Energy consumed so far today, restored across restarts."""
+
     entity_description: AquareaEnergyConsumptionSensorDescription
 
     def __init__(
@@ -512,12 +545,14 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
         description: AquareaEnergyConsumptionSensorDescription,
         coordinator: AquareaDataUpdateCoordinator,
     ) -> None:
+        """Initialize the sensor from its description."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{super().unique_id}_{description.key}"
         self._period_being_processed: datetime | None = None
         self.entity_description = description
 
     async def async_added_to_hass(self) -> None:
+        """Restore the last value and period before the first update."""
         sensor_data = await self.async_get_last_sensor_data()
         if sensor_data is not None:
             self._attr_native_value = sensor_data.native_value
@@ -528,6 +563,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
 
     @property
     def extra_restore_state_data(self) -> AquareaSensorExtraStoredData:
+        """Return the data to restore after a restart."""
         return AquareaSensorExtraStoredData(
             self.native_value,
             self.native_unit_of_measurement,
@@ -535,6 +571,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
         )
 
     async def async_get_last_sensor_data(self) -> AquareaSensorExtraStoredData | None:
+        """Return the restored sensor data, or None if there is none."""
         if (restored_last_extra_data := await self.async_get_last_extra_data()) is None:
             return None
         return AquareaSensorExtraStoredData.from_dict(
@@ -543,6 +580,7 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
 
     @property
     def period_being_processed(self) -> datetime | None:
+        """Return the day the current value belongs to."""
         return self._period_being_processed
 
     @callback
@@ -607,11 +645,14 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
 
 @dataclass
 class AquareaEdgeCounterExtraStoredData(SensorExtraStoredData):
+    """Restorable data of a daily edge counter: value, last reset and last detector state."""
+
     last_reset: datetime | None = None
     last_state: bool = False
 
     @classmethod
     def from_dict(cls, restored: dict[str, Any]) -> Self | None:
+        """Rebuild the stored data from a restored dict."""
         sensor_data = super().from_dict(restored)
         if sensor_data is None:
             return None
@@ -625,6 +666,7 @@ class AquareaEdgeCounterExtraStoredData(SensorExtraStoredData):
         )
 
     def as_dict(self) -> dict[str, Any]:
+        """Return the stored data as a dict."""
         data = super().as_dict()
         if self.last_reset is not None:
             data["last_reset"] = dt_util.as_local(self.last_reset).isoformat()
@@ -648,6 +690,7 @@ class DailyEdgeCounterSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
         icon: str,
         detector: Callable[[aioaquarea.Device], bool],
     ) -> None:
+        """Initialize the counter with the detector whose transitions it counts."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{super().unique_id}_{unique_suffix}"
         self._attr_translation_key = translation_key
@@ -658,6 +701,7 @@ class DailyEdgeCounterSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
         self._attr_native_value: int = 0
 
     async def async_added_to_hass(self) -> None:
+        """Restore the counter, its last reset and the last detector state."""
         restored = await self.async_get_last_sensor_data()
         if restored is not None:
             try:
@@ -680,6 +724,7 @@ class DailyEdgeCounterSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
 
     @property
     def extra_restore_state_data(self) -> AquareaEdgeCounterExtraStoredData:
+        """Return the data to restore after a restart."""
         return AquareaEdgeCounterExtraStoredData(
             native_value=self.native_value,
             native_unit_of_measurement=self.native_unit_of_measurement,
@@ -690,6 +735,7 @@ class DailyEdgeCounterSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
     async def async_get_last_sensor_data(
         self,
     ) -> AquareaEdgeCounterExtraStoredData | None:
+        """Return the restored counter data, or None if there is none."""
         if (restored_last_extra_data := await self.async_get_last_extra_data()) is None:
             return None
         return AquareaEdgeCounterExtraStoredData.from_dict(

@@ -188,8 +188,6 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "**" = ["PTH"]  # as in core
-# Docstrings: off for now, switched on in a later PR.
-"custom_components/**" = ["D1"]
 # The stdlib scripts print PASS/FAIL, exec code extracted via AST and reach
 # into private members by design.
 "tests/test_*.py" = ["T201", "S102", "SLF001", "D1", "N806"]
