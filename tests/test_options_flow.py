@@ -129,7 +129,9 @@ def _load():
     )
     handler = _class(tree, "AquareaOptionsFlowHandler")
     namespace = {
-        "config_entries": types.SimpleNamespace(OptionsFlow=_OptionsFlow),
+        "config_entries": types.SimpleNamespace(
+            OptionsFlow=_OptionsFlow, OptionsFlowWithReload=_OptionsFlow
+        ),
         "callback": lambda func: func,
         "vol": _vol,
         "CONF_CONSUMPTION_INTERVAL": CONF_CONSUMPTION_INTERVAL,

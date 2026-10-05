@@ -148,7 +148,6 @@ def _load_setup_entry(namespace_extra=None):
         "PLATFORMS": ["sensor"],
         "_LOGGER": _NullLogger(),
         "AquareaDataUpdateCoordinator": _Coordinator,
-        "_async_update_listener": None,
     }
     namespace.update(namespace_extra or {})
     # __init__.py has `from __future__ import annotations`; compile with the
@@ -210,9 +209,6 @@ class _Hass:
 class _Entry:
     entry_id = "test-entry"
     data = {"username": "u", "password": "p"}
-
-    def add_update_listener(self, listener):
-        return lambda: None
 
     def async_on_unload(self, func):
         pass

@@ -33,13 +33,6 @@ def _create_client(hass: HomeAssistant, entry: AquareaConfigEntry) -> aioaquarea
     return aioaquarea.Client(session, username, password)
 
 
-async def _async_update_listener(
-    hass: HomeAssistant, entry: AquareaConfigEntry
-) -> None:
-    """Reload the entry when its options (or data) change."""
-    await hass.config_entries.async_reload(entry.entry_id)
-
-
 async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
     """Set up Aquarea Smart Cloud from a config entry."""
 
@@ -64,11 +57,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
         entry.runtime_data = coordinators
         _LOGGER.debug("Forwarding entry setups for platforms")
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-        # Reload on options changes: the coordinator reads consumption_interval
-        # only once at construction, so without this a change in the options
-        # dialog would have no effect until Home Assistant restarts.
-        entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     except aioaquarea.AuthenticationError as err:
         if err.error_code in (
             aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,

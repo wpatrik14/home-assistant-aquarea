@@ -14,10 +14,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.12 is the oldest Python the 2024.12 minimum Home Assistant runs
+        # 3.13 is the oldest Python the 2025.8 minimum Home Assistant runs
         # on. The scripts compile extracted code with the module's own
-        # `from __future__ import annotations` flag, so they run on all three.
-        python-version: ["3.12", "3.13", "3.14"]
+        # `from __future__ import annotations` flag, so they run on both.
+        python-version: ["3.13", "3.14"]
     steps:
       - uses: "actions/checkout@v4"
       - uses: "actions/setup-python@v5"
