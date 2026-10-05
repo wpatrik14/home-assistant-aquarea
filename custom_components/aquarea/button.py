@@ -1,4 +1,5 @@
 """Buttons for Aquarea integration."""
+
 import logging
 
 import aioaquarea
@@ -24,7 +25,9 @@ async def async_setup_entry(
 
     entities: list[ButtonEntity] = []
 
-    entities.extend([AquareaDefrostButton(coordinator) for coordinator in data.values()])
+    entities.extend(
+        [AquareaDefrostButton(coordinator) for coordinator in data.values()]
+    )
 
     async_add_entities(entities)
 
@@ -46,5 +49,8 @@ class AquareaDefrostButton(AquareaBaseEntity, ButtonEntity):
             "Requesting defrost for device %s",
             self.coordinator.device.device_id,
         )
-        if self.coordinator.device.device_mode_status is not aioaquarea.DeviceModeStatus.DEFROST:
+        if (
+            self.coordinator.device.device_mode_status
+            is not aioaquarea.DeviceModeStatus.DEFROST
+        ):
             await self.coordinator.device.request_defrost()

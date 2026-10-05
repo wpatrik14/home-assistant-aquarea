@@ -1,4 +1,5 @@
 """Base entity for the Aquarea Smart Cloud integration."""
+
 from __future__ import annotations
 
 from collections.abc import Coroutine
@@ -22,7 +23,6 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
         """Initialize entity."""
         super().__init__(coordinator)
-
 
         self._attr_unique_id = self.coordinator.device_info.device_id
         self._attr_device_info = DeviceInfo(
@@ -52,4 +52,3 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         self.async_write_ha_state()
-

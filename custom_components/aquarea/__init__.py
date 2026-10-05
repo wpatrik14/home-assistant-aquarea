@@ -1,4 +1,5 @@
 """The Aquarea Smart Cloud integration."""
+
 from __future__ import annotations
 
 import logging
@@ -22,7 +23,7 @@ PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.WATER_HEATER,
     Platform.SWITCH,
-    Platform.SELECT
+    Platform.SELECT,
 ]
 
 
@@ -33,7 +34,9 @@ def _create_client(hass: HomeAssistant, entry: AquareaConfigEntry) -> aioaquarea
     return aioaquarea.Client(session, username, password)
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: AquareaConfigEntry) -> None:
+async def _async_update_listener(
+    hass: HomeAssistant, entry: AquareaConfigEntry
+) -> None:
     """Reload the entry when its options (or data) change."""
     await hass.config_entries.async_reload(entry.entry_id)
 

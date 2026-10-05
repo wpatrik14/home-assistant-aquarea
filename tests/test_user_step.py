@@ -37,6 +37,7 @@ aioaquarea, aiohttp, voluptuous or pytest installed:
 
     python3 tests/test_user_step.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -49,7 +50,10 @@ CONF_PASSWORD = "password"
 
 CONFIG_FLOW = os.path.join(
     os.path.dirname(__file__),
-    "..", "custom_components", "aquarea", "config_flow.py",
+    "..",
+    "custom_components",
+    "aquarea",
+    "config_flow.py",
 )
 
 
@@ -178,8 +182,16 @@ class _ConfigFlow:
     def async_create_entry(self, *, title, data):
         return {"type": "create_entry", "title": title, "data": data}
 
-    def async_show_form(self, *, step_id=None, data_schema=None, errors=None,
-                        description_placeholders=None, last_step=None, preview=None):
+    def async_show_form(
+        self,
+        *,
+        step_id=None,
+        data_schema=None,
+        errors=None,
+        description_placeholders=None,
+        last_step=None,
+        preview=None,
+    ):
         return {
             "type": "form",
             "step_id": step_id,
@@ -205,12 +217,14 @@ def _load_flow_class():
     with open(CONFIG_FLOW, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     cls = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "AquareaConfigFlow"
     )
     wanted = ("async_step_user", "_validate_input", "async_show_form")
     methods = [
-        n for n in cls.body
+        n
+        for n in cls.body
         if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name in wanted
     ]
     assert sorted(m.name for m in methods) == sorted(wanted), [m.name for m in methods]
@@ -238,8 +252,11 @@ def _load_flow_class():
     # config_flow.py has `from __future__ import annotations`; compile with the
     # same flag so its annotations are never evaluated, on any Python version.
     code = compile(
-        module, CONFIG_FLOW, "exec",
-        flags=__future__.annotations.compiler_flag, dont_inherit=True,
+        module,
+        CONFIG_FLOW,
+        "exec",
+        flags=__future__.annotations.compiler_flag,
+        dont_inherit=True,
     )
     exec(code, namespace)
     return namespace["ExtractedFlow"]
@@ -283,7 +300,8 @@ def main():
     result = asyncio.run(flow.async_step_user())
     check(
         "no input shows the empty user form",
-        result["type"] == "form" and result["step_id"] == "user"
+        result["type"] == "form"
+        and result["step_id"] == "user"
         and result["errors"] == {}
         and result["data_schema"] == (STEP_USER_DATA_SCHEMA, None),
         f"got={result!r}",
@@ -295,7 +313,8 @@ def main():
     result = _submit(flow, USER_INPUT)
     check(
         "valid login creates the entry with the submitted data",
-        result == {
+        result
+        == {
             "type": "create_entry",
             "title": USER_INPUT[CONF_USERNAME],
             "data": USER_INPUT,
@@ -310,7 +329,8 @@ def main():
     client = _FakeClient.created[-1] if _FakeClient.created else None
     check(
         "client gets the session and the submitted credentials",
-        client is not None and client.logged_in
+        client is not None
+        and client.logged_in
         and (client.session, client.username, client.password)
         == ("session-1", USER_INPUT[CONF_USERNAME], USER_INPUT[CONF_PASSWORD]),
         f"got={client and (client.session, client.username, client.password)!r}",
@@ -328,36 +348,48 @@ def main():
 
     # --- login failures map to the strings.json error keys ---------------
     cases = [
-        ("AuthenticationError -> invalid_auth (not api_error)",
-         AuthenticationError("1001-1401", "Invalid username or password"),
-         "invalid_auth"),
-        ("AuthenticationError, invalid credentials -> invalid_auth",
-         AuthenticationError("1000-1401", "Invalid credentials"),
-         "invalid_auth"),
-        ("AuthenticationError, other code -> invalid_auth",
-         AuthenticationError("API_ERROR", "Error in login: status 401"),
-         "invalid_auth"),
-        ("AuthenticationError, session closed -> cannot_connect",
-         AuthenticationError("1001-0001", "Session closed"),
-         "cannot_connect"),
-        ("AuthenticationError, token expired -> cannot_connect",
-         AuthenticationError("TOKEN_EXPIRED", "Token expired"),
-         "cannot_connect"),
-        ("aiohttp.ClientError -> cannot_connect",
-         _AiohttpConnectorError("dns failure"),
-         "cannot_connect"),
-        ("TimeoutError -> cannot_connect",
-         TimeoutError(),
-         "cannot_connect"),
-        ("ApiError -> api_error",
-         ApiError("5000-0001", "Service unavailable"),
-         "api_error"),
-        ("RequestFailedError -> cannot_connect",
-         RequestFailedError("timeout"),
-         "cannot_connect"),
-        ("unexpected exception -> unknown",
-         ValueError("boom"),
-         "unknown"),
+        (
+            "AuthenticationError -> invalid_auth (not api_error)",
+            AuthenticationError("1001-1401", "Invalid username or password"),
+            "invalid_auth",
+        ),
+        (
+            "AuthenticationError, invalid credentials -> invalid_auth",
+            AuthenticationError("1000-1401", "Invalid credentials"),
+            "invalid_auth",
+        ),
+        (
+            "AuthenticationError, other code -> invalid_auth",
+            AuthenticationError("API_ERROR", "Error in login: status 401"),
+            "invalid_auth",
+        ),
+        (
+            "AuthenticationError, session closed -> cannot_connect",
+            AuthenticationError("1001-0001", "Session closed"),
+            "cannot_connect",
+        ),
+        (
+            "AuthenticationError, token expired -> cannot_connect",
+            AuthenticationError("TOKEN_EXPIRED", "Token expired"),
+            "cannot_connect",
+        ),
+        (
+            "aiohttp.ClientError -> cannot_connect",
+            _AiohttpConnectorError("dns failure"),
+            "cannot_connect",
+        ),
+        ("TimeoutError -> cannot_connect", TimeoutError(), "cannot_connect"),
+        (
+            "ApiError -> api_error",
+            ApiError("5000-0001", "Service unavailable"),
+            "api_error",
+        ),
+        (
+            "RequestFailedError -> cannot_connect",
+            RequestFailedError("timeout"),
+            "cannot_connect",
+        ),
+        ("unexpected exception -> unknown", ValueError("boom"), "unknown"),
     ]
     for name, exc, expected in cases:
         flow = _new_flow()
@@ -376,7 +408,8 @@ def main():
     placeholders = result.get("description_placeholders") or {}
     check(
         "api_error shows the API message via api_error_msg",
-        placeholders.get("api_error_msg") == "API error: 5000-0001 - Service unavailable",
+        placeholders.get("api_error_msg")
+        == "API error: 5000-0001 - Service unavailable",
         f"got={placeholders!r}",
     )
     check(
@@ -392,7 +425,8 @@ def main():
     result = _submit(flow, USER_INPUT)
     check(
         "retry after a failure succeeds and reuses the session",
-        result["type"] == "create_entry" and flow.sessions_created == 1
+        result["type"] == "create_entry"
+        and flow.sessions_created == 1
         and [c.session for c in _FakeClient.created] == ["session-1", "session-1"],
         f"got={result['type']}, sessions={flow.sessions_created}",
     )

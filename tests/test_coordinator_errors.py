@@ -18,6 +18,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_coordinator_errors.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -64,7 +65,9 @@ aioaquarea = types.SimpleNamespace(
     AuthenticationError=AuthenticationError,
     AuthenticationErrorCodes=AuthenticationErrorCodes,
     errors=types.SimpleNamespace(
-        ApiError=ApiError, RequestFailedError=RequestFailedError, InvalidData=InvalidData
+        ApiError=ApiError,
+        RequestFailedError=RequestFailedError,
+        InvalidData=InvalidData,
     ),
 )
 
@@ -91,21 +94,25 @@ def _load():
     with open(COORDINATOR, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     cls = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "AquareaDataUpdateCoordinator"
     )
     node = next(
-        n for n in cls.body
+        n
+        for n in cls.body
         if isinstance(n, ast.AsyncFunctionDef) and n.name == "_async_update_data"
     )
     flow = ast.ClassDef(
-        name="Extracted", bases=[], keywords=[], body=[node],
-        decorator_list=[], type_params=[],
+        name="Extracted",
+        bases=[],
+        keywords=[],
+        body=[node],
+        decorator_list=[],
+        type_params=[],
     )
     module = ast.fix_missing_locations(ast.Module([flow], []))
-    anything = types.SimpleNamespace(
-        now=lambda: 0, get_time_zone=lambda *_: None
-    )
+    anything = types.SimpleNamespace(now=lambda: 0, get_time_zone=lambda *_: None)
     namespace = {
         "aioaquarea": aioaquarea,
         "UpdateFailed": UpdateFailed,
@@ -113,13 +120,17 @@ def _load():
         "dt_util": anything,
         "timedelta": lambda **kw: 0,
         "DateType": types.SimpleNamespace(MONTH="month"),
-        "_LOGGER": types.SimpleNamespace(debug=lambda *a, **k: None,
-                                         warning=lambda *a, **k: None),
+        "_LOGGER": types.SimpleNamespace(
+            debug=lambda *a, **k: None, warning=lambda *a, **k: None
+        ),
     }
     exec(
         compile(
-            module, COORDINATOR, "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            module,
+            COORDINATOR,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )
@@ -152,16 +163,26 @@ def main():
         print(f"[{'PASS' if ok else 'FAIL'}] {name:<58} {detail}")
 
     cases = [
-        ("invalid credentials -> reauth",
-         AuthenticationError(AuthenticationErrorCodes.INVALID_CREDENTIALS),
-         "ConfigEntryAuthFailed"),
-        ("invalid username/password -> reauth",
-         AuthenticationError(AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD),
-         "ConfigEntryAuthFailed"),
-        ("other auth error -> UpdateFailed",
-         AuthenticationError(AuthenticationErrorCodes.TOKEN_EXPIRED), "UpdateFailed"),
-        ("RequestFailedError -> UpdateFailed", RequestFailedError("timeout"),
-         "UpdateFailed"),
+        (
+            "invalid credentials -> reauth",
+            AuthenticationError(AuthenticationErrorCodes.INVALID_CREDENTIALS),
+            "ConfigEntryAuthFailed",
+        ),
+        (
+            "invalid username/password -> reauth",
+            AuthenticationError(AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD),
+            "ConfigEntryAuthFailed",
+        ),
+        (
+            "other auth error -> UpdateFailed",
+            AuthenticationError(AuthenticationErrorCodes.TOKEN_EXPIRED),
+            "UpdateFailed",
+        ),
+        (
+            "RequestFailedError -> UpdateFailed",
+            RequestFailedError("timeout"),
+            "UpdateFailed",
+        ),
         ("non-auth ApiError -> UpdateFailed", ApiError("5000", "down"), "UpdateFailed"),
         ("InvalidData -> UpdateFailed", InvalidData("bad payload"), "UpdateFailed"),
     ]

@@ -21,6 +21,7 @@ Assistant, aioaquarea, or pytest installed:
 
     python3 tests/test_zone_detector.py
 """
+
 import ast
 import os
 import sys
@@ -29,7 +30,10 @@ from enum import IntEnum
 
 SENSOR = os.path.join(
     os.path.dirname(__file__),
-    "..", "custom_components", "aquarea", "sensor.py",
+    "..",
+    "custom_components",
+    "aquarea",
+    "sensor.py",
 )
 
 
@@ -57,7 +61,8 @@ def _load_detector():
     with open(SENSOR) as fh:
         tree = ast.parse(fh.read())
     node = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.FunctionDef) and n.name == "_is_zone_active"
     )
     namespace = {"aioaquarea": aioaquarea}
@@ -82,13 +87,17 @@ def main():
     D = DeviceDirection
     cases = [
         # (name, device, expected)
-        ("idle, no zones on",            _Device(D.IDLE,  {0: _Zone(False)}),                 False),
-        ("DHW heating (WATER)",          _Device(D.WATER, {0: _Zone(False)}),                 False),
-        ("PUMP, all zones OFF (DHW)",    _Device(D.PUMP,  {0: _Zone(False), 1: _Zone(False)}), False),
-        ("PUMP, one zone ON",            _Device(D.PUMP,  {0: _Zone(False), 1: _Zone(True)}),  True),
-        ("PUMP, all zones ON",           _Device(D.PUMP,  {0: _Zone(True)}),                  True),
-        ("PUMP, no zones dict",          _Device(D.PUMP,  None),                              False),
-        ("direction is None",            _Device(None,    {0: _Zone(True)}),                  False),
+        ("idle, no zones on", _Device(D.IDLE, {0: _Zone(False)}), False),
+        ("DHW heating (WATER)", _Device(D.WATER, {0: _Zone(False)}), False),
+        (
+            "PUMP, all zones OFF (DHW)",
+            _Device(D.PUMP, {0: _Zone(False), 1: _Zone(False)}),
+            False,
+        ),
+        ("PUMP, one zone ON", _Device(D.PUMP, {0: _Zone(False), 1: _Zone(True)}), True),
+        ("PUMP, all zones ON", _Device(D.PUMP, {0: _Zone(True)}), True),
+        ("PUMP, no zones dict", _Device(D.PUMP, None), False),
+        ("direction is None", _Device(None, {0: _Zone(True)}), False),
     ]
 
     failures = 0
@@ -96,7 +105,9 @@ def main():
         got = is_zone_active(dev)
         ok = got == expected
         failures += not ok
-        print(f"[{'PASS' if ok else 'FAIL'}] {name:<28} expected={expected!s:<5} got={got}")
+        print(
+            f"[{'PASS' if ok else 'FAIL'}] {name:<28} expected={expected!s:<5} got={got}"
+        )
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

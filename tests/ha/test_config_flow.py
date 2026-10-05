@@ -6,6 +6,7 @@ Every step is started with `flow.async_init` and answered with
 test calls flow methods directly, for defensive branches the flow manager
 cannot reach.
 """
+
 from __future__ import annotations
 
 from collections.abc import Generator
@@ -70,9 +71,7 @@ LOGIN_ERRORS = [
         "cannot_connect",
         id="token_expired",
     ),
-    pytest.param(
-        aioaquarea.ApiError("E1", "maintenance"), "api_error", id="api_error"
-    ),
+    pytest.param(aioaquarea.ApiError("E1", "maintenance"), "api_error", id="api_error"),
     pytest.param(
         aioaquarea.RequestFailedError("bad gateway"),
         "cannot_connect",
@@ -131,9 +130,7 @@ async def test_user_step_error_then_recovery(
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": expected}
     if expected == "api_error":
-        assert result["description_placeholders"] == {
-            "api_error_msg": str(error)
-        }
+        assert result["description_placeholders"] == {"api_error_msg": str(error)}
 
     mock_aquarea_client.login.side_effect = None
     result = await hass.config_entries.flow.async_configure(
@@ -285,6 +282,7 @@ async def test_reauth_entry_without_unique_id(
         CONF_USERNAME: USERNAME,
         CONF_PASSWORD: NEW_PASSWORD,
     }
+
 
 async def test_reauth_without_username_aborts(
     hass: HomeAssistant, mock_aquarea_client: AsyncMock

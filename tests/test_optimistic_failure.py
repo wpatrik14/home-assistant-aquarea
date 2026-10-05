@@ -17,6 +17,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_optimistic_failure.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -78,28 +79,40 @@ def _load(filename):
     out = []
     for cls in (n for n in tree.body if isinstance(n, ast.ClassDef)):
         methods = [
-            n for n in cls.body
+            n
+            for n in cls.body
             if isinstance(n, ast.AsyncFunctionDef) and n.name in wanted
         ]
         if not methods:
             continue
         flow = ast.ClassDef(
-            name=cls.name, bases=[], keywords=[], body=methods,
-            decorator_list=[], type_params=[],
+            name=cls.name,
+            bases=[],
+            keywords=[],
+            body=methods,
+            decorator_list=[],
+            type_params=[],
         )
         module = ast.fix_missing_locations(ast.Module([flow], []))
         namespace = {"_LOGGER": _Logger()}
         for name in (
-            "aioaquarea", "QUIET_MODE_LOOKUP", "POWERFUL_TIME_LOOKUP",
-            "PowerfulTime", "SWITCH_DELAY", "SELECT_DELAY",
+            "aioaquarea",
+            "QUIET_MODE_LOOKUP",
+            "POWERFUL_TIME_LOOKUP",
+            "PowerfulTime",
+            "SWITCH_DELAY",
+            "SELECT_DELAY",
         ):
             namespace[name] = _Anything()
         # The modules have `from __future__ import annotations`; compile with
         # the same flag so annotations are never evaluated on any Python.
         exec(
             compile(
-                module, path, "exec",
-                flags=__future__.annotations.compiler_flag, dont_inherit=True,
+                module,
+                path,
+                "exec",
+                flags=__future__.annotations.compiler_flag,
+                dont_inherit=True,
             ),
             namespace,
         )
@@ -147,14 +160,19 @@ def main():
 
     for filename in COMMANDS:
         classes = _load(filename)
-        check(f"{filename}: found command entities", len(classes) >= 2,
-              f"got={[c[0] for c in classes]}")
+        check(
+            f"{filename}: found command entities",
+            len(classes) >= 2,
+            f"got={[c[0] for c in classes]}",
+        )
         for cls_name, cls, methods in classes:
             for method in methods:
                 obj = _make(cls)
                 raised = False
                 try:
-                    kwargs = {"option": "x"} if method.name == "async_select_option" else {}
+                    kwargs = (
+                        {"option": "x"} if method.name == "async_select_option" else {}
+                    )
                     asyncio.run(getattr(obj, method.name)(**kwargs))
                 except _Boom:
                     raised = True
@@ -162,7 +180,9 @@ def main():
                 cleared = all(getattr(obj, a) is None for a in OPTIMISTIC)
                 check(
                     f"{cls_name}.{method.name}: error propagates, optimistic cleared",
-                    raised and cleared and len(obj.writes) >= 2
+                    raised
+                    and cleared
+                    and len(obj.writes) >= 2
                     and all(v is None for v in obj.writes[-1].values())
                     and obj.hass.tasks == 0,
                     f"raised={raised} cleared={cleared} writes={obj.writes}",

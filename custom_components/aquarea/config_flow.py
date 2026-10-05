@@ -1,4 +1,5 @@
 """Config flow for Aquarea Smart Cloud integration."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -117,7 +118,9 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self.async_show_reauth_form(username, errors)
 
-    async def async_complete_reauth(self, username: str, password: str) -> ConfigFlowResult:
+    async def async_complete_reauth(
+        self, username: str, password: str
+    ) -> ConfigFlowResult:
         """Complete reauth."""
         entry = self._get_reauth_entry()
         changed = self.hass.config_entries.async_update_entry(
@@ -192,7 +195,11 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.error("API error during setup: %s", err)
             errors["base"] = "api_error"
             self._api_error_msg = str(err)
-        except (aioaquarea.errors.RequestFailedError, aiohttp.ClientError, TimeoutError):
+        except (
+            aioaquarea.errors.RequestFailedError,
+            aiohttp.ClientError,
+            TimeoutError,
+        ):
             # aioaquarea does not wrap network failures (DNS, connection
             # resets, timeouts); without this they would surface as "unknown".
             errors["base"] = "cannot_connect"

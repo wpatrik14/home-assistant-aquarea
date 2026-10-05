@@ -1,4 +1,5 @@
 """Aquarea Switch Sensors."""
+
 import asyncio
 import logging
 from typing import Any
@@ -143,6 +144,7 @@ class AquareaForceHeaterSwitch(AquareaBaseEntity, SwitchEntity):
             self.async_write_ha_state()
             raise
         self._start_delayed_refresh(self._schedule_refresh(SWITCH_DELAY))
+
 
 class AquareaHolidayTimerSwitch(AquareaBaseEntity, SwitchEntity):
     """Representation of an Aquarea switch."""

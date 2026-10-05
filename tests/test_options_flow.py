@@ -28,6 +28,7 @@ voluptuous or pytest installed:
 
     python3 tests/test_options_flow.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -60,7 +61,9 @@ def _load_constants(*names):
     return values
 
 
-_CONSTANTS = _load_constants("CONF_CONSUMPTION_INTERVAL", "DEFAULT_CONSUMPTION_INTERVAL")
+_CONSTANTS = _load_constants(
+    "CONF_CONSUMPTION_INTERVAL", "DEFAULT_CONSUMPTION_INTERVAL"
+)
 CONF_CONSUMPTION_INTERVAL = _CONSTANTS["CONF_CONSUMPTION_INTERVAL"]
 DEFAULT_CONSUMPTION_INTERVAL = _CONSTANTS["DEFAULT_CONSUMPTION_INTERVAL"]
 
@@ -82,7 +85,9 @@ class _OptionsFlow:
         if self.hass is None:
             raise ValueError("The config entry is not available during initialisation")
         if self.handler is None:
-            raise ValueError("The config entry id is not available during initialisation")
+            raise ValueError(
+                "The config entry id is not available during initialisation"
+            )
         return self.hass.config_entries.async_get_known_entry(self.handler)
 
     def async_create_entry(self, *, title, data):
@@ -117,7 +122,8 @@ _vol = types.SimpleNamespace(
 def _load():
     tree = _parse(CONFIG_FLOW)
     factory = next(
-        n for n in _class(tree, "AquareaConfigFlow").body
+        n
+        for n in _class(tree, "AquareaConfigFlow").body
         if isinstance(n, ast.FunctionDef) and n.name == "async_get_options_flow"
     )
     handler = _class(tree, "AquareaOptionsFlowHandler")
@@ -132,8 +138,11 @@ def _load():
     # same flag so its annotations are never evaluated, on any Python version.
     module = ast.Module([handler, factory], [])
     code = compile(
-        module, CONFIG_FLOW, "exec",
-        flags=__future__.annotations.compiler_flag, dont_inherit=True,
+        module,
+        CONFIG_FLOW,
+        "exec",
+        flags=__future__.annotations.compiler_flag,
+        dont_inherit=True,
     )
     exec(code, namespace)
     return namespace["async_get_options_flow"], namespace["AquareaOptionsFlowHandler"]

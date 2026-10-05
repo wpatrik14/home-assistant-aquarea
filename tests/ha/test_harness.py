@@ -1,4 +1,5 @@
 """Smoke tests for the pytest harness itself, not for the integration."""
+
 from unittest.mock import AsyncMock
 
 import aioaquarea

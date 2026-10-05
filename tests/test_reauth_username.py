@@ -27,6 +27,7 @@ aioaquarea, aiohttp or pytest installed:
 
     python3 tests/test_reauth_username.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -38,7 +39,10 @@ CONF_PASSWORD = "password"
 
 CONFIG_FLOW = os.path.join(
     os.path.dirname(__file__),
-    "..", "custom_components", "aquarea", "config_flow.py",
+    "..",
+    "custom_components",
+    "aquarea",
+    "config_flow.py",
 )
 
 
@@ -47,17 +51,19 @@ def _load_methods():
     with open(CONFIG_FLOW, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     cls = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "AquareaConfigFlow"
     )
     wanted = (
-        "_try_get_username", "async_step_reauth", "async_step_reauth_confirm",
+        "_try_get_username",
+        "async_step_reauth",
+        "async_step_reauth_confirm",
     )
     nodes = {
         n.name: n
         for n in cls.body
-        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and n.name in wanted
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name in wanted
     }
     namespace = {
         "CONF_USERNAME": CONF_USERNAME,
@@ -69,8 +75,11 @@ def _load_methods():
     module = ast.fix_missing_locations(module)
     exec(
         compile(
-            module, CONFIG_FLOW, "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            module,
+            CONFIG_FLOW,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )

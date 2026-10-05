@@ -18,6 +18,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_coordinator_relogin.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -121,16 +122,22 @@ def _load():
     with open(COORDINATOR, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     cls = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "AquareaDataUpdateCoordinator"
     )
     node = next(
-        n for n in cls.body
+        n
+        for n in cls.body
         if isinstance(n, ast.AsyncFunctionDef) and n.name == "_async_update_data"
     )
     flow = ast.ClassDef(
-        name="Extracted", bases=[], keywords=[], body=[node],
-        decorator_list=[], type_params=[],
+        name="Extracted",
+        bases=[],
+        keywords=[],
+        body=[node],
+        decorator_list=[],
+        type_params=[],
     )
     module = ast.fix_missing_locations(ast.Module([flow], []))
     namespace = {
@@ -147,8 +154,11 @@ def _load():
     }
     exec(
         compile(
-            module, COORDINATOR, "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            module,
+            COORDINATOR,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )
@@ -184,61 +194,99 @@ def main():
     # Logged in: no login call.
     client = _Client()
     obj, result = _poll(client)
-    check("logged-in client: no login",
-          client.log == ["get_device#1", "refresh#1", "consumption"],
-          f"log={client.log}")
-    check("returns the fetched device",
-          isinstance(result, _Device) and result.number == 1, f"result={result!r}")
-    check("caches the consumption", obj._month_consumption == ["entry"],
-          f"cache={obj._month_consumption}")
+    check(
+        "logged-in client: no login",
+        client.log == ["get_device#1", "refresh#1", "consumption"],
+        f"log={client.log}",
+    )
+    check(
+        "returns the fetched device",
+        isinstance(result, _Device) and result.number == 1,
+        f"result={result!r}",
+    )
+    check(
+        "caches the consumption",
+        obj._month_consumption == ["entry"],
+        f"cache={obj._month_consumption}",
+    )
 
     # Not logged in: log in before fetching.
     client = _Client(is_logged=False)
     _, result = _poll(client)
-    check("logged-out client: login first",
-          client.log[:2] == ["login", "get_device#1"], f"log={client.log}")
+    check(
+        "logged-out client: login first",
+        client.log[:2] == ["login", "get_device#1"],
+        f"log={client.log}",
+    )
 
     # Token expired during refresh: login, fresh device, retry once.
-    client = _Client(refresh_errors=[
-        AuthenticationError(AuthenticationErrorCodes.TOKEN_EXPIRED)
-    ])
+    client = _Client(
+        refresh_errors=[AuthenticationError(AuthenticationErrorCodes.TOKEN_EXPIRED)]
+    )
     _, result = _poll(client)
-    check("expired token: re-login and retry with a fresh device",
-          client.log == ["get_device#1", "refresh#1", "login", "get_device#2",
-                         "refresh#2", "consumption"],
-          f"log={client.log}")
-    check("expired token: poll succeeds with the fresh device",
-          isinstance(result, _Device) and result.number == 2, f"result={result!r}")
+    check(
+        "expired token: re-login and retry with a fresh device",
+        client.log
+        == [
+            "get_device#1",
+            "refresh#1",
+            "login",
+            "get_device#2",
+            "refresh#2",
+            "consumption",
+        ],
+        f"log={client.log}",
+    )
+    check(
+        "expired token: poll succeeds with the fresh device",
+        isinstance(result, _Device) and result.number == 2,
+        f"result={result!r}",
+    )
 
     # Retry fails with the same transient error: UpdateFailed, no third try.
-    client = _Client(refresh_errors=[
-        AuthenticationError(AuthenticationErrorCodes.TOKEN_EXPIRED),
-        AuthenticationError(AuthenticationErrorCodes.TOKEN_EXPIRED),
-    ])
+    client = _Client(
+        refresh_errors=[
+            AuthenticationError(AuthenticationErrorCodes.TOKEN_EXPIRED),
+            AuthenticationError(AuthenticationErrorCodes.TOKEN_EXPIRED),
+        ]
+    )
     _, result = _poll(client)
-    check("retry fails again (transient) -> UpdateFailed",
-          result == "UpdateFailed" and client.log.count("login") == 1,
-          f"result={result} log={client.log}")
+    check(
+        "retry fails again (transient) -> UpdateFailed",
+        result == "UpdateFailed" and client.log.count("login") == 1,
+        f"result={result} log={client.log}",
+    )
 
     # Retry fails because the credentials are now invalid: reauth.
-    client = _Client(refresh_errors=[
-        AuthenticationError(AuthenticationErrorCodes.TOKEN_EXPIRED),
-        AuthenticationError(AuthenticationErrorCodes.INVALID_CREDENTIALS),
-    ])
+    client = _Client(
+        refresh_errors=[
+            AuthenticationError(AuthenticationErrorCodes.TOKEN_EXPIRED),
+            AuthenticationError(AuthenticationErrorCodes.INVALID_CREDENTIALS),
+        ]
+    )
     _, result = _poll(client)
-    check("retry fails with invalid credentials -> reauth",
-          result == "ConfigEntryAuthFailed", f"result={result}")
+    check(
+        "retry fails with invalid credentials -> reauth",
+        result == "ConfigEntryAuthFailed",
+        f"result={result}",
+    )
 
     # Consumption failure is not fatal.
     LOGGER.warnings.clear()
     client = _Client(consumption_error=ClientError("consumption down"))
     obj, result = _poll(client)
-    check("consumption failure: poll still returns the device",
-          isinstance(result, _Device), f"result={result!r}")
-    check("consumption failure: logged, cache and timestamp untouched",
-          len(LOGGER.warnings) == 1 and obj._month_consumption is None
-          and obj._last_monthly_fetch_time is None,
-          f"warnings={LOGGER.warnings}")
+    check(
+        "consumption failure: poll still returns the device",
+        isinstance(result, _Device),
+        f"result={result!r}",
+    )
+    check(
+        "consumption failure: logged, cache and timestamp untouched",
+        len(LOGGER.warnings) == 1
+        and obj._month_consumption is None
+        and obj._last_monthly_fetch_time is None,
+        f"warnings={LOGGER.warnings}",
+    )
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

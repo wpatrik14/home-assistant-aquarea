@@ -28,6 +28,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_delayed_refresh.py
 """
+
 import __future__
 import ast
 import os
@@ -65,7 +66,10 @@ def _static_findings(filename):
                 create_task.append(node.lineno)
             if name == "_start_delayed_refresh":
                 for arg in node.args:
-                    if isinstance(arg, ast.Call) and _call_name(arg) == "_schedule_refresh":
+                    if (
+                        isinstance(arg, ast.Call)
+                        and _call_name(arg) == "_schedule_refresh"
+                    ):
                         wrapped += 1
         if isinstance(node, ast.AsyncFunctionDef) and node.name == "_schedule_refresh":
             for sub in ast.walk(node):
@@ -73,7 +77,8 @@ def _static_findings(filename):
                     if "RequestFailedError" in ast.unparse(sub.type):
                         dead_except.append(sub.lineno)
     total = sum(
-        1 for n in ast.walk(tree)
+        1
+        for n in ast.walk(tree)
         if isinstance(n, ast.Call) and _call_name(n) == "_schedule_refresh"
     )
     if wrapped != total:
@@ -84,26 +89,37 @@ def _static_findings(filename):
 def _load_helper():
     tree = _tree("entity.py")
     cls = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "AquareaBaseEntity"
     )
     node = next(
-        (n for n in cls.body
-         if isinstance(n, ast.FunctionDef) and n.name == "_start_delayed_refresh"),
+        (
+            n
+            for n in cls.body
+            if isinstance(n, ast.FunctionDef) and n.name == "_start_delayed_refresh"
+        ),
         None,
     )
     if node is None:
         return None
     flow = ast.ClassDef(
-        name="Extracted", bases=[], keywords=[], body=[node],
-        decorator_list=[], type_params=[],
+        name="Extracted",
+        bases=[],
+        keywords=[],
+        body=[node],
+        decorator_list=[],
+        type_params=[],
     )
     module = ast.fix_missing_locations(ast.Module([flow], []))
     namespace = {"DOMAIN": "aquarea"}
     exec(
         compile(
-            module, "entity.py", "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            module,
+            "entity.py",
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )
@@ -130,12 +146,21 @@ def main():
     for filename in PLATFORMS:
         create_task, unwrapped, dead_except, total = _static_findings(filename)
         check(f"{filename}: has delayed refreshes", total > 0, f"calls={total}")
-        check(f"{filename}: no hass.async_create_task", not create_task,
-              f"lines={create_task}")
-        check(f"{filename}: every refresh via _start_delayed_refresh",
-              not unwrapped, f"unwrapped={unwrapped}")
-        check(f"{filename}: no dead except RequestFailedError", not dead_except,
-              f"lines={dead_except}")
+        check(
+            f"{filename}: no hass.async_create_task",
+            not create_task,
+            f"lines={create_task}",
+        )
+        check(
+            f"{filename}: every refresh via _start_delayed_refresh",
+            not unwrapped,
+            f"unwrapped={unwrapped}",
+        )
+        check(
+            f"{filename}: no dead except RequestFailedError",
+            not dead_except,
+            f"lines={dead_except}",
+        )
 
     cls = _load_helper()
     check("AquareaBaseEntity defines _start_delayed_refresh", cls is not None)
@@ -158,8 +183,11 @@ def main():
             and entry.calls[0][1] is coro
             and isinstance(entry.calls[0][2], str)
         )
-        check("helper hands the coroutine to entry.async_create_background_task",
-              ok, f"calls={entry.calls}")
+        check(
+            "helper hands the coroutine to entry.async_create_background_task",
+            ok,
+            f"calls={entry.calls}",
+        )
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

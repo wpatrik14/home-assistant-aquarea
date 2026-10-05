@@ -1,4 +1,5 @@
 """Climate entity to control a zone for a Panasonic Aquarea Device."""
+
 from __future__ import annotations
 
 import asyncio
@@ -42,6 +43,7 @@ SPECIAL_STATUS_REVERSE_LOOKUP = {v: k for k, v in SPECIAL_STATUS_LOOKUP.items()}
 
 CLIMATE_DELAY_SHORT = 5.0
 CLIMATE_DELAY_LONG = 10.0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -104,7 +106,8 @@ def get_update_operation_mode_from_hvac_mode(mode: HVACMode) -> UpdateOperationM
 
 
 class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
-    """The ClimateEntity that controls one zone of the Aquarea heat pump. Some settings are shared between zones. The entity, the library and the API will keep a consistent state between zones. """
+    """The ClimateEntity that controls one zone of the Aquarea heat pump. Some settings are shared between zones. The entity, the library and the API will keep a consistent state between zones."""
+
     zone_id: int
 
     def __init__(self, coordinator: AquareaDataUpdateCoordinator, zone_id: int) -> None:
@@ -116,7 +119,9 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         self._attr_name = zone.name
         self._attr_unique_id = f"{super().unique_id}_climate_{zone_id}"
         self._attr_supported_features = (
-            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
+            ClimateEntityFeature.TARGET_TEMPERATURE
+            | ClimateEntityFeature.TURN_ON
+            | ClimateEntityFeature.TURN_OFF
         )
         if self.coordinator.device.support_special_status:
             self._attr_supported_features |= ClimateEntityFeature.PRESET_MODE
@@ -125,7 +130,12 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
                 self.coordinator.device.special_status
             )
         self._attr_precision = PRECISION_WHOLE
-        self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF, HVACMode.COOL, HVACMode.AUTO]
+        self._attr_hvac_modes = [
+            HVACMode.HEAT,
+            HVACMode.OFF,
+            HVACMode.COOL,
+            HVACMode.AUTO,
+        ]
         self._attr_hvac_mode = HVACMode.OFF
 
     async def async_added_to_hass(self) -> None:
@@ -165,19 +175,29 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         # This is a workaround to make the UI work.
         if zone.supports_set_temperature and device.mode != ExtendedOperationMode.OFF:
             self._attr_max_temp = (
-                zone.cool_max if device.mode in (ExtendedOperationMode.COOL, ExtendedOperationMode.AUTO_COOL) else zone.heat_max
+                zone.cool_max
+                if device.mode
+                in (ExtendedOperationMode.COOL, ExtendedOperationMode.AUTO_COOL)
+                else zone.heat_max
             )
             self._attr_min_temp = (
-                zone.cool_min if device.mode in (ExtendedOperationMode.COOL, ExtendedOperationMode.AUTO_COOL) else zone.heat_min
+                zone.cool_min
+                if device.mode
+                in (ExtendedOperationMode.COOL, ExtendedOperationMode.AUTO_COOL)
+                else zone.heat_min
             )
         else:
             self._attr_max_temp = zone.temperature
             self._attr_min_temp = zone.temperature
 
         self._attr_target_temperature = (
-            zone.cool_target_temperature if device.mode in (
-                ExtendedOperationMode.COOL, ExtendedOperationMode.AUTO_COOL,
-            ) else zone.heat_target_temperature
+            zone.cool_target_temperature
+            if device.mode
+            in (
+                ExtendedOperationMode.COOL,
+                ExtendedOperationMode.AUTO_COOL,
+            )
+            else zone.heat_target_temperature
         )
         self._attr_target_temperature_step = 1
         super()._handle_coordinator_update()
@@ -240,8 +260,10 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
                 zone.name,
                 str(temperature),
             )
-            _LOGGER.debug(f"Attempting to set temperature for zone {zone.zone_id} to {temperature}")
-            
+            _LOGGER.debug(
+                f"Attempting to set temperature for zone {zone.zone_id} to {temperature}"
+            )
+
             # Optimistic update
             old_temp = self._attr_target_temperature
             self._attr_target_temperature = temperature
@@ -252,7 +274,9 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
                     int(temperature), zone.zone_id
                 )
             except Exception:
-                _LOGGER.error("Failed to set temperature to %s, rolling back", temperature)
+                _LOGGER.error(
+                    "Failed to set temperature to %s, rolling back", temperature
+                )
                 self._attr_target_temperature = old_temp
                 self.async_write_ha_state()
                 raise

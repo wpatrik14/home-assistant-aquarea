@@ -17,6 +17,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_coordinator_init.py
 """
+
 import __future__
 import ast
 from datetime import timedelta
@@ -42,16 +43,20 @@ def _load():
     with open(COORDINATOR, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     cls = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "AquareaDataUpdateCoordinator"
     )
     node = next(
-        n for n in cls.body
-        if isinstance(n, ast.FunctionDef) and n.name == "__init__"
+        n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "__init__"
     )
     flow = ast.ClassDef(
-        name="Extracted", bases=[ast.Name("_Base", ast.Load())], keywords=[],
-        body=[node], decorator_list=[], type_params=[],
+        name="Extracted",
+        bases=[ast.Name("_Base", ast.Load())],
+        keywords=[],
+        body=[node],
+        decorator_list=[],
+        type_params=[],
     )
     module = ast.fix_missing_locations(ast.Module([flow], []))
     namespace = {
@@ -66,8 +71,11 @@ def _load():
     }
     exec(
         compile(
-            module, COORDINATOR, "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            module,
+            COORDINATOR,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )
@@ -90,17 +98,27 @@ def main():
     device_info = types.SimpleNamespace(device_id="dev1")
     obj = Extracted(hass, entry, object(), device_info)
 
-    check("config_entry passed to DataUpdateCoordinator",
-          obj.base_kwargs.get("config_entry", "missing") is entry,
-          f"kwargs={sorted(obj.base_kwargs)}")
-    check("hass and logger passed positionally",
-          obj.base_args == (hass, LOGGER), f"args={obj.base_args}")
-    check("name and update interval unchanged",
-          obj.base_kwargs.get("name") == "aquarea-user@example.com-dev1"
-          and obj.base_kwargs.get("update_interval") == timedelta(seconds=60),
-          f"kwargs={obj.base_kwargs}")
-    check("consumption interval read from options",
-          obj.consumption_interval == 30, f"got={obj.consumption_interval}")
+    check(
+        "config_entry passed to DataUpdateCoordinator",
+        obj.base_kwargs.get("config_entry", "missing") is entry,
+        f"kwargs={sorted(obj.base_kwargs)}",
+    )
+    check(
+        "hass and logger passed positionally",
+        obj.base_args == (hass, LOGGER),
+        f"args={obj.base_args}",
+    )
+    check(
+        "name and update interval unchanged",
+        obj.base_kwargs.get("name") == "aquarea-user@example.com-dev1"
+        and obj.base_kwargs.get("update_interval") == timedelta(seconds=60),
+        f"kwargs={obj.base_kwargs}",
+    )
+    check(
+        "consumption interval read from options",
+        obj.consumption_interval == 30,
+        f"got={obj.consumption_interval}",
+    )
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

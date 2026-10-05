@@ -17,6 +17,7 @@ Intentionally dependency-free (stdlib only):
 
     python3 tests/test_climate_initial_state.py
 """
+
 import __future__
 import ast
 import asyncio
@@ -39,26 +40,37 @@ def _load():
     with open(CLIMATE, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
     cls = next(
-        n for n in tree.body
+        n
+        for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "HeatPumpClimate"
     )
     node = next(
-        (n for n in cls.body
-         if isinstance(n, ast.AsyncFunctionDef) and n.name == "async_added_to_hass"),
+        (
+            n
+            for n in cls.body
+            if isinstance(n, ast.AsyncFunctionDef) and n.name == "async_added_to_hass"
+        ),
         None,
     )
     if node is None:
         return None
     flow = ast.ClassDef(
-        name="Extracted", bases=[ast.Name("_CoordinatorEntity", ast.Load())],
-        keywords=[], body=[node], decorator_list=[], type_params=[],
+        name="Extracted",
+        bases=[ast.Name("_CoordinatorEntity", ast.Load())],
+        keywords=[],
+        body=[node],
+        decorator_list=[],
+        type_params=[],
     )
     module = ast.fix_missing_locations(ast.Module([flow], []))
     namespace = {"_CoordinatorEntity": _CoordinatorEntity}
     exec(
         compile(
-            module, CLIMATE, "exec",
-            flags=__future__.annotations.compiler_flag, dont_inherit=True,
+            module,
+            CLIMATE,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
         ),
         namespace,
     )
