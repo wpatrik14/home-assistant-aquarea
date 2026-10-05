@@ -20,6 +20,7 @@ Intentionally dependency-free (stdlib only):
 """
 
 import __future__
+
 import ast
 import asyncio
 import os
@@ -149,7 +150,7 @@ def _poll(exc):
         asyncio.run(obj._async_update_data())
     except (UpdateFailed, ConfigEntryAuthFailed) as err:
         return type(err).__name__
-    except Exception as err:  # what Home Assistant would log with a traceback
+    except Exception as err:  # noqa: BLE001 - what Home Assistant would log with a traceback
         return f"ESCAPED {type(err).__name__}"
     return "no error"
 

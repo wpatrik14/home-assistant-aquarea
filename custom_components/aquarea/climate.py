@@ -6,7 +6,6 @@ import asyncio
 import logging
 from typing import Any
 
-import aioaquarea
 from aioaquarea import (
     DeviceAction,
     ExtendedOperationMode,
@@ -28,8 +27,8 @@ from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTempera
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import AquareaBaseEntity
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
+from .entity import AquareaBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -261,7 +260,9 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
                 str(temperature),
             )
             _LOGGER.debug(
-                f"Attempting to set temperature for zone {zone.zone_id} to {temperature}"
+                "Attempting to set temperature for zone %s to %s",
+                zone.zone_id,
+                temperature,
             )
 
             # Optimistic update

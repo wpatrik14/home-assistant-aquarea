@@ -7,7 +7,6 @@ import logging
 from typing import Any, Self
 
 import aioaquarea
-
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -22,8 +21,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
-from .entity import AquareaBaseEntity
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
+from .entity import AquareaBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -480,11 +479,10 @@ class EnergyAccumulatedConsumptionSensor(
                                 + (c.cool_consumption or 0.0)
                                 + (c.tank_consumption or 0.0)
                             )
-                except (ValueError, TypeError) as e:
+                except (ValueError, TypeError):
                     _LOGGER.exception(
-                        "Failed to parse month consumption item date: %s, error: %s",
+                        "Failed to parse month consumption item date: %s",
                         getattr(c, "data_time", None),
-                        e,
                     )
 
             ctype = self.entity_description.consumption_type

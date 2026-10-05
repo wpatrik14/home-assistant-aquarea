@@ -12,15 +12,14 @@ from __future__ import annotations
 from collections.abc import Generator
 from unittest.mock import AsyncMock, patch
 
-import aiohttp
 import aioaquarea
-import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-
+import aiohttp
 from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_USER
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aquarea.config_flow import AquareaConfigFlow
 from custom_components.aquarea.const import CONF_CONSUMPTION_INTERVAL, DOMAIN
@@ -373,6 +372,9 @@ async def test_defensive_branches_unreachable_through_flow_manager(
     assert (await flow.async_step_reauth_confirm())["reason"] == "reauth_no_username"
 
     flow.init_data = {CONF_USERNAME: "from-init-data"}
-    assert flow._try_get_username({}) == "from-init-data"
+    assert flow._try_get_username({}) == "from-init-data"  # noqa: SLF001
     # Now known, so it wins over anything in entry_data.
-    assert flow._try_get_username({CONF_USERNAME: "other"}) == "from-init-data"
+    assert (
+        flow._try_get_username({CONF_USERNAME: "other"})  # noqa: SLF001
+        == "from-init-data"
+    )

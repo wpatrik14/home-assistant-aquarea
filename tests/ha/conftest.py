@@ -15,11 +15,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import aioaquarea
 from aioaquarea.data import DeviceZone
-import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-
 from homeassistant.components.recorder import Recorder
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aquarea.const import DOMAIN
 

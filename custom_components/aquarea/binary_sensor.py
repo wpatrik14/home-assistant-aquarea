@@ -3,7 +3,6 @@
 import logging
 
 import aioaquarea
-
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -12,8 +11,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import AquareaBaseEntity
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
+from .entity import AquareaBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 

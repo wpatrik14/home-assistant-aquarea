@@ -20,9 +20,10 @@ Intentionally dependency-free (stdlib only):
 """
 
 import __future__
+
 import ast
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 import os
 import sys
 import types
@@ -145,7 +146,7 @@ def _load():
         "UpdateFailed": UpdateFailed,
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "dt_util": types.SimpleNamespace(
-            now=lambda: datetime(2026, 10, 14, 12, 0, tzinfo=timezone.utc),
+            now=lambda: datetime(2026, 10, 14, 12, 0, tzinfo=UTC),
             get_time_zone=lambda *_: None,
         ),
         "timedelta": timedelta,

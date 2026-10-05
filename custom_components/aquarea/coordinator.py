@@ -7,7 +7,6 @@ import logging
 
 import aioaquarea
 from aioaquarea.statistics import DateType
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_USERNAME
 from homeassistant.core import HomeAssistant
@@ -16,10 +15,10 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    DOMAIN,
     CONF_CONSUMPTION_INTERVAL,
-    DEFAULT_SCAN_INTERVAL,
     DEFAULT_CONSUMPTION_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -153,18 +152,17 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                         self._device.long_id, DateType.MONTH, month_date_str
                     )
                     self._last_monthly_fetch_time = now
-                except Exception as ex:
+                except Exception as ex:  # noqa: BLE001 - deliberate: warn and keep the cached month data
                     _LOGGER.warning("Failed to fetch month consumption: %s", ex)
 
-            return self._device
+            return self._device  # noqa: TRY300 - the handlers below cover the whole fetch
         except aioaquarea.AuthenticationError as err:
             if err.error_code in (
                 aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
                 aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
             ):
                 raise ConfigEntryAuthFailed from err
-            else:
-                raise UpdateFailed(f"Authentication error: {err}") from err
+            raise UpdateFailed(f"Authentication error: {err}") from err
         except aioaquarea.ClientError as err:
             # Covers RequestFailedError, non-auth ApiError and InvalidData,
             # which share only this base class. Anything else would reach

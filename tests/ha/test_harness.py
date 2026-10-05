@@ -3,7 +3,6 @@
 from unittest.mock import AsyncMock
 
 import aioaquarea
-
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 

@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import logging
 
-import aiohttp
 import aioaquarea
-
+import aiohttp
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady

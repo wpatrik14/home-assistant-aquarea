@@ -30,6 +30,7 @@ Intentionally dependency-free (stdlib only):
 """
 
 import __future__
+
 import ast
 import os
 import sys
@@ -132,7 +133,6 @@ class _Entry:
 
     def async_create_background_task(self, hass, target, name, eager_start=True):
         self.calls.append((hass, target, name))
-        return None
 
 
 def main():

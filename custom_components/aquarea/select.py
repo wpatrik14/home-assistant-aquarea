@@ -4,13 +4,12 @@ import asyncio
 import logging
 
 from aioaquarea import PowerfulTime, QuietMode
-
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import AquareaBaseEntity
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
+from .entity import AquareaBaseEntity
 
 SELECT_DELAY = 10.0
 

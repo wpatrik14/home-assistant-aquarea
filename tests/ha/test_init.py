@@ -11,19 +11,18 @@ from __future__ import annotations
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
 
-import aiohttp
 import aioaquarea
+import aiohttp
 from freezegun.api import FrozenDateTimeFactory
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
+from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
-
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from custom_components.aquarea.const import CONF_CONSUMPTION_INTERVAL, DOMAIN
 
