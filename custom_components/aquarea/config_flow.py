@@ -41,6 +41,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     _api_error_msg: str | None = None
 
     def __init__(self, *args, **kwargs):
+        """Initialize the flow state."""
         super().__init__(*args, **kwargs)
         self.info = {}
         self._api: aioaquarea.Client = None

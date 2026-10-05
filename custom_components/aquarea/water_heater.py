@@ -52,6 +52,7 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
     _attr_has_entity_name = True
 
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        """Initialize the water heater."""
         super().__init__(coordinator)
 
         self._attr_name = "Tank"
@@ -117,9 +118,11 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
         await self.coordinator.async_request_refresh(force_fetch=True)
 
     async def async_turn_on(self, **kwargs) -> None:
+        """Turn the water heater on."""
         await self.async_set_operation_mode(HEATING)
 
     async def async_turn_off(self, **kwargs) -> None:
+        """Turn the water heater off."""
         await self.async_set_operation_mode(STATE_OFF)
 
     async def async_set_temperature(self, **kwargs):
@@ -139,6 +142,7 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
             self._start_delayed_refresh(self._schedule_refresh(WATER_HEATER_DELAY))
 
     async def async_set_operation_mode(self, operation_mode):
+        """Set the operation mode: heating or off."""
         _LOGGER.debug(
             "Turning %s water tank %s",
             self.coordinator.device.device_id,
