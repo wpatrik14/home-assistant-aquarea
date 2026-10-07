@@ -281,8 +281,11 @@ async def test_set_temperature_with_hvac_mode(
     mock_config_entry: MockConfigEntry,
     mock_device: MagicMock,
 ) -> None:
-    """A target with a mode sets both."""
+    """A target with a mode sets the mode first, then the temperature."""
     await _setup(hass, mock_config_entry)
+    calls: list[str] = []
+    mock_device.set_mode.side_effect = lambda *_: calls.append("mode")
+    mock_device.set_temperature.side_effect = lambda *_: calls.append("temperature")
 
     await _call(
         hass,
@@ -294,6 +297,11 @@ async def test_set_temperature_with_hvac_mode(
         aioaquarea.UpdateOperationMode.COOL, 1
     )
     mock_device.set_temperature.assert_awaited_once_with(25, 1)
+    # In cool mode the target belongs to the cool side, so the mode goes first.
+    assert calls == ["mode", "temperature"]
+    state = hass.states.get(ENTITY_ID)
+    assert state.state == HVACMode.COOL
+    assert state.attributes[ATTR_TEMPERATURE] == 25
 
 
 async def test_set_temperature_not_supported(
@@ -403,22 +411,33 @@ async def test_turn_on_off(
 
 
 @pytest.mark.parametrize(
-    ("service", "method"),
-    [(SERVICE_TURN_ON, "turn_on"), (SERVICE_TURN_OFF, "turn_off")],
+    ("service", "method", "start_mode"),
+    [
+        # Each case starts from the opposite of the optimistic value, so a
+        # missing rollback is visible: turn_on shows HEAT, turn_off shows OFF.
+        (SERVICE_TURN_ON, "turn_on", HVACMode.OFF),
+        (SERVICE_TURN_OFF, "turn_off", HVACMode.HEAT),
+    ],
 )
 async def test_turn_on_off_failure_rolls_back(
     hass: HomeAssistant,
     mock_aquarea_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     mock_device: MagicMock,
+    freezer: FrozenDateTimeFactory,
     service: str,
     method: str,
+    start_mode: HVACMode,
 ) -> None:
     """When the cloud rejects turning on or off, the old mode comes back."""
     await _setup(hass, mock_config_entry)
+    if start_mode is HVACMode.OFF:
+        mock_device.zones[1].operation_status = aioaquarea.OperationStatus.OFF
+        await _poll(hass, freezer)
+    assert hass.states.get(ENTITY_ID).state == start_mode
     getattr(mock_device, method).side_effect = aioaquarea.ApiError("500", "x")
 
     with pytest.raises(aioaquarea.ApiError):
         await _call(hass, service)
 
-    assert hass.states.get(ENTITY_ID).state == HVACMode.HEAT
+    assert hass.states.get(ENTITY_ID).state == start_mode
