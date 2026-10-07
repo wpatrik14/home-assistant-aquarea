@@ -314,6 +314,8 @@ async def test_water_pressure_sensor_hidden_when_not_reported(
     """No sensor when the library has no pressure (None, or an older library)."""
     if reported is None:
         mock_device.water_pressure = None
+    else:
+        del mock_device.water_pressure  # an aioaquarea without the attribute
     await _setup(hass, mock_config_entry)
 
     assert hass.states.get("sensor.heat_pump_water_pressure") is None
