@@ -33,8 +33,8 @@ The integration follows the standard Home Assistant integration pattern, utilizi
 - The coordinator polls the API at a configurable interval (default: 60 seconds).
 - **Device State**: Fetched via `client.get_device()`. This includes temperatures, operation modes, and zone statuses.
 - **Consumption Data**: Fetched at a separate interval (default: 60 minutes) to avoid excessive API calls. It retrieves:
-    - **Daily (Hourly)**: Consumption for the previous hour.
-    - **Monthly**: Month-to-date consumption.
+    - **Monthly**: one record per day of the month, read by the energy sensors.
+    - **Hourly**: one record per hour, labelled in UTC: aioaquarea sends `osTimezone: +00:00`, so the cloud's days and hour labels are UTC (`statistics.CLOUD_TIME_ZONE`; a test pins the offset aioaquarea sends). Today (UTC) is fetched on its own cadence (the consumption interval), independent of the monthly fetch. Yesterday is fetched again, at most hourly, until it has been received at least 3 hours into today, since the cloud publishes its last hours after the day ends. The last three days are kept, the oldest as context only. Used to correct the energy sensors' hourly statistics, see below.
 - When the coordinator receives new data, it calls `self.async_set_updated_data(device)`, which triggers `_handle_coordinator_update` in all associated entities.
 
 ### Commands (Write)
@@ -61,6 +61,7 @@ The integration follows the standard Home Assistant integration pattern, utilizi
 - **Energy Sensors**:
     - **Accumulated Consumption**: Uses `TOTAL_INCREASING` state class. It restores state from Home Assistant's database to maintain a continuous total even if the cloud data resets or the integration restarts.
     - **Hourly Consumption**: Provides the energy used in the last processed hour.
+    - **Hourly statistics** (`statistics.py`): the cloud publishes an hour's consumption only after the hour has closed, so the recorder files each increase one or two hours late. After every hourly consumption fetch, each energy sensor rewrites its own past hourly statistics rows (same statistic id, so the Energy dashboard needs no change). It matches the energy recorded in each hour, oldest first, to the cloud hours up to and including it (the sensors' daily figures include the hour in progress), at most 3 hours back (longer for consumption intervals over an hour), working from the recorder's 5-minute statistics, which it never writes. The most recent hourly row is never rewritten and comes out unchanged, so the recorder carries on from the same total. Energy lost at a sensor reset is not matched, and energy the cloud does not label stays where it was recorded.
 - **Direction Sensor**: Indicates whether the heat pump is currently servicing the zones (PUMP) or the water tank (WATER).
 
 ## 4. Error Handling and Authentication
