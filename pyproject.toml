@@ -29,8 +29,9 @@ addopts = "--cov=custom_components/aquarea --cov-report=term-missing"
 # config-flow-test-coverage rule), via `coverage report --include=...`.
 # 68.76 after #104 deleted 12 covered lines (percentage fell, no test lost);
 # 82.76 with the climate and switch tests (82.7676%, rounded down so
-# pytest-cov's unrounded summary line agrees with the gate).
-fail_under = 83.07
+# pytest-cov's unrounded summary line agrees with the gate);
+# 85.84 with the hourly statistics tests (85.8451%, rounded down).
+fail_under = 85.84
 precision = 2
 show_missing = true
 

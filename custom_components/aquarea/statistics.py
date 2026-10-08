@@ -254,7 +254,13 @@ def corrected_sums(
 def _read(
     hass: HomeAssistant, statistic_id: str, first_hour: datetime
 ) -> tuple[StatisticMetaData | None, list[StatisticsRow], list[StatisticsRow]]:
-    """Read the metadata, and the 5-minute and hourly rows up to the latest hour."""
+    """Read the metadata, and the 5-minute and hourly rows up to the latest hour.
+
+    The rows are read in the statistic's own unit. Left to itself,
+    statistics_during_period converts them to the entity's current display
+    unit, which can differ (e.g. Wh for a statistic kept in kWh), and the
+    sums written back would then be off by that factor.
+    """
     last = get_last_statistics(hass, 1, statistic_id, False, {"sum"})
     if not last.get(statistic_id):
         return None, [], []
@@ -264,6 +270,10 @@ def _read(
     metadata = get_metadata(hass, statistic_ids={statistic_id}).get(statistic_id)
     if metadata is None:
         return None, [], []
+    unit = metadata[1].get("unit_of_measurement")
+    if unit is None or unit not in EnergyConverter.VALID_UNITS:
+        return None, [], []
+    units = {EnergyConverter.UNIT_CLASS: unit}
     five_minute, hourly = (
         statistics_during_period(
             hass,
@@ -271,7 +281,7 @@ def _read(
             end,
             {statistic_id},
             period,
-            None,
+            units,
             {"last_reset", "state", "sum"},
         ).get(statistic_id, [])
         for period in ("5minute", "hour")
@@ -310,19 +320,26 @@ async def async_redistribute_hourly_statistics(
         or len(rows) < 2
     ):
         return 0
-    unit = metadata.get("unit_of_measurement")
-    if unit not in EnergyConverter.VALID_UNITS:
-        return 0
+    unit = metadata["unit_of_measurement"]
     cloud = {
         start: EnergyConverter.convert(value, UnitOfEnergy.KILO_WATT_HOUR, unit)
         for start, value in hourly.items()
     }
-    sums = corrected_sums(_recorded_hours(five_minute), cloud, max_lag)
+    recorded = _recorded_hours(five_minute)
+    if not recorded:
+        return 0
+    sums = corrected_sums(recorded, cloud, max_lag)
+    # The first recorded hour is the base and keeps its raw sum. When the
+    # 5-minute rows start after write_from (purged with a short keep_days),
+    # writing it would revert a row an earlier run corrected.
+    base = recorded[0].start
 
     changed: list[StatisticData] = []
     for row in rows[:-1]:
         start = dt_util.utc_from_timestamp(row["start"])
-        if start < write_from or (new_sum := sums.get(start)) is None:
+        if start < write_from or start <= base:
+            continue
+        if (new_sum := sums.get(start)) is None:
             continue
         old_sum = row.get("sum")
         if old_sum is not None and abs(new_sum - old_sum) <= _EPSILON:

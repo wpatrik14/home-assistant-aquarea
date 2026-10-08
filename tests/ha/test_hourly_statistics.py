@@ -12,14 +12,21 @@ total, and leaves the hours compiled afterwards alone.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from functools import partial
 import itertools
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import aioaquarea
 from aioaquarea.core import AquareaClient
 from aioaquarea.statistics import DateType
 from freezegun.api import FrozenDateTimeFactory
-from homeassistant.components.recorder.statistics import statistics_during_period
+from homeassistant.components.recorder.models import StatisticData
+from homeassistant.components.recorder.statistics import (
+    async_import_statistics,
+    get_metadata,
+    statistics_during_period,
+)
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
@@ -418,10 +425,16 @@ async def test_aioaquarea_asks_for_consumption_in_utc() -> None:
     """
     response = MagicMock()
     response.json = AsyncMock(return_value={})
-    with patch(
-        "aioaquarea.api_client.AquareaAPIClient.request",
-        AsyncMock(return_value=response),
-    ) as request:
+    with (
+        patch(
+            "aioaquarea.api_client.AquareaAPIClient.request",
+            AsyncMock(return_value=response),
+        ) as request,
+        # Logged in already, so the call doesn't log in over the network.
+        patch.object(
+            AquareaClient, "is_logged", new_callable=PropertyMock, return_value=True
+        ),
+    ):
         client = AquareaClient(MagicMock(), "user", "not-a-real-password")
         await client.get_device_consumption("long-id", DateType.DAY, "20261005")
 
@@ -476,8 +489,13 @@ class _Sensor:
         await async_wait_recording_done(self.hass)
         return written
 
-    async def hourly_changes(self, period: str = "hour") -> dict[tuple, float]:
-        """Return the energy of each hour (or 5 minutes) as the dashboard sees it."""
+    async def hourly_changes(
+        self, period: str = "hour", unit: str | None = None
+    ) -> dict[tuple, float]:
+        """Return the energy of each hour (or 5 minutes) as the dashboard sees it.
+
+        In the entity's display unit, or in `unit` when given.
+        """
         rows = await self.hass.async_add_executor_job(
             statistics_during_period,
             self.hass,
@@ -485,7 +503,7 @@ class _Sensor:
             None,
             {STATISTIC_ID},
             period,
-            None,
+            {"energy": unit} if unit else None,
             {"change"},
         )
         changes: dict[tuple, float] = {}
@@ -615,6 +633,69 @@ async def test_a_sensor_shown_in_wh(
 
     changes = await recorder.hourly_changes()
     assert (changes[(5, 4)], changes[(5, 5)]) == (1190.0, 0.0)
+
+
+async def test_a_statistic_in_kwh_shown_in_wh(sensor_recorder: _Sensor) -> None:
+    """The display unit can differ from the statistic's unit; sums stay in the latter.
+
+    Review of wpatrik14/home-assistant-aquarea#111: the statistic is kept in
+    kWh, the entity is switched to display Wh. Rows read without an explicit
+    unit come back in Wh, and the sums written back were 1000 times too big
+    (a 5001.19 kWh row).
+    """
+    # 0.5 kWh recorded already, so the sums aren't 0 when the unit matters.
+    await sensor_recorder.run_until(
+        _local(5, 6),
+        {_local(5, 2): 5.0, _local(5, 2, 30): 5.5, _local(5, 5, 6): 6.69},
+    )
+    sensor_recorder.attributes["unit_of_measurement"] = UnitOfEnergy.WATT_HOUR
+    await sensor_recorder.run_until(_local(5, 7), {_local(5, 6, 30): 6690.0})
+
+    assert await sensor_recorder.correct({_local(5, 4): 1.19}, _local(5, 0)) == 1
+
+    changes = await sensor_recorder.hourly_changes(unit=UnitOfEnergy.KILO_WATT_HOUR)
+    assert changes == {
+        (5, 2): 0.5,
+        (5, 3): 0.0,
+        (5, 4): 1.19,
+        (5, 5): 0.0,
+        (5, 6): 0.0,
+    }
+
+
+async def test_the_base_hour_is_never_rewritten(
+    hass: HomeAssistant, sensor_recorder: _Sensor
+) -> None:
+    """A corrected row at the start of the 5-minute data is not reverted.
+
+    Review of wpatrik14/home-assistant-aquarea#111: with a short purge_keep_days
+    the 5-minute rows can start after write_from. The first hour with 5-minute
+    data is the base and keeps its raw sum, so writing it would revert a row
+    an earlier run corrected, leaving a negative hour after it.
+    """
+    await sensor_recorder.run_until(
+        _local(5, 6), {_local(5, 2): 0.0, _local(5, 3, 5): 0.5, _local(5, 5, 6): 1.69}
+    )
+    # An earlier run moved 03:05's 0.5 kWh into 02:00; its 5-minute rows have
+    # been purged since, as far as this run can tell.
+    metadata = await hass.async_add_executor_job(
+        partial(get_metadata, hass, statistic_ids={STATISTIC_ID})
+    )
+    async_import_statistics(
+        hass,
+        metadata[STATISTIC_ID][1],
+        [StatisticData(start=_local(5, 2), state=0.0, sum=0.5)],
+    )
+    await async_wait_recording_done(hass)
+
+    # The cloud's hours start at 00:00, before the 5-minute data (02:00), and
+    # rows are rewritable from 00:00: 02:00 is the base.
+    await sensor_recorder.correct({_local(5, 0): 0.0, _local(5, 4): 1.19}, _local(5, 0))
+
+    changes = await sensor_recorder.hourly_changes()
+    assert changes[(5, 2)] == 0.5
+    assert changes[(5, 3)] == 0.0
+    assert changes[(5, 4)] == 1.19
 
 
 async def test_nothing_to_do_without_statistics(
@@ -966,3 +1047,68 @@ async def test_today_is_corrected_when_only_today_was_fetched(
     coordinator = next(iter(mock_config_entry.runtime_data.values()))
     assert coordinator.hourly_consumption_first_day == _cloud(5, 0).date()
     assert {call.args[3] for call in redistribute.await_args_list} == {_cloud(5, 0)}
+
+
+async def test_a_transient_auth_error_in_the_hourly_fetch_only_warns(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """An expired token that survives aioaquarea's own re-login keeps the entry up.
+
+    Like the month: the day is skipped with a warning, the other days still
+    count, and no reauth starts.
+    """
+    freezer.move_to(_cloud(5, 12))
+
+    async def consumption(
+        long_id: str, aggregation: DateType, date_input: str
+    ) -> list[aioaquarea.Consumption]:
+        if aggregation == DateType.DAY and date_input == "20261004":
+            raise aioaquarea.AuthenticationError(
+                aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED, "Token expires"
+            )
+        if aggregation == DateType.DAY and date_input == "20261005":
+            return [_record("20261005 04", tank=1.0)]
+        return []
+
+    mock_aquarea_client.get_device_consumption.side_effect = consumption
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    assert not hass.config_entries.flow.async_progress_by_handler("aquarea")
+    coordinator = next(iter(mock_config_entry.runtime_data.values()))
+    assert [r.data_time for r in coordinator.hourly_consumption] == ["20261005 04"]
+
+
+async def test_invalid_credentials_in_the_hourly_fetch_start_reauth(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """An authentication error that survives the new login is not swallowed."""
+    freezer.move_to(_cloud(5, 12))
+
+    async def consumption(
+        long_id: str, aggregation: DateType, date_input: str
+    ) -> list[aioaquarea.Consumption]:
+        if aggregation == DateType.DAY:
+            raise aioaquarea.AuthenticationError(
+                aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS, "Invalid"
+            )
+        return []
+
+    mock_aquarea_client.get_device_consumption.side_effect = consumption
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
+    assert any(
+        flow["context"]["source"] == SOURCE_REAUTH
+        for flow in hass.config_entries.flow.async_progress_by_handler("aquarea")
+    )

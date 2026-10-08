@@ -182,6 +182,19 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                 records = await self._client.get_device_consumption(
                     self._device.long_id, DateType.DAY, day.strftime("%Y%m%d")
                 )
+            except aioaquarea.AuthenticationError as ex:
+                # As for the month: aioaquarea-ng logs in again on an expired
+                # token itself; credential failures go on to start reauth.
+                if ex.error_code in (
+                    aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
+                    aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
+                    MFA_REQUIRED,
+                ):
+                    raise
+                _LOGGER.warning(
+                    "Failed to fetch the hourly consumption of %s: %s", day, ex
+                )
+                continue
             except Exception as ex:  # noqa: BLE001 - deliberate: warn and keep the cached hourly data
                 _LOGGER.warning(
                     "Failed to fetch the hourly consumption of %s: %s", day, ex
