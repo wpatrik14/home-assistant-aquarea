@@ -7,7 +7,7 @@
 # Dependabot proposes every bump as a PR, and CI on that PR shows whether the
 # new Home Assistant release breaks a test.
 #
-# The plugin does not install the manifest's requirements, so aioaquarea is
+# The plugin does not install the manifest's requirements, so aioaquarea-ng is
 # pinned here too. Needs Python >= 3.14 (Home Assistant 2026.9 requires it).
 pytest-homeassistant-custom-component==0.13.367
-aioaquarea==1.0.7
+aioaquarea-ng==1.1.0

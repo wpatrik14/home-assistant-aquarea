@@ -8,6 +8,7 @@
         "error": {
             "cannot_connect": "Nepavyko prisijungti",
             "invalid_auth": "Neteisingas prisijungimo vardas arba slaptažodis. Pastaba: ši integracija naudoja jūsų Panasonic Comfort Cloud paskyrą (tuos pačius duomenis, kaip Comfort Cloud programėlėje), o ne atskirą Aquarea Smart Cloud / Aquarea Home paskyrą.",
+            "mfa_required": "Šiam Panasonic ID reikalingas kelių veiksnių autentifikavimas (dviejų veiksmų patvirtinimas), kurio integracija kol kas nepalaiko.",
             "unknown": "Nežinoma klaida",
             "api_error": "API klaida: {api_error_msg}"
         },

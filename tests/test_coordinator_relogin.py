@@ -143,6 +143,7 @@ def _load():
     module = ast.fix_missing_locations(ast.Module([flow], []))
     namespace = {
         "aioaquarea": aioaquarea,
+        "MFA_REQUIRED": "MFA_REQUIRED",
         "UpdateFailed": UpdateFailed,
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "dt_util": types.SimpleNamespace(

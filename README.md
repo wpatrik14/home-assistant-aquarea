@@ -42,9 +42,11 @@ Panasonic only allows one connection per account at the same time. This means th
 
 A possible solution to this behaviour is to use a second Panasonic ID specifically for Home Assistant, which your main account has granted access to the device. Then you can use the app with your main account and the integration with the second one at the same time.
 
-Panasonic has retired the Aquarea Smart Cloud website (`aquarea-smart.panasonic.com`) and the account site the old instructions used (`csapl.pcpf.panasonic.com`). Both the registration and the access request now have to go through the official Aquarea Smart Cloud app. If you have set this up with the current app, a PR or issue with the exact steps is welcome.
+Panasonic has retired the Aquarea Smart Cloud website (`aquarea-smart.panasonic.com`) and the account site the old instructions used (`csapl.pcpf.panasonic.com`). Both the registration and the access request now have to go through the official Panasonic Comfort Cloud app, which uses the same Panasonic ID as this integration. If you have set this up with the current app, a PR or issue with the exact steps is welcome.
 
-If the integration suddenly fails to log in (e.g. `Error in get_token ... Missing required parameter: code`), log in to the official app with the same account first. Panasonic periodically publishes new terms/policies, and the login fails until they are accepted there. If the app doesn't ask, update it.
+If the integration suddenly fails to log in (e.g. `Error in get_token ... Missing required parameter: code`), log in to the official Comfort Cloud app with the same account first. Panasonic periodically publishes new terms/policies, and the login fails until they are accepted there. If the app doesn't ask, update it.
+
+Panasonic now enforces multi-factor authentication (2-step verification) on Panasonic IDs. When an account gets the challenge, setup and reauthentication show "requires multi-factor authentication", and the integration stops retrying until you reconfigure it. Support for entering the code is tracked in [#112](https://github.com/wpatrik14/home-assistant-aquarea/issues/112).
 
 ### Minimum Home Assistant version required
 The minimum supported version of Home Assistant is **2025.8**. Older versions can keep using the last release that supports them: `v1.0.62` for 2024.12. A further raise to **2026.3** is planned about a month after the first release with this floor (see [#98](https://github.com/wpatrik14/home-assistant-aquarea/issues/98))

@@ -16,7 +16,7 @@
     "aquarea"
   ],
   "requirements": [
-    "aioaquarea>=1.0.7"
+    "aioaquarea-ng>=1.1.0"
   ],
   "ssdp": [],
   "version": "1.1.0",

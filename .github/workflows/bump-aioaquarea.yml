@@ -1,4 +1,4 @@
-name: Bump aioaquarea
+name: Bump aioaquarea-ng
 
 on:
   schedule:
@@ -19,7 +19,7 @@ jobs:
       - name: Get latest aioaquarea version from PyPI
         id: pypi
         run: |
-          LATEST=$(curl -s https://pypi.org/pypi/aioaquarea/json | python3 -c "import sys,json; print(json.load(sys.stdin)['info']['version'])")
+          LATEST=$(curl -s https://pypi.org/pypi/aioaquarea-ng/json | python3 -c "import sys,json; print(json.load(sys.stdin)['info']['version'])")
           echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
 
       - name: Get current aioaquarea version from manifest.json
@@ -28,7 +28,7 @@ jobs:
           CURRENT=$(python3 -c "
           import json, re
           manifest = json.load(open('custom_components/aquarea/manifest.json'))
-          req = next(r for r in manifest['requirements'] if r.startswith('aioaquarea'))
+          req = next(r for r in manifest['requirements'] if r.startswith('aioaquarea-ng'))
           version = re.search(r'[\d.]+', req).group()
           print(version)
           ")
@@ -58,7 +58,7 @@ jobs:
           latest = os.environ['LATEST']
           manifest = json.load(open(path))
           manifest['requirements'] = [
-              re.sub(r'aioaquarea>=[\d.]+', f'aioaquarea>={latest}', r)
+              re.sub(r'aioaquarea-ng>=[\d.]+', f'aioaquarea-ng>={latest}', r)
               for r in manifest['requirements']
           ]
           with open(path, 'w') as f:
@@ -71,13 +71,13 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Bump aioaquarea from ${{ steps.current.outputs.version }} to ${{ steps.pypi.outputs.latest }}"
-          branch: bump/aioaquarea-${{ steps.pypi.outputs.latest }}
+          commit-message: "Bump aioaquarea-ng from ${{ steps.current.outputs.version }} to ${{ steps.pypi.outputs.latest }}"
+          branch: bump/aioaquarea-ng-${{ steps.pypi.outputs.latest }}
           delete-branch: true
-          title: "Bump aioaquarea from ${{ steps.current.outputs.version }} to ${{ steps.pypi.outputs.latest }}"
+          title: "Bump aioaquarea-ng from ${{ steps.current.outputs.version }} to ${{ steps.pypi.outputs.latest }}"
           body: |
-            Bumps [aioaquarea](https://github.com/cjaliaga/aioaquarea) from `${{ steps.current.outputs.version }}` to `${{ steps.pypi.outputs.latest }}`.
+            Bumps [aioaquarea-ng](https://github.com/wpatrik14/aioaquarea) from `${{ steps.current.outputs.version }}` to `${{ steps.pypi.outputs.latest }}`.
 
-            - [PyPI release](https://pypi.org/project/aioaquarea/${{ steps.pypi.outputs.latest }}/)
-            - [Changelog](https://github.com/cjaliaga/aioaquarea/releases/tag/${{ steps.pypi.outputs.latest }})
+            - [PyPI release](https://pypi.org/project/aioaquarea-ng/${{ steps.pypi.outputs.latest }}/)
+            - [Changelog](https://github.com/wpatrik14/aioaquarea/releases/tag/${{ steps.pypi.outputs.latest }})
           labels: dependencies

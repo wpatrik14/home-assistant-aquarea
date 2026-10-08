@@ -61,6 +61,13 @@ LOGIN_ERRORS = [
         id="other_auth_code",
     ),
     pytest.param(
+        # A plain string: aioaquarea releases before the MFA_REQUIRED member
+        # raise nothing else, and the integration compares the value.
+        aioaquarea.AuthenticationError("MFA_REQUIRED", "message from the cloud"),
+        "mfa_required",
+        id="mfa_required",
+    ),
+    pytest.param(
         _auth_error(aioaquarea.AuthenticationErrorCodes.SESSION_CLOSED),
         "cannot_connect",
         id="session_closed",

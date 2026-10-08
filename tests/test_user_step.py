@@ -243,6 +243,7 @@ def _load_flow_class():
     namespace = {
         "_ConfigFlow": _ConfigFlow,
         "aioaquarea": aioaquarea,
+        "MFA_REQUIRED": "MFA_REQUIRED",
         "aiohttp": aiohttp,
         "async_create_clientsession": _create_clientsession,
         "STEP_USER_DATA_SCHEMA": STEP_USER_DATA_SCHEMA,

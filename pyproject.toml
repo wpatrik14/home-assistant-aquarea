@@ -2,7 +2,7 @@
 python_version = "3.14"
 warn_unused_ignores = true
 
-# aioaquarea ships no py.typed marker, so its symbols are untyped for mypy.
+# aioaquarea-ng (import name aioaquarea) ships no py.typed marker, so its symbols are untyped for mypy.
 # Scoped to the one module rather than set globally, so a genuinely missing
 # dependency still fails loudly.
 [[tool.mypy.overrides]]
@@ -28,7 +28,7 @@ addopts = "--cov=custom_components/aquarea --cov-report=term-missing"
 # 68.76 after #104 deleted 12 covered lines (percentage fell, no test lost);
 # 82.76 with the climate and switch tests (82.7676%, rounded down so
 # pytest-cov's unrounded summary line agrees with the gate).
-fail_under = 82.76
+fail_under = 82.85
 precision = 2
 show_missing = true
 

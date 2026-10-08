@@ -116,6 +116,7 @@ def _load():
     anything = types.SimpleNamespace(now=lambda: 0, get_time_zone=lambda *_: None)
     namespace = {
         "aioaquarea": aioaquarea,
+        "MFA_REQUIRED": "MFA_REQUIRED",
         "UpdateFailed": UpdateFailed,
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "dt_util": anything,
