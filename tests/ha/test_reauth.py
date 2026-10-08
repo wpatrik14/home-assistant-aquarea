@@ -78,3 +78,46 @@ async def test_reauth_while_loaded_reloads_entry(
     assert mock_config_entry.state is ConfigEntryState.LOADED
     # One login to validate the password in the flow, one for the reload.
     assert mock_aquarea_client.login.await_count == logins + 2
+
+
+async def test_consumption_credential_error_starts_reauth(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """aioaquarea-ng 1.2.0 raises auth errors from consumption calls: reauth, not a warning."""
+    mock_aquarea_client.get_device_consumption.side_effect = (
+        aioaquarea.AuthenticationError(
+            aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD, "rejected"
+        )
+    )
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
+    flows = [
+        flow
+        for flow in hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+        if flow["context"]["source"] == SOURCE_REAUTH
+    ]
+    assert len(flows) == 1
+
+
+async def test_consumption_token_expired_keeps_entry_loaded(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """A transient auth error on consumption only warns; the entry still loads."""
+    mock_aquarea_client.get_device_consumption.side_effect = (
+        aioaquarea.AuthenticationError(
+            aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED, "expired"
+        )
+    )
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    assert not hass.config_entries.flow.async_progress_by_handler(DOMAIN)

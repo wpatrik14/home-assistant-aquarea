@@ -153,6 +153,17 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                         self._device.long_id, DateType.MONTH, month_date_str
                     )
                     self._last_monthly_fetch_time = now
+                except aioaquarea.AuthenticationError as ex:
+                    # Since aioaquarea-ng 1.2.0 auth errors are raised by consumption
+                    # calls (they used to return None). Credential failures must not
+                    # be hidden behind the cache: let the handler below start reauth.
+                    if ex.error_code in (
+                        aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
+                        aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
+                        MFA_REQUIRED,
+                    ):
+                        raise
+                    _LOGGER.warning("Failed to fetch month consumption: %s", ex)
                 except Exception as ex:  # noqa: BLE001 - deliberate: warn and keep the cached month data
                     _LOGGER.warning("Failed to fetch month consumption: %s", ex)
 
