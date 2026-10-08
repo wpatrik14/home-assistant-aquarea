@@ -82,6 +82,9 @@
         "tank_temperature": {
           "name": "Temperatura del depósito"
         },
+        "water_pressure": {
+          "name": "Presión del agua"
+        },
         "pump_status": {
           "name": "Estado de la bomba"
         },

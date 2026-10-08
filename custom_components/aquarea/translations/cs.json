@@ -82,6 +82,9 @@
         "tank_temperature": {
           "name": "Teplota nádrže"
         },
+        "water_pressure": {
+          "name": "Tlak vody"
+        },
         "pump_status": {
           "name": "Stav čerpadla"
         },

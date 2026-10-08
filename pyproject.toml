@@ -28,7 +28,7 @@ addopts = "--cov=custom_components/aquarea --cov-report=term-missing"
 # 68.76 after #104 deleted 12 covered lines (percentage fell, no test lost);
 # 82.76 with the climate and switch tests (82.7676%, rounded down so
 # pytest-cov's unrounded summary line agrees with the gate).
-fail_under = 82.85
+fail_under = 83.01
 precision = 2
 show_missing = true
 

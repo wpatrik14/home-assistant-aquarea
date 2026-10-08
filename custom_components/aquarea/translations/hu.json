@@ -82,6 +82,9 @@
         "tank_temperature": {
           "name": "Tartály hőmérséklete"
         },
+        "water_pressure": {
+          "name": "Víznyomás"
+        },
         "pump_status": {
           "name": "Szivattyú állapota"
         },

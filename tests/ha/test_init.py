@@ -287,6 +287,35 @@ async def test_poll_updates_entities(
     assert hass.states.get("sensor.heat_pump_outdoor_temperature").state == "3"
 
 
+async def test_water_pressure_sensor_when_reported(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_device: MagicMock,
+) -> None:
+    """A unit that reports a water pressure gets a sensor in bar."""
+    mock_device.water_pressure = 1.18
+    await _setup(hass, mock_config_entry)
+
+    state = hass.states.get("sensor.heat_pump_water_pressure")
+    assert state is not None
+    assert state.state == "1.18"
+    assert state.attributes["unit_of_measurement"] == "bar"
+
+
+async def test_water_pressure_sensor_hidden_when_not_reported(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_device: MagicMock,
+) -> None:
+    """No sensor when the unit does not report a pressure."""
+    mock_device.water_pressure = None
+    await _setup(hass, mock_config_entry)
+
+    assert hass.states.get("sensor.heat_pump_water_pressure") is None
+
+
 @pytest.mark.parametrize(
     ("data", "options", "expected"),
     [

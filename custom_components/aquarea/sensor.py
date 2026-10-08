@@ -14,7 +14,7 @@ from homeassistant.components.sensor import (
     SensorExtraStoredData,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfEnergy, UnitOfTemperature
+from homeassistant.const import UnitOfEnergy, UnitOfPressure, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -183,6 +183,9 @@ async def async_setup_entry(
         entities.append(ErrorCodeSensor(coordinator))
         if coordinator.device.has_tank:
             entities.append(TankTemperatureSensor(coordinator))
+        # Not every unit reports a water pressure; skip the sensor then.
+        if coordinator.device.water_pressure is not None:
+            entities.append(WaterPressureSensor(coordinator))
         entities.append(
             DailyEdgeCounterSensor(
                 coordinator,
@@ -340,6 +343,27 @@ class TankTemperatureSensor(AquareaStateSensor):
         if self.coordinator.device is None:
             return
         self._attr_native_value = self.coordinator.device.tank.temperature
+        super()._handle_coordinator_update()
+
+
+class WaterPressureSensor(AquareaStateSensor):
+    """Water circuit pressure reported by the heat pump, in bar."""
+
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_translation_key = "water_pressure"
+        self._attr_unique_id = f"{super().unique_id}_water_pressure"
+        self._attr_device_class = SensorDeviceClass.PRESSURE
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_native_unit_of_measurement = UnitOfPressure.BAR
+        self._attr_suggested_display_precision = 2
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        if self.coordinator.device is None:
+            return
+        self._attr_native_value = self.coordinator.device.water_pressure
         super()._handle_coordinator_update()
 
 

@@ -82,6 +82,9 @@
             "tank_temperature": {
                 "name": "Температура бака"
             },
+            "water_pressure": {
+                "name": "Давление воды"
+            },
             "pump_status": {
                 "name": "Статус насоса"
             },

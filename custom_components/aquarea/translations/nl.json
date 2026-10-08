@@ -82,6 +82,9 @@
             "tank_temperature": {
                 "name": "Tanktemperatuur"
             },
+            "water_pressure": {
+                "name": "Waterdruk"
+            },
             "pump_status": {
                 "name": "Pompstatus"
             },
