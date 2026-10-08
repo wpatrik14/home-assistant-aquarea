@@ -186,7 +186,9 @@ def corrected_sums(
     """Return each recorded hour's sum with the energy moved to the cloud's hours.
 
     `recorded` are the sums at the end of each hour, oldest first, and
-    `hourly` the cloud's consumption per hour, in the same unit. The first
+    `hourly` the cloud's consumption per hour, in the same unit. The result
+    also has a sum for each cloud hour between two recorded hours that has
+    no recorded hour of its own. The first
     recorded hour is the base: its sum is kept, and cloud hours up to it are
     left out, as what was recorded before it is not known. The last recorded
     hour always keeps its sum, as all the energy matched by then belongs to
@@ -233,21 +235,16 @@ def corrected_sums(
                 pending[0] = item._replace(energy=item.energy - used)
         unmatched[hour.start] = energy
 
-    sums = {recorded[0].start: recorded[0].sum}
+    # A cloud hour between two recorded hours that has none of its own (the
+    # sensor was unavailable, e.g. while the cloud was unreachable) gets a
+    # sum too, so its energy can have a row instead of joining the next one.
+    first, last = recorded[0].start, recorded[-1].start
+    hours = sorted(set(unmatched) | {start for start in hourly if first < start < last})
+    sums = {first: recorded[0].sum}
     total = recorded[0].sum
-    matched_hours = sorted(matched)
-    next_matched = 0
-    for hour in recorded[1:]:
-        # The energy of a cloud hour with no recorded hour of its own (Home
-        # Assistant was down) goes to the next hour that has one.
-        while (
-            next_matched < len(matched_hours)
-            and matched_hours[next_matched] <= hour.start
-        ):
-            total += matched[matched_hours[next_matched]]
-            next_matched += 1
-        total += unmatched[hour.start]
-        sums[hour.start] = total
+    for start in hours:
+        total += matched.get(start, 0.0) + unmatched.get(start, 0.0)
+        sums[start] = total
     return sums
 
 
@@ -337,13 +334,36 @@ async def async_redistribute_hourly_statistics(
     # would revert rows an earlier run corrected.
     base = recorded[0].start
 
+    existing = {dt_util.utc_from_timestamp(row["start"]): row for row in rows}
+    newest = dt_util.utc_from_timestamp(rows[-1]["start"])
     changed: list[StatisticData] = []
-    for row in rows[:-1]:
-        start = dt_util.utc_from_timestamp(row["start"])
-        if start < write_from or start < base + max_lag:
+    inserted = 0
+    previous: StatisticsRow | None = None
+    for start in sorted(set(sums) | set(existing)):
+        row = existing.get(start)
+        if start >= newest:
+            break
+        if (
+            start < write_from
+            or start < base + max_lag
+            or (new_sum := sums.get(start)) is None
+        ):
+            previous = row or previous
             continue
-        if (new_sum := sums.get(start)) is None:
+        if row is None:
+            # An hour with no row of its own: the sensor was unavailable, so
+            # the recorder compiled nothing for it, and never will. A new row
+            # holds the energy the cloud puts in it, with the state the
+            # sensor had before.
+            if previous is None:
+                continue
+            stat = StatisticData(start=start, sum=new_sum)
+            if (state := previous.get("state")) is not None:
+                stat["state"] = state
+            changed.append(stat)
+            inserted += 1
             continue
+        previous = row
         old_sum = row.get("sum")
         if old_sum is not None and abs(new_sum - old_sum) <= _EPSILON:
             continue
@@ -355,9 +375,11 @@ async def async_redistribute_hourly_statistics(
         changed.append(stat)
     if changed:
         _LOGGER.debug(
-            "Moving the hourly statistics of %s onto the cloud's hours: %s rows",
+            "Moving the hourly statistics of %s onto the cloud's hours: %s rows,"
+            " %s of them new",
             statistic_id,
             len(changed),
+            inserted,
         )
         async_import_statistics(hass, metadata, changed)
     return len(changed)

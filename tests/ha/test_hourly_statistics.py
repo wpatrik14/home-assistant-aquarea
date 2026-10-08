@@ -204,12 +204,21 @@ def test_cloud_hours_up_to_the_first_recorded_hour_are_left_out() -> None:
     }
 
 
-def test_energy_of_hours_without_a_row_goes_to_the_next_row() -> None:
-    """Home Assistant was down 03:00-05:00: no rows to move the energy into."""
+def test_hours_without_a_recorded_hour_get_a_sum_of_their_own() -> None:
+    """The sensor was unavailable 03:00-05:00: those hours get sums too.
+
+    Energy the cloud puts in them goes there, not into the next recorded
+    hour; what is left over stays where it was recorded. A cloud hour after
+    the last recorded hour gets nothing yet.
+    """
     recorded = _recorded((5, 2, 10.0), (5, 5, 11.5), (5, 6, 11.5))
 
-    assert _corrected(recorded, {(5, 2): 0.5, (5, 3): 0.5, (5, 4): 0.5}) == {
+    assert _corrected(
+        recorded, {(5, 2): 0.5, (5, 3): 0.5, (5, 4): 0.5, (5, 7): 0.2}
+    ) == {
         (5, 2): 10.0,
+        (5, 3): 10.5,
+        (5, 4): 11.0,
         (5, 5): 11.5,
         (5, 6): 11.5,
     }
@@ -470,7 +479,9 @@ class _Sensor:
         self.next_period = start
         self.started = False
 
-    async def run_until(self, end: datetime, states: dict[datetime, float]) -> None:
+    async def run_until(
+        self, end: datetime, states: dict[datetime, float] | dict[datetime, float | str]
+    ) -> None:
         """Set each state at its time and compile every 5 minutes up to `end`."""
         if not self.started and states:
             # Like a real sensor, it had a value before the hours under test.
@@ -728,6 +739,45 @@ async def test_the_hours_around_the_base_are_never_rewritten(
     assert (changes[(5, 2)], changes[(5, 3)], changes[(5, 4)]) == (1.0, 0.0, 0.0)
     assert changes[(5, 5)] == 0.0
     assert (changes[(5, 6)], changes[(5, 7)]) == (1.19, 0.0)
+
+
+async def test_hours_without_a_row_get_one(sensor_recorder: _Sensor) -> None:
+    """Energy for hours when the sensor was unavailable gets rows of its own.
+
+    The live case of 2026-10-08: the cloud was unreachable 09:40-12:28 local,
+    so the sensors were unavailable and the recorder compiled no rows for
+    10:00 and 11:00. The tank ran at 11:00, and its 0.711 kWh, recorded at
+    13:29, went into the 12:00 row, more than the whole house used in that
+    hour. That hour now gets a row of its own, and the next hours compile
+    from the same total.
+    """
+    states: dict[datetime, float | str] = {
+        _local(5, 2): 5.0,
+        _local(5, 3, 40): "unavailable",
+        _local(5, 6, 28): 5.0,
+        _local(5, 7, 29): 5.711,
+    }
+    await sensor_recorder.run_until(_local(5, 9), states)
+    assert (5, 4) not in await sensor_recorder.hourly_changes()
+
+    hourly = {_local(5, h): 0.0 for h in range(2, 9)} | {_local(5, 5): 0.711}
+    assert await sensor_recorder.correct(hourly, _local(5, 0)) == 3
+    await sensor_recorder.run_until(_local(5, 10), {_local(5, 9, 10): 6.0})
+
+    changes = await sensor_recorder.hourly_changes()
+    assert {hour: changes.get((5, hour)) for hour in range(2, 10)} == {
+        2: 0.0,
+        3: 0.0,
+        4: 0.0,
+        5: 0.711,
+        6: 0.0,
+        7: 0.0,
+        8: 0.0,
+        9: 0.289,
+    }
+
+    # Idempotent: the rows exist now, and the same data changes nothing.
+    assert await sensor_recorder.correct(hourly, _local(5, 0)) == 0
 
 
 async def test_nothing_to_do_without_statistics(
