@@ -329,15 +329,18 @@ async def async_redistribute_hourly_statistics(
     if not recorded:
         return 0
     sums = corrected_sums(recorded, cloud, max_lag)
-    # The first recorded hour is the base and keeps its raw sum. When the
-    # 5-minute rows start after write_from (purged with a short keep_days),
-    # writing it would revert a row an earlier run corrected.
+    # The first recorded hour is the base and keeps its raw sum, and energy
+    # recorded up to max_lag after it can belong to cloud hours at or before
+    # it, which the matching can't see; from base + max_lag on, that energy
+    # is inside the recorded sum. When the 5-minute rows start after
+    # write_from (purged with a short keep_days), writing the hours before
+    # would revert rows an earlier run corrected.
     base = recorded[0].start
 
     changed: list[StatisticData] = []
     for row in rows[:-1]:
         start = dt_util.utc_from_timestamp(row["start"])
-        if start < write_from or start <= base:
+        if start < write_from or start < base + max_lag:
             continue
         if (new_sum := sums.get(start)) is None:
             continue

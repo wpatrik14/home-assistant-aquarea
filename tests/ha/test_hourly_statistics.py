@@ -458,15 +458,25 @@ class _Sensor:
     ) -> None:
         self.hass = hass
         self.freezer = freezer
-        self.next_period = start
+        self.start_at(start)
         self.attributes = {
             "device_class": "energy",
             "state_class": "total_increasing",
             "unit_of_measurement": unit,
         }
 
+    def start_at(self, start: datetime) -> None:
+        """Start recording at `start`; the first state is backdated to it."""
+        self.next_period = start
+        self.started = False
+
     async def run_until(self, end: datetime, states: dict[datetime, float]) -> None:
         """Set each state at its time and compile every 5 minutes up to `end`."""
+        if not self.started and states:
+            # Like a real sensor, it had a value before the hours under test.
+            states = {self.next_period: states[min(states)], **states}
+            self.context_hour = self.next_period + timedelta(hours=1)
+            self.started = True
         while self.next_period < end:
             period_end = self.next_period + timedelta(minutes=5)
             for changed_at, value in sorted(states.items()):
@@ -482,7 +492,15 @@ class _Sensor:
             self.next_period = period_end
 
     async def correct(self, hourly: dict[datetime, float], write_from: datetime) -> int:
-        """Run the correction and wait for the recorder to write it."""
+        """Run the correction and wait for the recorder to write it.
+
+        As in production, the cloud's hours start well before the hours under
+        test (there, the oldest cached day is context): a zero hour an hour
+        after recording started. Hours within the match lag of the first
+        recorded hour are never rewritten.
+        """
+        if hourly and getattr(self, "context_hour", None) is not None:
+            hourly = {self.context_hour: 0.0, **hourly}
         written = await async_redistribute_hourly_statistics(
             self.hass, STATISTIC_ID, hourly, write_from
         )
@@ -490,16 +508,20 @@ class _Sensor:
         return written
 
     async def hourly_changes(
-        self, period: str = "hour", unit: str | None = None
+        self,
+        period: str = "hour",
+        unit: str | None = None,
+        since: datetime | None = None,
     ) -> dict[tuple, float]:
         """Return the energy of each hour (or 5 minutes) as the dashboard sees it.
 
-        In the entity's display unit, or in `unit` when given.
+        In the entity's display unit, or in `unit` when given; from 02:00 on
+        2026-10-05 unless `since` says otherwise.
         """
         rows = await self.hass.async_add_executor_job(
             statistics_during_period,
             self.hass,
-            _local(1, 0),
+            since or _local(5, 2),
             None,
             {STATISTIC_ID},
             period,
@@ -518,10 +540,10 @@ class _Sensor:
 async def sensor_recorder(
     hass: HomeAssistant, freezer: FrozenDateTimeFactory
 ) -> _Sensor:
-    """A tank sensor recorded from 2026-10-05 02:00."""
+    """A tank sensor recorded from 2026-10-04 22:00."""
     # The sensor integration's recorder platform compiles the statistics.
     assert await async_setup_component(hass, "sensor", {})
-    return _Sensor(hass, freezer, _local(5, 2))
+    return _Sensor(hass, freezer, _local(4, 22))
 
 
 async def test_the_issue_case_on_the_recorder(sensor_recorder: _Sensor) -> None:
@@ -568,7 +590,7 @@ async def test_every_hourly_run_builds_on_the_recorded_sums(
     rewritten, so energy the cloud labelled but the sensor never recorded
     became a permanent offset, and the correction stopped for good.
     """
-    sensor_recorder.next_period = _local(4, 20)
+    sensor_recorder.start_at(_local(4, 16))
     # A today sensor: 0.4 kWh for 21-22 recorded at 22:05; 23-24 (0.7) is
     # lost at the midnight reset; 00-01 (0.3) recorded at 01:05; 01-02 (0.2)
     # recorded at 03:01, two hours late.
@@ -592,7 +614,7 @@ async def test_every_hourly_run_builds_on_the_recorded_sums(
         await sensor_recorder.run_until(_local(4, 0) + timedelta(hours=hour), states)
         await sensor_recorder.correct(hourly, _local(4, 0))
 
-    assert await sensor_recorder.hourly_changes() == {
+    assert await sensor_recorder.hourly_changes(since=_local(4, 20)) == {
         (4, 20): 0.0,
         (4, 21): 0.4,
         (4, 22): 0.0,
@@ -626,7 +648,7 @@ async def test_a_sensor_shown_in_wh(
 ) -> None:
     """The cloud's kWh are converted to the statistic's unit."""
     assert await async_setup_component(hass, "sensor", {})
-    recorder = _Sensor(hass, freezer, _local(5, 2), unit=UnitOfEnergy.WATT_HOUR)
+    recorder = _Sensor(hass, freezer, _local(4, 22), unit=UnitOfEnergy.WATT_HOUR)
     await recorder.run_until(_local(5, 6), {_local(5, 2): 0.0, _local(5, 5, 6): 1190.0})
 
     assert await recorder.correct({_local(5, 4): 1.19}, _local(5, 0)) == 1
@@ -663,39 +685,49 @@ async def test_a_statistic_in_kwh_shown_in_wh(sensor_recorder: _Sensor) -> None:
     }
 
 
-async def test_the_base_hour_is_never_rewritten(
+async def test_the_hours_around_the_base_are_never_rewritten(
     hass: HomeAssistant, sensor_recorder: _Sensor
 ) -> None:
-    """A corrected row at the start of the 5-minute data is not reverted.
+    """Corrected rows at the start of the 5-minute data are not reverted.
 
     Review of wpatrik14/home-assistant-aquarea#111: with a short purge_keep_days
     the 5-minute rows can start after write_from. The first hour with 5-minute
-    data is the base and keeps its raw sum, so writing it would revert a row
-    an earlier run corrected, leaving a negative hour after it.
+    data is the base and keeps its raw sum, and energy recorded within the
+    match lag after it can belong to hours at or before it, which this run
+    can't see: 1 kWh for 02:00, recorded at 04:05. Writing 02:00 or 03:00
+    would revert what an earlier run, which saw further back, had corrected.
+    Hours after the lag are corrected as usual.
     """
+    sensor_recorder.start_at(_local(5, 2))
     await sensor_recorder.run_until(
-        _local(5, 6), {_local(5, 2): 0.0, _local(5, 3, 5): 0.5, _local(5, 5, 6): 1.69}
+        _local(5, 9),
+        {_local(5, 2): 0.0, _local(5, 4, 5): 1.0, _local(5, 7, 6): 2.19},
     )
-    # An earlier run moved 03:05's 0.5 kWh into 02:00; its 5-minute rows have
-    # been purged since, as far as this run can tell.
+    # An earlier run moved 04:05's 1 kWh into 02:00.
     metadata = await hass.async_add_executor_job(
         partial(get_metadata, hass, statistic_ids={STATISTIC_ID})
     )
     async_import_statistics(
         hass,
         metadata[STATISTIC_ID][1],
-        [StatisticData(start=_local(5, 2), state=0.0, sum=0.5)],
+        [
+            StatisticData(start=_local(5, 2), state=0.0, sum=1.0),
+            StatisticData(start=_local(5, 3), state=0.0, sum=1.0),
+        ],
     )
     await async_wait_recording_done(hass)
 
     # The cloud's hours start at 00:00, before the 5-minute data (02:00), and
-    # rows are rewritable from 00:00: 02:00 is the base.
-    await sensor_recorder.correct({_local(5, 0): 0.0, _local(5, 4): 1.19}, _local(5, 0))
+    # rows are rewritable from 00:00: 02:00 is the base, the lag is 3 h, so
+    # 02:00-04:00 are kept and 05:00 on are corrected.
+    await sensor_recorder.correct(
+        {_local(5, 0): 0.0, _local(5, 2): 1.0, _local(5, 6): 1.19}, _local(5, 0)
+    )
 
     changes = await sensor_recorder.hourly_changes()
-    assert changes[(5, 2)] == 0.5
-    assert changes[(5, 3)] == 0.0
-    assert changes[(5, 4)] == 1.19
+    assert (changes[(5, 2)], changes[(5, 3)], changes[(5, 4)]) == (1.0, 0.0, 0.0)
+    assert changes[(5, 5)] == 0.0
+    assert (changes[(5, 6)], changes[(5, 7)]) == (1.19, 0.0)
 
 
 async def test_nothing_to_do_without_statistics(
@@ -834,11 +866,9 @@ async def test_a_failed_hourly_fetch_keeps_the_cached_hours(
 
     async def consumption(
         long_id: str, aggregation: DateType, date_input: str
-    ) -> list[aioaquarea.Consumption] | None:
+    ) -> list[aioaquarea.Consumption]:
         if aggregation == DateType.DAY and date_input == "20261004":
             raise aioaquarea.ClientError("cloud unhappy")
-        if aggregation == DateType.DAY:
-            return None
         return []
 
     mock_aquarea_client.get_device_consumption.side_effect = consumption
@@ -1112,3 +1142,48 @@ async def test_invalid_credentials_in_the_hourly_fetch_start_reauth(
         flow["context"]["source"] == SOURCE_REAUTH
         for flow in hass.config_entries.flow.async_progress_by_handler("aquarea")
     )
+
+
+async def test_no_data_from_the_cloud_keeps_the_cached_day(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """A refetch that returns None keeps the cached hours and is tried again.
+
+    Review of wpatrik14/home-assistant-aquarea#111: aioaquarea returns None on
+    HTTP and network errors. Stored as an empty day, a failed refetch of
+    yesterday wiped its hours, and the next correction reverted the day.
+    """
+    freezer.move_to(_cloud(6, 1))
+    yesterday = [_record("20261005 04", tank=1.19)]
+    answers: dict[str, list] = {"20261005": [yesterday]}
+
+    async def consumption(
+        long_id: str, aggregation: DateType, date_input: str
+    ) -> list[aioaquarea.Consumption] | None:
+        if aggregation == DateType.DAY and answers.get(date_input):
+            return answers[date_input].pop(0)
+        return None if aggregation == DateType.DAY else []
+
+    mock_aquarea_client.get_device_consumption.side_effect = consumption
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator = next(iter(mock_config_entry.runtime_data.values()))
+    assert [r.data_time for r in coordinator.hourly_consumption] == ["20261005 04"]
+
+    # 02:00: yesterday is refetched, and the cloud returns nothing.
+    mock_aquarea_client.get_device_consumption.reset_mock()
+    freezer.move_to(_cloud(6, 2))
+    await coordinator.async_refresh()
+    assert "20261005" in _day_calls(mock_aquarea_client)
+    assert [r.data_time for r in coordinator.hourly_consumption] == ["20261005 04"]
+
+    # 04:00, past the refetch window: yesterday was never received after
+    # 03:00, so it is asked for again.
+    mock_aquarea_client.get_device_consumption.reset_mock()
+    freezer.move_to(_cloud(6, 4))
+    await coordinator.async_refresh()
+    assert "20261005" in _day_calls(mock_aquarea_client)

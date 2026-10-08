@@ -200,7 +200,17 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                     "Failed to fetch the hourly consumption of %s: %s", day, ex
                 )
                 continue
-            self._day_consumption[day] = records or []
+            if records is None:
+                # aioaquarea returns None on HTTP and network errors, and
+                # when the cloud has no data: a failure, not an empty day.
+                # Storing it would wipe the cached hours and revert the
+                # corrections built on them.
+                _LOGGER.warning(
+                    "No hourly consumption received for %s; keeping the cached hours",
+                    day,
+                )
+                continue
+            self._day_consumption[day] = records
             self._day_received_at[day] = now
             fetched = True
         # Keep the day before yesterday too: it is context for yesterday's
