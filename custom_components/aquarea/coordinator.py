@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 import logging
 
 import aioaquarea
@@ -20,9 +20,16 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MFA_REQUIRED,
+    YESTERDAY_REFETCH_HOURS,
 )
+from .statistics import CLOUD_TIME_ZONE
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _cloud_date(moment: datetime) -> date:
+    """Return the cloud's date (in CLOUD_TIME_ZONE) at a moment."""
+    return moment.astimezone(CLOUD_TIME_ZONE).date()
 
 
 # The entry's runtime data: one coordinator per device, keyed by device ID.
@@ -52,6 +59,13 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         # Cached consumption results (lists of Consumption objects from aioaquarea.statistics)
         self._month_consumption = None
         self._last_monthly_fetch_time: datetime | None = None
+        # Hourly consumption (DAY queries) of the last three days, by the
+        # cloud's date (UTC, see statistics.CLOUD_TIME_ZONE), with when each day was last asked for and last received. The
+        # hourly fetch has its own cadence, independent of the monthly one.
+        self._day_consumption: dict[date, list[aioaquarea.Consumption]] = {}
+        self._day_requested_at: dict[date, datetime] = {}
+        self._day_received_at: dict[date, datetime] = {}
+        self._hourly_consumption_fetched_at: datetime | None = None
 
         # Main device and zones are fixed at 1 minute
         scan_interval = DEFAULT_SCAN_INTERVAL
@@ -95,6 +109,122 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
     def month_consumption(self):
         """Return the last cached month consumption entries or None."""
         return getattr(self, "_month_consumption", None)
+
+    @property
+    def hourly_consumption_first_day(self) -> date | None:
+        """Return the first day with cached hourly consumption, or None."""
+        return min(self._day_consumption, default=None)
+
+    @property
+    def hourly_consumption(self) -> list[aioaquarea.Consumption]:
+        """Return the cached hourly consumption records, oldest first."""
+        return [
+            record
+            for day in sorted(self._day_consumption)
+            for record in self._day_consumption[day]
+        ]
+
+    @property
+    def hourly_consumption_fetched_at(self) -> datetime | None:
+        """Return when the hourly consumption was last fetched, or None."""
+        return self._hourly_consumption_fetched_at
+
+    def _hourly_days_due(self, now: datetime) -> list[date]:
+        """Return the days whose hourly consumption is due for a fetch, oldest first.
+
+        The days are the cloud's (UTC, see statistics.CLOUD_TIME_ZONE). Today
+        is fetched every consumption interval. The cloud publishes
+        yesterday's last hours after it ends, so yesterday is fetched again,
+        at most hourly, until it has been received at least
+        YESTERDAY_REFETCH_HOURS into today; after a restart that is the
+        first fetch. The day before yesterday is fetched once when missing,
+        after a restart: it is the context that lets yesterday be rewritten.
+        The intervals run from the last request, so a failing query is
+        retried at the same pace rather than on every poll.
+        """
+        today = _cloud_date(now)
+        yesterday = today - timedelta(days=1)
+        interval = timedelta(minutes=self.consumption_interval)
+        complete_from = datetime.combine(today, time(), CLOUD_TIME_ZONE) + timedelta(
+            hours=YESTERDAY_REFETCH_HOURS
+        )
+        days: list[date] = []
+        before_yesterday = today - timedelta(days=2)
+        requested = self._day_requested_at.get(before_yesterday)
+        if before_yesterday not in self._day_received_at and (
+            requested is None or now - requested >= interval
+        ):
+            days.append(before_yesterday)
+        received = self._day_received_at.get(yesterday)
+        requested = self._day_requested_at.get(yesterday)
+        if (received is None or received < complete_from) and (
+            requested is None or now - requested >= min(interval, timedelta(hours=1))
+        ):
+            days.append(yesterday)
+        requested = self._day_requested_at.get(today)
+        if requested is None or now - requested >= interval:
+            days.append(today)
+        return days
+
+    async def _async_fetch_hourly_consumption(self, now: datetime) -> None:
+        """Fetch the hourly consumption of the days that are due.
+
+        The energy sensors use it to file their hourly statistics under the
+        hours the cloud labels the energy with (see statistics.py).
+        """
+        days = self._hourly_days_due(now)
+        if not days:
+            return
+        fetched = False
+        for day in days:
+            self._day_requested_at[day] = now
+            try:
+                records = await self._client.get_device_consumption(
+                    self._device.long_id, DateType.DAY, day.strftime("%Y%m%d")
+                )
+            except aioaquarea.AuthenticationError as ex:
+                # As for the month: aioaquarea-ng logs in again on an expired
+                # token itself; credential failures go on to start reauth.
+                if ex.error_code in (
+                    aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
+                    aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
+                    MFA_REQUIRED,
+                ):
+                    raise
+                _LOGGER.warning(
+                    "Failed to fetch the hourly consumption of %s: %s", day, ex
+                )
+                continue
+            except Exception as ex:  # noqa: BLE001 - deliberate: warn and keep the cached hourly data
+                _LOGGER.warning(
+                    "Failed to fetch the hourly consumption of %s: %s", day, ex
+                )
+                continue
+            if records is None:
+                # aioaquarea returns None on HTTP and network errors, and
+                # when the cloud has no data: a failure, not an empty day.
+                # Storing it would wipe the cached hours and revert the
+                # corrections built on them.
+                _LOGGER.warning(
+                    "No hourly consumption received for %s; keeping the cached hours",
+                    day,
+                )
+                continue
+            self._day_consumption[day] = records
+            self._day_received_at[day] = now
+            fetched = True
+        # Keep the day before yesterday too: it is context for yesterday's
+        # first hours, whose energy can be recorded after midnight.
+        oldest = _cloud_date(now) - timedelta(days=2)
+        for cache in (
+            self._day_consumption,
+            self._day_requested_at,
+            self._day_received_at,
+        ):
+            for day in [day for day in cache if day < oldest]:
+                del cache[day]
+        if fetched:
+            self._hourly_consumption_fetched_at = now
 
     async def _async_update_data(self) -> aioaquarea.Device:
         """Fetch data from Aquarea Smart Cloud Service with tiered intervals."""
@@ -166,6 +296,9 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                     _LOGGER.warning("Failed to fetch month consumption: %s", ex)
                 except Exception as ex:  # noqa: BLE001 - deliberate: warn and keep the cached month data
                     _LOGGER.warning("Failed to fetch month consumption: %s", ex)
+
+            # 3. Fetch hourly consumption, on its own cadence
+            await self._async_fetch_hourly_consumption(now)
 
             return self._device  # noqa: TRY300 - the handlers below cover the whole fetch
         except aioaquarea.AuthenticationError as err:

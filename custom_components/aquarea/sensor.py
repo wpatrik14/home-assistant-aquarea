@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 import logging
 from typing import Any, Self
 
@@ -23,6 +23,12 @@ from homeassistant.util import dt as dt_util
 
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 from .entity import AquareaBaseEntity
+from .statistics import (
+    CLOUD_TIME_ZONE,
+    async_redistribute_hourly_statistics,
+    hourly_consumption,
+    max_match_lag,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -436,8 +442,69 @@ class ErrorCodeSensor(AquareaStateSensor):
         super()._handle_coordinator_update()
 
 
+class AquareaEnergySensor(AquareaBaseEntity):
+    """An energy sensor whose hourly statistics follow the cloud's hour labels.
+
+    The sensor's value moves when a consumption fetch first sees an hour's
+    energy, after that hour has closed, so the recorder files it one or two
+    hours late. Each time the coordinator fetches the hourly consumption,
+    the sensor's past hourly statistics are moved onto the hours the cloud
+    labels the energy with (see statistics.py). The statistic id stays the
+    same, so the Energy dashboard needs no change.
+    """
+
+    entity_description: AquareaEnergyConsumptionSensorDescription
+    _hourly_consumption_fetched_at: datetime | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Follow the hourly consumption fetches, and use the one already made."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self._handle_hourly_consumption)
+        )
+        self._handle_hourly_consumption()
+
+    @callback
+    def _handle_hourly_consumption(self) -> None:
+        """Correct the hourly statistics once per hourly consumption fetch."""
+        fetched_at = self.coordinator.hourly_consumption_fetched_at
+        if fetched_at is None or fetched_at == self._hourly_consumption_fetched_at:
+            return
+        self._hourly_consumption_fetched_at = fetched_at
+        first_day = self.coordinator.hourly_consumption_first_day
+        if first_day is None:
+            return
+        consumption_type = self.entity_description.consumption_type
+        hourly = hourly_consumption(
+            self.coordinator.hourly_consumption, consumption_type
+        )
+        # The first cached day is context only: what was recorded before it
+        # is not known, so its own hours are not rewritten. Today is always
+        # rewritten, even with no earlier day cached (yesterday's fetch failed):
+        # energy recorded early today for yesterday's hours then stays put.
+        write_from = datetime.combine(
+            min(
+                first_day + timedelta(days=1),
+                dt_util.utcnow().astimezone(CLOUD_TIME_ZONE).date(),
+            ),
+            time(),
+            CLOUD_TIME_ZONE,
+        )
+        self.coordinator.entry.async_create_background_task(
+            self.hass,
+            async_redistribute_hourly_statistics(
+                self.hass,
+                self.entity_id,
+                hourly,
+                write_from,
+                max_match_lag(self.coordinator.consumption_interval),
+            ),
+            name=f"aquarea hourly statistics {self.entity_id}",
+        )
+
+
 class EnergyAccumulatedConsumptionSensor(
-    AquareaBaseEntity, SensorEntity, RestoreEntity
+    AquareaEnergySensor, SensorEntity, RestoreEntity
 ):
     """Energy consumed so far in the current month, restored across restarts."""
 
@@ -559,7 +626,7 @@ class EnergyAccumulatedConsumptionSensor(
         super()._handle_coordinator_update()
 
 
-class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
+class EnergyConsumptionSensor(AquareaEnergySensor, SensorEntity, RestoreEntity):
     """Energy consumed so far today, restored across restarts."""
 
     entity_description: AquareaEnergyConsumptionSensorDescription

@@ -132,11 +132,16 @@ def _load():
         for n in cls.body
         if isinstance(n, ast.AsyncFunctionDef) and n.name == "_async_update_data"
     )
+    # The hourly (DAY) consumption fetch is covered by the pytest suite
+    # (tests/ha/test_hourly_statistics.py); stub it out here.
+    hourly_stub = ast.parse(
+        "async def _async_fetch_hourly_consumption(self, now): pass"
+    ).body[0]
     flow = ast.ClassDef(
         name="Extracted",
         bases=[],
         keywords=[],
-        body=[node],
+        body=[node, hourly_stub],
         decorator_list=[],
         type_params=[],
     )
