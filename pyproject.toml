@@ -2,11 +2,13 @@
 python_version = "3.14"
 warn_unused_ignores = true
 
-# aioaquarea-ng (import name aioaquarea) ships no py.typed marker, so its symbols are untyped for mypy.
-# Scoped to the one module rather than set globally, so a genuinely missing
-# dependency still fails loudly.
+# aioaquarea-ng 1.2.0 ships a py.typed marker, which exposes ~27 Optional-narrowing
+# errors (zones/tanks typed `X | None`) in the entity code. Treating the library as
+# untyped (Any) keeps the previous behaviour; narrowing is a follow-up refactor.
+# Scoped to the one module rather than set globally.
 [[tool.mypy.overrides]]
 module = "aioaquarea.*"
+follow_imports = "skip"
 ignore_missing_imports = true
 
 # pytest suite in tests/ha/, run with pytest-homeassistant-custom-component
@@ -28,7 +30,7 @@ addopts = "--cov=custom_components/aquarea --cov-report=term-missing"
 # 68.76 after #104 deleted 12 covered lines (percentage fell, no test lost);
 # 82.76 with the climate and switch tests (82.7676%, rounded down so
 # pytest-cov's unrounded summary line agrees with the gate).
-fail_under = 83.01
+fail_under = 83.07
 precision = 2
 show_missing = true
 

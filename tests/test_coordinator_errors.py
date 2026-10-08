@@ -88,6 +88,15 @@ class _Client:
         self.exc = exc
 
     async def get_device(self, **kwargs):
+        if self.consumption:
+            return types.SimpleNamespace(
+                long_id="x", refresh_data=lambda: asyncio.sleep(0)
+            )
+        raise self.exc
+
+    consumption = False
+
+    async def get_device_consumption(self, *args):
         raise self.exc
 
 
@@ -113,7 +122,10 @@ def _load():
         type_params=[],
     )
     module = ast.fix_missing_locations(ast.Module([flow], []))
-    anything = types.SimpleNamespace(now=lambda: 0, get_time_zone=lambda *_: None)
+    anything = types.SimpleNamespace(
+        now=lambda: __import__("datetime").datetime(2026, 1, 1),
+        get_time_zone=lambda *_: None,
+    )
     namespace = {
         "aioaquarea": aioaquarea,
         "MFA_REQUIRED": "MFA_REQUIRED",
@@ -142,9 +154,13 @@ def _load():
 Extracted = _load()
 
 
-def _poll(exc):
+def _poll(exc, consumption=False):
     obj = Extracted()
     obj._client = _Client(exc)
+    obj._client.consumption = consumption
+    obj._last_monthly_fetch_time = None
+    obj.consumption_interval = 15
+    obj._month_consumption = None
     obj._device_info = None
     obj.hass = types.SimpleNamespace(config=types.SimpleNamespace(time_zone="UTC"))
     try:
@@ -190,6 +206,33 @@ def main():
     ]
     for name, exc, expected in cases:
         got = _poll(exc)
+        check(name, got == expected, f"got={got!r}")
+
+    consumption_cases = [
+        (
+            "consumption bad password -> reauth",
+            AuthenticationError(AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD),
+            "ConfigEntryAuthFailed",
+        ),
+        (
+            "consumption invalid credentials -> reauth",
+            AuthenticationError(AuthenticationErrorCodes.INVALID_CREDENTIALS),
+            "ConfigEntryAuthFailed",
+        ),
+        (
+            "consumption MFA required -> reauth",
+            AuthenticationError("MFA_REQUIRED"),
+            "ConfigEntryAuthFailed",
+        ),
+        (
+            "consumption token expired -> warn, poll ok",
+            AuthenticationError(AuthenticationErrorCodes.TOKEN_EXPIRED),
+            "no error",
+        ),
+        ("consumption ApiError -> warn, poll ok", ApiError("HTTP_500"), "no error"),
+    ]
+    for name, exc, expected in consumption_cases:
+        got = _poll(exc, consumption=True)
         check(name, got == expected, f"got={got!r}")
 
     print()
