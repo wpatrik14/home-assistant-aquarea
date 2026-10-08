@@ -303,19 +303,14 @@ async def test_water_pressure_sensor_when_reported(
     assert state.attributes["unit_of_measurement"] == "bar"
 
 
-@pytest.mark.parametrize("reported", [None, "missing"])
 async def test_water_pressure_sensor_hidden_when_not_reported(
     hass: HomeAssistant,
     mock_aquarea_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     mock_device: MagicMock,
-    reported: str | None,
 ) -> None:
-    """No sensor when the library has no pressure (None, or an older library)."""
-    if reported is None:
-        mock_device.water_pressure = None
-    else:
-        del mock_device.water_pressure  # an aioaquarea without the attribute
+    """No sensor when the unit does not report a pressure."""
+    mock_device.water_pressure = None
     await _setup(hass, mock_config_entry)
 
     assert hass.states.get("sensor.heat_pump_water_pressure") is None

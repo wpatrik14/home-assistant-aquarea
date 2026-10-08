@@ -82,6 +82,9 @@
         "tank_temperature": {
           "name": "Speichertemperatur"
         },
+        "water_pressure": {
+          "name": "Wasserdruck"
+        },
         "pump_status": {
           "name": "Pumpenstatus"
         },

@@ -183,9 +183,8 @@ async def async_setup_entry(
         entities.append(ErrorCodeSensor(coordinator))
         if coordinator.device.has_tank:
             entities.append(TankTemperatureSensor(coordinator))
-        # Not every unit reports a water pressure; skip the sensor when the
-        # library has no value for it (or predates the attribute).
-        if getattr(coordinator.device, "water_pressure", None) is not None:
+        # Not every unit reports a water pressure; skip the sensor then.
+        if coordinator.device.water_pressure is not None:
             entities.append(WaterPressureSensor(coordinator))
         entities.append(
             DailyEdgeCounterSensor(
@@ -364,9 +363,7 @@ class WaterPressureSensor(AquareaStateSensor):
     def _handle_coordinator_update(self) -> None:
         if self.coordinator.device is None:
             return
-        self._attr_native_value = getattr(
-            self.coordinator.device, "water_pressure", None
-        )
+        self._attr_native_value = self.coordinator.device.water_pressure
         super()._handle_coordinator_update()
 
 

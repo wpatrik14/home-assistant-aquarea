@@ -82,6 +82,9 @@
             "tank_temperature": {
                 "name": "Temperatura zbiornika"
             },
+            "water_pressure": {
+                "name": "Ciśnienie wody"
+            },
             "pump_status": {
                 "name": "Status pompy"
             },
