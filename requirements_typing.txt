@@ -4,4 +4,4 @@
 # workflow's python-version in step with the Home Assistant pin.
 homeassistant==2026.9.1
 mypy==2.3.1
-aioaquarea>=1.0.7
+aioaquarea-ng>=1.1.0
