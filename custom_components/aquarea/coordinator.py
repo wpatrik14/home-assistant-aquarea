@@ -19,6 +19,7 @@ from .const import (
     DEFAULT_CONSUMPTION_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    MFA_REQUIRED,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -160,6 +161,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
             if err.error_code in (
                 aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
                 aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
+                MFA_REQUIRED,
             ):
                 raise ConfigEntryAuthFailed from err
             raise UpdateFailed(f"Authentication error: {err}") from err

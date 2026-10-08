@@ -8,6 +8,7 @@
         "error": {
             "cannot_connect": "Nem sikerült csatlakozni",
             "invalid_auth": "Érvénytelen felhasználónév vagy jelszó. Megjegyzés: ez az integráció a Panasonic Comfort Cloud fiókodat használja (ugyanazt, mint a Comfort Cloud alkalmazás) — nem a különálló Aquarea Smart Cloud / Aquarea Home fiókot.",
+            "mfa_required": "Ehhez a Panasonic ID-hoz többlépcsős hitelesítés (kétlépcsős azonosítás) szükséges, amit az integráció még nem támogat. See https://github.com/wpatrik14/home-assistant-aquarea/issues/112.",
             "unknown": "Váratlan hiba",
             "api_error": "API hiba: {api_error_msg}"
         },

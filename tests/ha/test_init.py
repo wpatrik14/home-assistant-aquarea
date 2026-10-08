@@ -127,15 +127,20 @@ async def test_setup_entry_without_tank(
     [
         aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
         aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
+        "MFA_REQUIRED",
     ],
 )
 async def test_setup_entry_invalid_credentials_start_reauth(
     hass: HomeAssistant,
     mock_aquarea_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
-    code: aioaquarea.AuthenticationErrorCodes,
+    code: aioaquarea.AuthenticationErrorCodes | str,
 ) -> None:
-    """Rejected credentials fail setup and start a reauth flow."""
+    """Rejected credentials, or an MFA challenge, fail setup and start reauth.
+
+    Retrying an MFA challenge cannot succeed, and each attempt sends the user a
+    Panasonic login email.
+    """
     mock_aquarea_client.login.side_effect = _auth_error(code)
 
     await _setup(hass, mock_config_entry)
@@ -190,15 +195,18 @@ async def test_setup_entry_first_refresh_cloud_error_retries(
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
+@pytest.mark.parametrize(
+    "code",
+    [aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS, "MFA_REQUIRED"],
+)
 async def test_setup_entry_first_refresh_auth_error_starts_reauth(
     hass: HomeAssistant,
     mock_aquarea_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
+    code: aioaquarea.AuthenticationErrorCodes | str,
 ) -> None:
     """Credentials rejected during the first poll also start a reauth flow."""
-    mock_aquarea_client.get_device.side_effect = _auth_error(
-        aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS
-    )
+    mock_aquarea_client.get_device.side_effect = _auth_error(code)
 
     await _setup(hass, mock_config_entry)
 

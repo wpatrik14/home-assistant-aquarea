@@ -8,6 +8,7 @@
         "error": {
             "cannot_connect": "Nepodařilo se připojit",
             "invalid_auth": "Neplatné uživatelské jméno nebo heslo. Poznámka: tato integrace používá váš účet Panasonic Comfort Cloud (stejné přihlašovací údaje jako v aplikaci Comfort Cloud) — nikoli samostatný účet Aquarea Smart Cloud / Aquarea Home.",
+            "mfa_required": "Toto Panasonic ID vyžaduje vícefázové ověření (dvoufázové ověření), které integrace zatím nepodporuje. See https://github.com/wpatrik14/home-assistant-aquarea/issues/112.",
             "unknown": "Neočekávaná chyba",
             "api_error": "Chyba API: {api_error_msg}"
         },

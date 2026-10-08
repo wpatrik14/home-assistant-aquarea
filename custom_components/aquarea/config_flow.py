@@ -16,7 +16,12 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 import voluptuous as vol
 
-from .const import CONF_CONSUMPTION_INTERVAL, DEFAULT_CONSUMPTION_INTERVAL, DOMAIN
+from .const import (
+    CONF_CONSUMPTION_INTERVAL,
+    DEFAULT_CONSUMPTION_INTERVAL,
+    DOMAIN,
+    MFA_REQUIRED,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -180,6 +185,8 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED,
             ):
                 errors["base"] = "cannot_connect"
+            elif err.error_code == MFA_REQUIRED:
+                errors["base"] = "mfa_required"
             else:
                 errors["base"] = "invalid_auth"
         except aioaquarea.errors.ApiError as err:

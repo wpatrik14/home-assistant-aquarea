@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
+from .const import MFA_REQUIRED
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,6 +65,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
         ):
             raise ConfigEntryAuthFailed(
                 "Invalid Aquarea Smart Cloud credentials"
+            ) from err
+        if err.error_code == MFA_REQUIRED:
+            # Retrying cannot pass the challenge, and every attempt sends the
+            # user a Panasonic login email.
+            raise ConfigEntryAuthFailed(
+                "The Panasonic ID requires multi-factor authentication, which "
+                "is not supported yet"
             ) from err
         # Any other authentication failure (SESSION_CLOSED, API_ERROR,
         # TOKEN_EXPIRED, ...) is transient. Never fall through to `return True`
