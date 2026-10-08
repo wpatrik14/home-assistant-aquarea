@@ -65,6 +65,8 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         self._day_consumption: dict[date, list[aioaquarea.Consumption]] = {}
         self._day_requested_at: dict[date, datetime] = {}
         self._day_received_at: dict[date, datetime] = {}
+        # Days whose query came back empty, so the warning is logged once.
+        self._day_missing: set[date] = set()
         self._hourly_consumption_fetched_at: datetime | None = None
 
         # Main device and zones are fixed at 1 minute
@@ -204,12 +206,16 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                 # aioaquarea returns None on HTTP and network errors, and
                 # when the cloud has no data: a failure, not an empty day.
                 # Storing it would wipe the cached hours and revert the
-                # corrections built on them.
-                _LOGGER.warning(
+                # corrections built on them. Warn once per day, not at every
+                # interval of an outage.
+                log = _LOGGER.debug if day in self._day_missing else _LOGGER.warning
+                log(
                     "No hourly consumption received for %s; keeping the cached hours",
                     day,
                 )
+                self._day_missing.add(day)
                 continue
+            self._day_missing.discard(day)
             self._day_consumption[day] = records
             self._day_received_at[day] = now
             fetched = True
@@ -223,6 +229,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         ):
             for day in [day for day in cache if day < oldest]:
                 del cache[day]
+        self._day_missing = {day for day in self._day_missing if day >= oldest}
         if fetched:
             self._hourly_consumption_fetched_at = now
 
