@@ -40,14 +40,11 @@ This integration is actively maintained. Please report any issues you find and a
 ## Remarks
 Panasonic only allows one connection per account at the same time. This means that if you open the session from the Panasonic Comfort Cloud app or the Panasonic Comfort Cloud website, the session will be closed and you will be disconnected from Home Assistant. The integration will try to reconnect automatically, closing the session from the app or the website. If you want to use the app or the website, you will have to temporarily disable the integration.
 
-A possible solution to this behaviour is to create a second account specifically for home assistant.
-1. Go to https://csapl.pcpf.panasonic.com/ and create a new account.
-2. Then login with your new account into https://aquarea-smart.panasonic.com/.
-3. You will be asked to enter your device id and your password. Enter the device id which is label on your Wifi Module (e.g. CZ-TAW1) and your password which you already created with your main account.
-4. Now you will get a user request to your main account. It should be somewhere under `Users` -> `Userlist`. Accept this user request.
-5. Use the new panasonic account to setup your "Panasonic Aquarea Smart Cloud" home assistant integration.  
+A possible solution to this behaviour is to use a second Panasonic ID specifically for Home Assistant, which your main account has granted access to the device. Then you can use the app with your main account and the integration with the second one at the same time.
 
-Now it should be possible to access the aquarea smart cloud website and also use the home assistant integration at the same time.
+Panasonic has retired the Aquarea Smart Cloud website (`aquarea-smart.panasonic.com`) and the account site the old instructions used (`csapl.pcpf.panasonic.com`). Both the registration and the access request now have to go through the official Aquarea Smart Cloud app. If you have set this up with the current app, a PR or issue with the exact steps is welcome.
+
+If the integration suddenly fails to log in (e.g. `Error in get_token ... Missing required parameter: code`), log in to the official app with the same account first. Panasonic periodically publishes new terms/policies, and the login fails until they are accepted there. If the app doesn't ask, update it.
 
 ### Minimum Home Assistant version required
 The minimum supported version of Home Assistant is **2025.8**. Older versions can keep using the last release that supports them: `v1.0.62` for 2024.12. A further raise to **2026.3** is planned about a month after the first release with this floor (see [#98](https://github.com/wpatrik14/home-assistant-aquarea/issues/98))
