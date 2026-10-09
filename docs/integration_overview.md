@@ -35,6 +35,7 @@ The integration follows the standard Home Assistant integration pattern, utilizi
 - **Consumption Data**: Fetched at a separate interval (default: 60 minutes) to avoid excessive API calls. It retrieves:
     - **Monthly**: one record per day of the month, read by the energy sensors.
     - **Hourly**: one record per hour, labelled in UTC: aioaquarea sends `osTimezone: +00:00`, so the cloud's days and hour labels are UTC (`statistics.CLOUD_TIME_ZONE`; a test pins the offset aioaquarea sends). Today (UTC) is fetched on its own cadence (the consumption interval), independent of the monthly fetch. Yesterday is fetched again, at most hourly, until it has been received at least 3 hours into today, since the cloud publishes its last hours after the day ends. The last three days are kept, the oldest as context only. Used to correct the energy sensors' hourly statistics, see below.
+    - The daily and month-to-date energy sensors read the monthly records by the same UTC dates, so they reset at UTC midnight and at the start of the UTC month (02:00 local in Europe/Warsaw in summer, 01:00 in winter), not at local midnight. They are `TOTAL_INCREASING`, so the reset time changes when their own value drops to 0, not the energy the recorder meters.
 - When the coordinator receives new data, it calls `self.async_set_updated_data(device)`, which triggers `_handle_coordinator_update` in all associated entities.
 
 ### Commands (Write)

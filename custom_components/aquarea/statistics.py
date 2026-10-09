@@ -33,7 +33,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Iterable, Mapping, Sequence
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import itertools
 import logging
 from typing import Any, NamedTuple
@@ -62,6 +62,17 @@ HOUR = timedelta(hours=1)
 # sends +00:00: its consumption manager is built with `dt.timezone.utc`, and
 # the time zone given to `get_device` doesn't reach it. A test pins this.
 CLOUD_TIME_ZONE = dt_util.UTC
+
+
+def cloud_date(moment: datetime) -> date:
+    """Return the cloud's date (in CLOUD_TIME_ZONE) at a moment.
+
+    The cloud's days and months, in the DAY and MONTH queries alike, are
+    dates in CLOUD_TIME_ZONE: in Europe/Warsaw its day runs from 02:00 to
+    02:00 (01:00 to 01:00 in winter).
+    """
+    return moment.astimezone(CLOUD_TIME_ZONE).date()
+
 
 # Differences below this are float noise, not a change worth writing.
 _EPSILON = 1e-6
