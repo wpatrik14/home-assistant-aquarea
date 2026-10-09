@@ -8,9 +8,11 @@
         "error": {
             "cannot_connect": "Geen verbinding mogelijk",
             "invalid_auth": "Ongeldige gebruikersnaam of wachtwoord. Let op: deze integratie gebruikt uw Panasonic Comfort Cloud-account (dezelfde inloggegevens als de Comfort Cloud-app) — niet het aparte Aquarea Smart Cloud / Aquarea Home-account.",
-            "mfa_required": "Deze Panasonic ID vereist meervoudige authenticatie (verificatie in twee stappen), die de integratie nog niet ondersteunt.",
+            "mfa_required": "Dit Panasonic ID gebruikt een methode voor meerfactorauthenticatie die de integratie niet ondersteunt. Alleen sms-codes en codes van een authenticator-app werken.",
             "unknown": "Onverwachte fout",
-            "api_error": "API-fout: {api_error_msg}"
+            "api_error": "API-fout: {api_error_msg}",
+            "invalid_mfa_code": "De code is niet geaccepteerd. Controleer de code en probeer het opnieuw.",
+            "mfa_expired": "De verificatieaanvraag is verlopen. Voer je wachtwoord opnieuw in om een nieuwe code te krijgen."
         },
         "step": {
             "user": {
@@ -23,6 +25,26 @@
                 "description": "Voer het wachtwoord voor uw Panasonic ID {username} in:",
                 "data": {
                     "password": "Wachtwoord"
+                }
+            },
+            "mfa_sms": {
+                "description": "Panasonic heeft een verificatiecode per sms gestuurd naar {destination}. Voer die hieronder in. Vink voor een nieuwe code \"Nieuwe code versturen\" aan en verstuur het formulier.",
+                "data": {
+                    "code": "Verificatiecode",
+                    "resend_code": "Nieuwe code versturen"
+                },
+                "data_description": {
+                    "code": "De 6-cijferige code. Een herstelcode werkt ook.",
+                    "resend_code": "Vink dit aan om de sms opnieuw door Panasonic te laten versturen; het codeveld mag leeg blijven."
+                }
+            },
+            "mfa_otp": {
+                "description": "Voer de huidige 6-cijferige code uit je authenticator-app in.",
+                "data": {
+                    "code": "Verificatiecode"
+                },
+                "data_description": {
+                    "code": "De 6-cijferige code. Een herstelcode werkt ook."
                 }
             }
         }

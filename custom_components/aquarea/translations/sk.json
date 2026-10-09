@@ -8,9 +8,11 @@
         "error": {
             "cannot_connect": "Nepodarilo sa pripojiť",
             "invalid_auth": "Neplatné používateľské meno alebo heslo. Poznámka: táto integrácia používa váš účet Panasonic Comfort Cloud (rovnaké prihlasovacie údaje ako v aplikácii Comfort Cloud) — nie samostatný účet Aquarea Smart Cloud / Aquarea Home.",
-            "mfa_required": "Toto Panasonic ID vyžaduje viacfaktorové overenie (dvojstupňové overenie), ktoré integrácia zatiaľ nepodporuje.",
+            "mfa_required": "Toto Panasonic ID používa metódu viacfaktorového overenia, ktorú integrácia nepodporuje. Fungujú iba kódy z SMS a kódy z overovacej aplikácie.",
             "unknown": "Neočakávaná chyba",
-            "api_error": "Chyba API: {api_error_msg}"
+            "api_error": "Chyba API: {api_error_msg}",
+            "invalid_mfa_code": "Kód nebol prijatý. Skontrolujte ho a skúste to znova.",
+            "mfa_expired": "Požiadavka na overenie vypršala. Zadajte znova svoje heslo, aby ste získali nový kód."
         },
         "step": {
             "user": {
@@ -23,6 +25,26 @@
                 "description": "Zadajte heslo pre svoje Panasonic ID {username}:",
                 "data": {
                     "password": "Heslo"
+                }
+            },
+            "mfa_sms": {
+                "description": "Panasonic poslal overovací kód v SMS na číslo {destination}. Zadajte ho nižšie. Nový kód získate zaškrtnutím „Poslať nový kód“ a odoslaním formulára.",
+                "data": {
+                    "code": "Overovací kód",
+                    "resend_code": "Poslať nový kód"
+                },
+                "data_description": {
+                    "code": "6-miestny kód. Funguje aj záložný kód.",
+                    "resend_code": "Zaškrtnite, aby Panasonic poslal SMS znova; pole s kódom môže zostať prázdne."
+                }
+            },
+            "mfa_otp": {
+                "description": "Zadajte aktuálny 6-miestny kód z overovacej aplikácie.",
+                "data": {
+                    "code": "Overovací kód"
+                },
+                "data_description": {
+                    "code": "6-miestny kód. Funguje aj záložný kód."
                 }
             }
         }

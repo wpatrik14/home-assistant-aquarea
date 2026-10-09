@@ -8,9 +8,11 @@
         "error": {
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid username or password. Note: this integration uses your Panasonic Comfort Cloud account (the same login as the Comfort Cloud app) — not the separate Aquarea Smart Cloud / Aquarea Home app account.",
-            "mfa_required": "This Panasonic ID requires multi-factor authentication (2-step verification), which the integration does not support yet.",
+            "mfa_required": "This Panasonic ID uses a multi-factor authentication method this integration does not support. Only SMS codes and authenticator app codes work.",
             "unknown": "Unexpected error",
-            "api_error": "API error: {api_error_msg}"
+            "api_error": "API error: {api_error_msg}",
+            "invalid_mfa_code": "The code was not accepted. Check it and try again.",
+            "mfa_expired": "The verification request expired. Enter your password again to get a new code."
         },
         "step": {
             "user": {
@@ -30,6 +32,26 @@
                 },
                 "data_description": {
                     "password": "The current password for this Panasonic ID."
+                }
+            },
+            "mfa_sms": {
+                "description": "Panasonic sent a verification code by SMS to {destination}. Enter it below. To get a new code, tick \"Send a new code\" and submit.",
+                "data": {
+                    "code": "Verification code",
+                    "resend_code": "Send a new code"
+                },
+                "data_description": {
+                    "code": "The 6-digit code. A recovery code works as well.",
+                    "resend_code": "Tick this to have Panasonic send the SMS again; the code field can stay empty."
+                }
+            },
+            "mfa_otp": {
+                "description": "Enter the current 6-digit code from your authenticator app.",
+                "data": {
+                    "code": "Verification code"
+                },
+                "data_description": {
+                    "code": "The 6-digit code. A recovery code works as well."
                 }
             }
         }

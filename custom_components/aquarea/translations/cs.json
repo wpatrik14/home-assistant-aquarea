@@ -8,9 +8,11 @@
         "error": {
             "cannot_connect": "Nepodařilo se připojit",
             "invalid_auth": "Neplatné uživatelské jméno nebo heslo. Poznámka: tato integrace používá váš účet Panasonic Comfort Cloud (stejné přihlašovací údaje jako v aplikaci Comfort Cloud) — nikoli samostatný účet Aquarea Smart Cloud / Aquarea Home.",
-            "mfa_required": "Toto Panasonic ID vyžaduje vícefázové ověření (dvoufázové ověření), které integrace zatím nepodporuje.",
+            "mfa_required": "Toto Panasonic ID používá metodu vícefaktorového ověření, kterou integrace nepodporuje. Fungují pouze kódy z SMS a kódy z ověřovací aplikace.",
             "unknown": "Neočekávaná chyba",
-            "api_error": "Chyba API: {api_error_msg}"
+            "api_error": "Chyba API: {api_error_msg}",
+            "invalid_mfa_code": "Kód nebyl přijat. Zkontrolujte jej a zkuste to znovu.",
+            "mfa_expired": "Požadavek na ověření vypršel. Zadejte znovu své heslo, abyste získali nový kód."
         },
         "step": {
             "user": {
@@ -23,6 +25,26 @@
                 "description": "Zadejte prosím heslo pro své Panasonic ID {username}:",
                 "data": {
                     "password": "Heslo"
+                }
+            },
+            "mfa_sms": {
+                "description": "Panasonic poslal ověřovací kód v SMS na číslo {destination}. Zadejte jej níže. Nový kód získáte zaškrtnutím „Poslat nový kód“ a odesláním formuláře.",
+                "data": {
+                    "code": "Ověřovací kód",
+                    "resend_code": "Poslat nový kód"
+                },
+                "data_description": {
+                    "code": "6místný kód. Funguje i záložní kód.",
+                    "resend_code": "Zaškrtněte, aby Panasonic poslal SMS znovu; pole s kódem může zůstat prázdné."
+                }
+            },
+            "mfa_otp": {
+                "description": "Zadejte aktuální 6místný kód z ověřovací aplikace.",
+                "data": {
+                    "code": "Ověřovací kód"
+                },
+                "data_description": {
+                    "code": "6místný kód. Funguje i záložní kód."
                 }
             }
         }

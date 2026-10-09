@@ -125,6 +125,7 @@ def mock_aquarea_client(
     """
     client = AsyncMock(spec=aioaquarea.Client)
     client.is_logged = True
+    client.refresh_token = None
     client.get_devices.return_value = [mock_device_info]
     client.get_device.return_value = mock_device
     client.get_device_consumption.return_value = []

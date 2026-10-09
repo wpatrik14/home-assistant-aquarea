@@ -8,9 +8,11 @@
         "error": {
             "cannot_connect": "No se pudo conectar",
             "invalid_auth": "Usuario o contraseña no válida. Nota: esta integración utiliza tu cuenta de Panasonic Comfort Cloud (las mismas credenciales que la app Comfort Cloud), no la cuenta independiente de Aquarea Smart Cloud / Aquarea Home.",
-            "mfa_required": "Este Panasonic ID requiere autenticación multifactor (verificación en dos pasos), que la integración aún no admite.",
+            "mfa_required": "Este Panasonic ID usa un método de autenticación multifactor que la integración no admite. Solo funcionan los códigos por SMS y los de una aplicación de autenticación.",
             "unknown": "Error inesperado",
-            "api_error": "Error de API: {api_error_msg}"
+            "api_error": "Error de API: {api_error_msg}",
+            "invalid_mfa_code": "No se aceptó el código. Compruébalo e inténtalo de nuevo.",
+            "mfa_expired": "La solicitud de verificación caducó. Introduce de nuevo tu contraseña para obtener un código nuevo."
         },
         "step": {
             "user": {
@@ -23,6 +25,26 @@
                 "description": "Escribe la contraseña de tu ID de Panasonic {username}:",
                 "data": {
                     "password": "Contraseña"
+                }
+            },
+            "mfa_sms": {
+                "description": "Panasonic envió un código de verificación por SMS a {destination}. Introdúcelo abajo. Para recibir un código nuevo, marca «Enviar un código nuevo» y envía el formulario.",
+                "data": {
+                    "code": "Código de verificación",
+                    "resend_code": "Enviar un código nuevo"
+                },
+                "data_description": {
+                    "code": "El código de 6 dígitos. También sirve un código de recuperación.",
+                    "resend_code": "Márcalo para que Panasonic vuelva a enviar el SMS; el campo del código puede quedar vacío."
+                }
+            },
+            "mfa_otp": {
+                "description": "Introduce el código actual de 6 dígitos de tu aplicación de autenticación.",
+                "data": {
+                    "code": "Código de verificación"
+                },
+                "data_description": {
+                    "code": "El código de 6 dígitos. También sirve un código de recuperación."
                 }
             }
         }

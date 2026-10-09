@@ -112,6 +112,7 @@ class _FakeFlow:
         self, *, cached=None, init_data=None, unique_id=None, validate_errors=None
     ):
         self._username = cached
+        self._challenge = None  # no multi-factor challenge pending
         self.init_data = init_data
         self.unique_id = unique_id
         self._validated_with = None

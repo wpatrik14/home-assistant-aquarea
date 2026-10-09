@@ -98,6 +98,7 @@ class _FakeClient:
         self.username = username
         self.password = password
         self.logged_in = False
+        self.refresh_token = None
         _FakeClient.created.append(self)
 
     async def login(self):
@@ -163,6 +164,7 @@ class _ConfigFlow:
 
     _session = None
     _api_error_msg = None
+    _challenge = None  # no multi-factor challenge pending
 
     def __init__(self, configured=()):
         self.hass = object()
@@ -222,7 +224,12 @@ def _load_flow_class():
         for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "AquareaConfigFlow"
     )
-    wanted = ("async_step_user", "_validate_input", "async_show_form")
+    wanted = (
+        "async_step_user",
+        "_validate_input",
+        "_entry_data",
+        "async_show_form",
+    )
     methods = [
         n
         for n in cls.body
@@ -244,6 +251,8 @@ def _load_flow_class():
         "_ConfigFlow": _ConfigFlow,
         "aioaquarea": aioaquarea,
         "MFA_REQUIRED": "MFA_REQUIRED",
+        "MFA_EXPIRED": "MFA_EXPIRED",
+        "CONF_REFRESH_TOKEN": "refresh_token",
         "aiohttp": aiohttp,
         "async_create_clientsession": _create_clientsession,
         "STEP_USER_DATA_SCHEMA": STEP_USER_DATA_SCHEMA,

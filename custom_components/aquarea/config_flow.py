@@ -9,7 +9,7 @@ from typing import Any
 import aioaquarea
 import aiohttp
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
@@ -17,9 +17,14 @@ from homeassistant.helpers.aiohttp_client import async_create_clientsession
 import voluptuous as vol
 
 from .const import (
+    CONF_CODE,
     CONF_CONSUMPTION_INTERVAL,
+    CONF_REFRESH_TOKEN,
+    CONF_RESEND_CODE,
     DEFAULT_CONSUMPTION_INTERVAL,
     DOMAIN,
+    MFA_EXPIRED,
+    MFA_INVALID_CODE,
     MFA_REQUIRED,
 )
 
@@ -50,6 +55,10 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         super().__init__(*args, **kwargs)
         self.info = {}
         self._api: aioaquarea.Client = None
+        # Set when the login stopped at the multi-factor challenge; the
+        # credentials are kept in memory only until the code is accepted.
+        self._challenge: aioaquarea.MfaChallenge | None = None
+        self._password: str | None = None
 
     @staticmethod
     @callback
@@ -72,9 +81,17 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
             )
 
+            if self._challenge is not None:
+                self._username = user_input[CONF_USERNAME]
+                self._password = user_input[CONF_PASSWORD]
+                return self._show_mfa_form()
+
             if not errors:
                 return self.async_create_entry(
-                    title=user_input[CONF_USERNAME], data=user_input
+                    title=user_input[CONF_USERNAME],
+                    data=self._entry_data(
+                        user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
+                    ),
                 )
 
         return self.async_show_form(
@@ -110,6 +127,10 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             errors = await self._validate_input(username, user_input[CONF_PASSWORD])
 
+            if self._challenge is not None:
+                self._password = user_input[CONF_PASSWORD]
+                return self._show_mfa_form()
+
             if not errors:
                 # If we get here, we have a valid login
                 return await self.async_complete_reauth(
@@ -118,22 +139,144 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self.async_show_reauth_form(username, errors)
 
+    async def async_step_mfa_sms(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask for the code Panasonic texted (setup and reauth)."""
+        return await self._async_handle_mfa(user_input)
+
+    async def async_step_mfa_otp(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask for the code of the authenticator app (setup and reauth)."""
+        return await self._async_handle_mfa(user_input)
+
+    def _show_mfa_form(self, errors: dict[str, str] | None = None) -> ConfigFlowResult:
+        """Show the form for the pending challenge's factor."""
+        challenge = self._challenge
+        assert challenge is not None
+        schema: dict[Any, Any] = {vol.Optional(CONF_CODE): str}
+        placeholders = {"destination": challenge.destination or "?"}
+        if challenge.factor == "sms":
+            schema[vol.Optional(CONF_RESEND_CODE, default=False)] = bool
+        else:
+            # An authenticator app always has a code; only SMS can be resent.
+            schema = {vol.Required(CONF_CODE): str}
+        return self.async_show_form(
+            step_id=f"mfa_{challenge.factor}",
+            data_schema=vol.Schema(schema),
+            description_placeholders=placeholders,
+            errors=errors,
+        )
+
+    async def _async_handle_mfa(
+        self, user_input: dict[str, Any] | None
+    ) -> ConfigFlowResult:
+        """Check the code (or send a new one) and finish setup or reauth."""
+        if self._challenge is None or self._api is None:
+            # No login is waiting for a code (the flow was restarted).
+            return self._restart_login("mfa_expired")
+        if user_input is None:
+            return self._show_mfa_form()
+
+        errors: dict[str, str] = {}
+        code = (user_input.get(CONF_CODE) or "").strip()
+        if user_input.get(CONF_RESEND_CODE):
+            errors = await self._call_mfa(self._api.resend_mfa_code)
+        elif not code:
+            errors["base"] = "invalid_mfa_code"
+        else:
+            errors = await self._call_mfa(self._api.complete_mfa, code)
+            if not errors:
+                return await self._async_finish_login()
+        if errors.get("base") == "mfa_expired":
+            return self._restart_login("mfa_expired")
+        return self._show_mfa_form(errors)
+
+    async def _call_mfa(self, func, *args) -> dict[str, str]:
+        """Run a multi-factor client call; return the form errors it caused."""
+        try:
+            await func(*args)
+        except aioaquarea.AuthenticationError as err:
+            if err.error_code == MFA_INVALID_CODE:
+                return {"base": "invalid_mfa_code"}
+            if err.error_code == MFA_EXPIRED:
+                return {"base": "mfa_expired"}
+            _LOGGER.warning("Multi-factor authentication failed: %s", err)
+            return {"base": "cannot_connect"}
+        except (
+            aioaquarea.errors.ApiError,
+            aioaquarea.errors.RequestFailedError,
+            aiohttp.ClientError,
+            TimeoutError,
+        ):
+            return {"base": "cannot_connect"}
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.exception("Unexpected error during multi-factor authentication")
+            return {"base": "unknown"}
+        return {}
+
+    def _restart_login(self, error: str) -> ConfigFlowResult:
+        """Back to the password form: the MFA transaction is gone."""
+        self._challenge = None
+        if self.source == SOURCE_REAUTH:
+            return self.async_show_form(
+                step_id="reauth_confirm",
+                description_placeholders={"username": str(self._username)},
+                data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),
+                errors={"base": error},
+            )
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_USER_DATA_SCHEMA, {CONF_USERNAME: self._username}
+            ),
+            errors={"base": error},
+        )
+
+    async def _async_finish_login(self) -> ConfigFlowResult:
+        """The code was accepted: the client is logged in."""
+        username, password = self._username, self._password
+        assert username is not None and password is not None
+        self._challenge = None
+        self._password = None
+        if self.source == SOURCE_REAUTH:
+            return await self.async_complete_reauth(username, password)
+        return self.async_create_entry(
+            title=username, data=self._entry_data(username, password)
+        )
+
+    def _entry_data(self, username: str, password: str) -> dict[str, Any]:
+        """The data of a new entry: the credentials and the refresh token, if any."""
+        data: dict[str, Any] = {CONF_USERNAME: username, CONF_PASSWORD: password}
+        if token := self._api.refresh_token:
+            data[CONF_REFRESH_TOKEN] = token
+        return data
+
     async def async_complete_reauth(
         self, username: str, password: str
     ) -> ConfigFlowResult:
         """Complete reauth."""
         entry = self._get_reauth_entry()
+        data = {
+            **entry.data,
+            CONF_USERNAME: username,
+            CONF_PASSWORD: password,
+        }
+        # The old token belongs to the old login: replace it, or drop it.
+        data.pop(CONF_REFRESH_TOKEN, None)
+        data.update(
+            {
+                key: value
+                for key, value in self._entry_data(username, password).items()
+                if key == CONF_REFRESH_TOKEN
+            }
+        )
         # Also reloads the entry when nothing changed: an entry whose setup
         # failed on the old password must be set up again, and Home Assistant
         # does not reload entries when a reauth flow ends.
         return self.async_update_reload_and_abort(
-            entry,
-            data={
-                **entry.data,
-                CONF_USERNAME: username,
-                CONF_PASSWORD: password,
-            },
-            reason="reauth_successful",
+            entry, data=data, reason="reauth_successful"
         )
 
     async def async_show_reauth_form(
@@ -171,6 +314,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _validate_input(self, username, password) -> dict[str, str]:
         """Validate the user input allows us to connect."""
         errors = {}
+        self._challenge = None
         if self._session is None:
             self._session = async_create_clientsession(self.hass)
 
@@ -178,15 +322,22 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             await self._api.login()
         except aioaquarea.AuthenticationError as err:
+            challenge = getattr(err, "challenge", None)
             # SESSION_CLOSED and TOKEN_EXPIRED are transient; telling the user
             # their (correct) password is wrong would send them the wrong way.
-            if err.error_code in (
+            if challenge is not None:
+                # aioaquarea-ng >= 1.3.0: the code can be entered right here.
+                self._challenge = challenge
+            elif err.error_code in (
                 aioaquarea.AuthenticationErrorCodes.SESSION_CLOSED,
                 aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED,
             ):
                 errors["base"] = "cannot_connect"
             elif err.error_code == MFA_REQUIRED:
+                # An MFA page or factor the library cannot drive.
                 errors["base"] = "mfa_required"
+            elif err.error_code == MFA_EXPIRED:
+                errors["base"] = "mfa_expired"
             else:
                 errors["base"] = "invalid_auth"
         except aioaquarea.errors.ApiError as err:

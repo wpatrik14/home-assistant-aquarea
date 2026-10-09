@@ -1,31 +1,53 @@
 {
   "config": {
-      "abort": {
-          "already_configured": "Il dispositivo è già configurato",
-          "reauth_successful": "La riautenticazione è stata eseguita correttamente",
-          "reauth_no_username": "Impossibile ri-autenticare: questa voce di configurazione non ha un nome utente salvato. Rimuovi l'integrazione e aggiungila di nuovo."
+    "abort": {
+      "already_configured": "Il dispositivo è già configurato",
+      "reauth_successful": "La riautenticazione è stata eseguita correttamente",
+      "reauth_no_username": "Impossibile ri-autenticare: questa voce di configurazione non ha un nome utente salvato. Rimuovi l'integrazione e aggiungila di nuovo."
+    },
+    "error": {
+      "cannot_connect": "Connessione non riuscita",
+      "invalid_auth": "Nome utente o password non validi. Nota: questa integrazione utilizza il tuo account Panasonic Comfort Cloud (le stesse credenziali dell'app Comfort Cloud), non l'account separato Aquarea Smart Cloud / Aquarea Home.",
+      "mfa_required": "Questo Panasonic ID usa un metodo di autenticazione a più fattori che l'integrazione non supporta. Funzionano solo i codici via SMS e quelli di un'app di autenticazione.",
+      "unknown": "Errore inatteso",
+      "api_error": "Errore API: {api_error_msg}",
+      "invalid_mfa_code": "Il codice non è stato accettato. Controllalo e riprova.",
+      "mfa_expired": "La richiesta di verifica è scaduta. Inserisci di nuovo la password per ottenere un nuovo codice."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "password": "Password",
+          "username": "Nome utente"
+        }
       },
-      "error": {
-          "cannot_connect": "Connessione non riuscita",
-          "invalid_auth": "Nome utente o password non validi. Nota: questa integrazione utilizza il tuo account Panasonic Comfort Cloud (le stesse credenziali dell'app Comfort Cloud), non l'account separato Aquarea Smart Cloud / Aquarea Home.",
-          "mfa_required": "Questo Panasonic ID richiede l'autenticazione a più fattori (verifica in due passaggi), che l'integrazione non supporta ancora.",
-          "unknown": "Errore inatteso",
-          "api_error": "Errore API: {api_error_msg}"
+      "reauth_confirm": {
+        "description": "Inserire la password del tuo ID Panasonic {username}:",
+        "data": {
+          "password": "Password"
+        }
       },
-      "step": {
-          "user": {
-              "data": {
-                  "password": "Password",
-                  "username": "Nome utente"
-              }
-          },
-          "reauth_confirm": {
-              "description": "Inserire la password del tuo ID Panasonic {username}:",
-              "data": {
-                  "password": "Password"
-              }
-          }
+      "mfa_sms": {
+        "description": "Panasonic ha inviato un codice di verifica via SMS a {destination}. Inseriscilo qui sotto. Per ricevere un nuovo codice, seleziona «Invia un nuovo codice» e invia il modulo.",
+        "data": {
+          "code": "Codice di verifica",
+          "resend_code": "Invia un nuovo codice"
+        },
+        "data_description": {
+          "code": "Il codice di 6 cifre. Funziona anche un codice di recupero.",
+          "resend_code": "Selezionalo per far inviare di nuovo l'SMS da Panasonic; il campo del codice può restare vuoto."
+        }
+      },
+      "mfa_otp": {
+        "description": "Inserisci il codice attuale di 6 cifre della tua app di autenticazione.",
+        "data": {
+          "code": "Codice di verifica"
+        },
+        "data_description": {
+          "code": "Il codice di 6 cifre. Funziona anche un codice di recupero."
+        }
       }
+    }
   },
   "options": {
       "step": {

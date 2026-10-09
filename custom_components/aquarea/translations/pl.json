@@ -8,9 +8,11 @@
         "error": {
             "cannot_connect": "Nie udało się połączyć",
             "invalid_auth": "Niprawidłowa nazwa użytkownika lub hasło. Uwaga: ta integracja korzysta z konta Panasonic Comfort Cloud (tego samego co w aplikacji Comfort Cloud) — a nie z osobnego konta Aquarea Smart Cloud / Aquarea Home.",
-            "mfa_required": "Ten Panasonic ID wymaga uwierzytelniania wieloskładnikowego (weryfikacji dwuetapowej), którego integracja jeszcze nie obsługuje.",
+            "mfa_required": "To konto Panasonic ID używa metody uwierzytelniania wieloskładnikowego, której integracja nie obsługuje. Działają tylko kody SMS i kody z aplikacji uwierzytelniającej.",
             "unknown": "Wystąpił nieznany błąd",
-            "api_error": "Błąd API: {api_error_msg}"
+            "api_error": "Błąd API: {api_error_msg}",
+            "invalid_mfa_code": "Kod nie został zaakceptowany. Sprawdź go i spróbuj ponownie.",
+            "mfa_expired": "Żądanie weryfikacji wygasło. Wpisz hasło ponownie, aby otrzymać nowy kod."
         },
         "step": {
             "user": {
@@ -23,6 +25,26 @@
                 "description": "Wprowadź hasło dla swojego identyfikatora Panasonic ID {username}:",
                 "data": {
                     "password": "Hasło"
+                }
+            },
+            "mfa_sms": {
+                "description": "Panasonic wysłał kod weryfikacyjny SMS-em na numer {destination}. Wpisz go poniżej. Aby otrzymać nowy kod, zaznacz „Wyślij nowy kod” i zatwierdź formularz.",
+                "data": {
+                    "code": "Kod weryfikacyjny",
+                    "resend_code": "Wyślij nowy kod"
+                },
+                "data_description": {
+                    "code": "6-cyfrowy kod. Kod odzyskiwania również działa.",
+                    "resend_code": "Zaznacz, aby Panasonic wysłał SMS ponownie; pole kodu może pozostać puste."
+                }
+            },
+            "mfa_otp": {
+                "description": "Wpisz aktualny 6-cyfrowy kod z aplikacji uwierzytelniającej.",
+                "data": {
+                    "code": "Kod weryfikacyjny"
+                },
+                "data_description": {
+                    "code": "6-cyfrowy kod. Kod odzyskiwania również działa."
                 }
             }
         }
