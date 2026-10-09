@@ -212,10 +212,34 @@ def corrected_sums(
             if hourly[start] > _EPSILON:
                 pending.append(_Pending(start, hourly[start]))
             next_cloud += 1
-        # After a reset the sensor counts only what comes next: the hours
-        # before it are lost to the sensor, recorded or not.
         if hour.reset:
-            pending = deque(item for item in pending if item.cloud_hour >= hour.start)
+            # After a reset the sensor counts only what comes after it, so
+            # what this hour recorded is the energy since the reset. When the
+            # sensor was unavailable before this hour, the reset happened
+            # somewhere in that gap and later cloud hours are waiting too:
+            # the energy belongs to the latest of them, newest first. The
+            # older ones ended before the reset and are lost to the sensor.
+            # Only the newest waiting hour's remainder (normally this hour's
+            # own) can still be recorded later.
+            waiting = [
+                item
+                for item in pending
+                if item.cloud_hour > previous.start
+                and item.cloud_hour >= hour.start - max_lag
+            ]
+            energy = hour.sum - previous.sum
+            pending = deque()
+            for newest, item in enumerate(reversed(waiting)):
+                used = min(max(energy, 0.0), item.energy)
+                if used > _EPSILON:
+                    matched[item.cloud_hour] = matched.get(item.cloud_hour, 0.0) + used
+                    energy -= used
+                if newest == 0 and item.energy - used > _EPSILON:
+                    pending.append(item._replace(energy=item.energy - used))
+                if energy <= _EPSILON:
+                    break
+            unmatched[hour.start] = energy
+            continue
         while pending and pending[0].cloud_hour < hour.start - max_lag:
             expired = pending.popleft()
             _LOGGER.debug(
@@ -357,6 +381,8 @@ async def async_redistribute_hourly_statistics(
             # sensor had before.
             if previous is None:
                 continue
+            # No last_reset: the energy sensors are TOTAL_INCREASING, and the
+            # recorder only uses last_reset for TOTAL sensors.
             stat = StatisticData(start=start, sum=new_sum)
             if (state := previous.get("state")) is not None:
                 stat["state"] = state

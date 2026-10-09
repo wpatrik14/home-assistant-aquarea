@@ -189,6 +189,39 @@ def test_energy_lost_at_a_reset_does_not_shift_later_hours() -> None:
     }
 
 
+def test_a_reset_during_an_outage_keeps_the_hours_after_it() -> None:
+    """The sensor was unavailable over midnight; the reset happened in the gap.
+
+    Review of wpatrik14/home-assistant-aquarea#111: a today sensor, unavailable
+    22:00-02:00. 23:00 (0.7 kWh) ended before the midnight reset and is lost
+    to the sensor; 00:00 (0.2) and 01:00 (0.3) came after it and are what
+    the sensor shows at 02:00. Those hours keep their energy instead of all
+    of it staying at 02:00.
+    """
+    recorded = _recorded((5, 21, 10.0), (5, 22, 10.0), (6, 2, 10.5, True), (6, 3, 10.5))
+
+    assert _corrected(recorded, {(5, 23): 0.7, (6, 0): 0.2, (6, 1): 0.3}) == {
+        (5, 21): 10.0,
+        (5, 22): 10.0,
+        (5, 23): 10.0,
+        (6, 0): 10.2,
+        (6, 1): 10.5,
+        (6, 2): 10.5,
+        (6, 3): 10.5,
+    }
+
+
+def test_a_reset_keeps_its_own_hour_waiting() -> None:
+    """The reset hour's own energy that isn't recorded yet still can be later."""
+    recorded = _recorded((5, 23, 10.0), (6, 0, 10.1, True), (6, 1, 10.4))
+
+    assert _corrected(recorded, {(5, 23): 0.5, (6, 0): 0.4}) == {
+        (5, 23): 10.0,
+        (6, 0): 10.4,
+        (6, 1): 10.4,
+    }
+
+
 def test_cloud_hours_up_to_the_first_recorded_hour_are_left_out() -> None:
     """What was recorded before the first hour is unknown, so its hours are context.
 
@@ -1237,3 +1270,51 @@ async def test_no_data_from_the_cloud_keeps_the_cached_day(
     freezer.move_to(_cloud(6, 4))
     await coordinator.async_refresh()
     assert "20261005" in _day_calls(mock_aquarea_client)
+
+
+async def test_an_empty_day_is_warned_about_once(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """During an outage the same day comes back empty at every interval.
+
+    Review of wpatrik14/home-assistant-aquarea#111: the warning is logged the
+    first time, then at debug level until the day is received again.
+    """
+    freezer.move_to(_cloud(5, 12))
+    answers: dict[str, list] = {"20261005": [None, None, [], None]}
+
+    async def consumption(
+        long_id: str, aggregation: DateType, date_input: str
+    ) -> list[aioaquarea.Consumption] | None:
+        if aggregation == DateType.DAY:
+            queue = answers.get(date_input)
+            return queue.pop(0) if queue else []
+        return []
+
+    mock_aquarea_client.get_device_consumption.side_effect = consumption
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator = next(iter(mock_config_entry.runtime_data.values()))
+
+    def warnings() -> int:
+        return sum(
+            record.levelname == "WARNING"
+            and "No hourly consumption received for 2026-10-05" in record.getMessage()
+            for record in caplog.records
+        )
+
+    assert warnings() == 1
+    freezer.tick(timedelta(hours=1))
+    await coordinator.async_refresh()
+    assert warnings() == 1
+
+    # Received, then empty again: a new outage is warned about again.
+    for _ in range(2):
+        freezer.tick(timedelta(hours=1))
+        await coordinator.async_refresh()
+    assert warnings() == 2
