@@ -8,9 +8,11 @@
         "error": {
             "cannot_connect": "Verbindung fehlgeschlagen",
             "invalid_auth": "Ungültiger Benutzername oder Passwort. Hinweis: Diese Integration verwendet dein Panasonic Comfort Cloud-Konto (dieselben Zugangsdaten wie in der Comfort Cloud-App) — nicht das separate Aquarea Smart Cloud / Aquarea Home-Konto.",
-            "mfa_required": "Diese Panasonic ID erfordert eine Multi-Faktor-Authentifizierung (Zwei-Schritt-Verifizierung), die die Integration noch nicht unterstützt.",
+            "mfa_required": "Diese Panasonic ID verwendet ein Verfahren der Mehrfaktor-Authentifizierung, das die Integration nicht unterstützt. Es funktionieren nur SMS-Codes und Codes einer Authenticator-App.",
             "unknown": "Unerwarteter Fehler",
-            "api_error": "API-Fehler: {api_error_msg}"
+            "api_error": "API-Fehler: {api_error_msg}",
+            "invalid_mfa_code": "Der Code wurde nicht akzeptiert. Prüfe ihn und versuche es erneut.",
+            "mfa_expired": "Die Bestätigungsanfrage ist abgelaufen. Gib dein Passwort erneut ein, um einen neuen Code zu erhalten."
         },
         "step": {
             "user": {
@@ -23,6 +25,26 @@
                 "description": "Bitte gib das Passwort für deine Panasonic-ID {username} ein:",
                 "data": {
                     "password": "Passwort"
+                }
+            },
+            "mfa_sms": {
+                "description": "Panasonic hat einen Bestätigungscode per SMS an {destination} gesendet. Gib ihn unten ein. Für einen neuen Code aktiviere „Neuen Code senden“ und sende das Formular ab.",
+                "data": {
+                    "code": "Bestätigungscode",
+                    "resend_code": "Neuen Code senden"
+                },
+                "data_description": {
+                    "code": "Der 6-stellige Code. Ein Wiederherstellungscode funktioniert ebenfalls.",
+                    "resend_code": "Aktivieren, damit Panasonic die SMS erneut sendet; das Codefeld kann leer bleiben."
+                }
+            },
+            "mfa_otp": {
+                "description": "Gib den aktuellen 6-stelligen Code aus deiner Authenticator-App ein.",
+                "data": {
+                    "code": "Bestätigungscode"
+                },
+                "data_description": {
+                    "code": "Der 6-stellige Code. Ein Wiederherstellungscode funktioniert ebenfalls."
                 }
             }
         }

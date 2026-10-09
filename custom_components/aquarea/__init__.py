@@ -7,11 +7,11 @@ import logging
 import aioaquarea
 import aiohttp
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-from .const import MFA_REQUIRED
+from .const import CONF_REFRESH_TOKEN, MFA_REQUIRED
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,7 +31,26 @@ def _create_client(hass: HomeAssistant, entry: AquareaConfigEntry) -> aioaquarea
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
     session = async_create_clientsession(hass)
-    return aioaquarea.Client(session, username, password)
+
+    @callback
+    def _store_refresh_token(token: str) -> None:
+        """Keep the entry's refresh token current (it can rotate on every refresh)."""
+        if entry.data.get(CONF_REFRESH_TOKEN) != token:
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, CONF_REFRESH_TOKEN: token}
+            )
+
+    # Without a stored token the password login is used. Setup and polling run
+    # unattended: a login that needs multi-factor authentication must not text
+    # a code nobody is waiting for; it starts reauth, which asks for the code.
+    return aioaquarea.Client(
+        session,
+        username,
+        password,
+        refresh_token=entry.data.get(CONF_REFRESH_TOKEN),
+        mfa_send_code=False,
+        refresh_token_callback=_store_refresh_token,
+    )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
@@ -68,10 +87,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
             ) from err
         if err.error_code == MFA_REQUIRED:
             # Retrying cannot pass the challenge, and every attempt sends the
-            # user a Panasonic login email.
+            # user a Panasonic login email. Reauth asks for the code.
             raise ConfigEntryAuthFailed(
-                "The Panasonic ID requires multi-factor authentication, which "
-                "is not supported yet"
+                "The Panasonic ID requires multi-factor authentication"
             ) from err
         # Any other authentication failure (SESSION_CLOSED, API_ERROR,
         # TOKEN_EXPIRED, ...) is transient. Never fall through to `return True`

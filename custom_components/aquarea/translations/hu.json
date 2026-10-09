@@ -8,9 +8,11 @@
         "error": {
             "cannot_connect": "Nem sikerült csatlakozni",
             "invalid_auth": "Érvénytelen felhasználónév vagy jelszó. Megjegyzés: ez az integráció a Panasonic Comfort Cloud fiókodat használja (ugyanazt, mint a Comfort Cloud alkalmazás) — nem a különálló Aquarea Smart Cloud / Aquarea Home fiókot.",
-            "mfa_required": "Ehhez a Panasonic ID-hoz többlépcsős hitelesítés (kétlépcsős azonosítás) szükséges, amit az integráció még nem támogat.",
+            "mfa_required": "Ez a Panasonic ID olyan többlépcsős hitelesítést használ, amelyet az integráció nem támogat. Csak az SMS-ben küldött és a hitelesítő alkalmazás kódjai működnek.",
             "unknown": "Váratlan hiba",
-            "api_error": "API hiba: {api_error_msg}"
+            "api_error": "API hiba: {api_error_msg}",
+            "invalid_mfa_code": "A kódot nem fogadta el a rendszer. Ellenőrizd, és próbáld újra.",
+            "mfa_expired": "Az ellenőrzési kérés lejárt. Add meg újra a jelszavadat, hogy új kódot kapj."
         },
         "step": {
             "user": {
@@ -23,6 +25,26 @@
                 "description": "Add meg a jelszavadat a következő Panasonic ID-hoz: {username}:",
                 "data": {
                     "password": "Jelszó"
+                }
+            },
+            "mfa_sms": {
+                "description": "A Panasonic ellenőrző kódot küldött SMS-ben a következő számra: {destination}. Írd be alább. Új kódért jelöld be az „Új kód küldése” mezőt, és küldd el az űrlapot.",
+                "data": {
+                    "code": "Ellenőrző kód",
+                    "resend_code": "Új kód küldése"
+                },
+                "data_description": {
+                    "code": "A 6 számjegyű kód. Helyreállítási kód is megfelel.",
+                    "resend_code": "Jelöld be, ha azt szeretnéd, hogy a Panasonic újra elküldje az SMS-t; a kód mező üresen maradhat."
+                }
+            },
+            "mfa_otp": {
+                "description": "Add meg a hitelesítő alkalmazásod aktuális 6 számjegyű kódját.",
+                "data": {
+                    "code": "Ellenőrző kód"
+                },
+                "data_description": {
+                    "code": "A 6 számjegyű kód. Helyreállítási kód is megfelel."
                 }
             }
         }
