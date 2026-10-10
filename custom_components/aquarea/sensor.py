@@ -26,6 +26,7 @@ from .entity import AquareaBaseEntity
 from .statistics import (
     CLOUD_TIME_ZONE,
     async_redistribute_hourly_statistics,
+    cloud_date,
     hourly_consumption,
     max_match_lag,
 )
@@ -455,6 +456,19 @@ class AquareaEnergySensor(AquareaBaseEntity):
 
     entity_description: AquareaEnergyConsumptionSensorDescription
     _hourly_consumption_fetched_at: datetime | None = None
+    _period_being_processed: datetime | None = None
+
+    def _ahead_of_the_cloud(self, period_start: datetime) -> bool:
+        """Return whether the value belongs to a period after the cloud's current one.
+
+        Versions up to 1.5.1 followed the local day and month, which start
+        before the cloud's. Restored between the two, the value already
+        belongs to the new local period (typically 0 after its reset); the
+        cloud's current period would count again energy the recorder has
+        metered already, so the value is kept until the cloud catches up.
+        """
+        previous = self._period_being_processed
+        return previous is not None and previous > period_start
 
     async def async_added_to_hass(self) -> None:
         """Follow the hourly consumption fetches, and use the one already made."""
@@ -485,7 +499,7 @@ class AquareaEnergySensor(AquareaBaseEntity):
         write_from = datetime.combine(
             min(
                 first_day + timedelta(days=1),
-                dt_util.utcnow().astimezone(CLOUD_TIME_ZONE).date(),
+                cloud_date(dt_util.utcnow()),
             ),
             time(),
             CLOUD_TIME_ZONE,
@@ -506,7 +520,7 @@ class AquareaEnergySensor(AquareaBaseEntity):
 class EnergyAccumulatedConsumptionSensor(
     AquareaEnergySensor, SensorEntity, RestoreEntity
 ):
-    """Energy consumed so far in the current month, restored across restarts."""
+    """Energy consumed so far in the cloud's (UTC) month, restored across restarts."""
 
     entity_description: AquareaEnergyConsumptionSensorDescription
 
@@ -564,11 +578,17 @@ class EnergyAccumulatedConsumptionSensor(
 
     @callback
     def _handle_coordinator_update(self) -> None:
+        # The cloud's month, which the coordinator fetches (see
+        # EnergyConsumptionSensor).
+        today = cloud_date(dt_util.utcnow())
+        month_start = datetime.combine(today.replace(day=1), time(), CLOUD_TIME_ZONE)
+        if self._ahead_of_the_cloud(month_start):
+            super()._handle_coordinator_update()
+            return
         month_consumption = self.coordinator.month_consumption
         if not month_consumption:
             self._attr_native_value = None
         else:
-            now = dt_util.now()
             month_heat = month_cool = month_tank = month_total = 0.0
             for c in month_consumption:
                 try:
@@ -589,7 +609,7 @@ class EnergyAccumulatedConsumptionSensor(
                         )
                         continue
 
-                    if item_date <= now.date():
+                    if item_date <= today:
                         month_heat += float(c.heat_consumption or 0.0)
                         month_cool += float(c.cool_consumption or 0.0)
                         month_tank += float(c.tank_consumption or 0.0)
@@ -618,16 +638,13 @@ class EnergyAccumulatedConsumptionSensor(
             elif ctype == aioaquarea.ConsumptionType.TOTAL:
                 reported_val = month_total
             if reported_val is not None:
-                month_start = now.replace(
-                    day=1, hour=0, minute=0, second=0, microsecond=0
-                )
                 self._period_being_processed = month_start
                 self._attr_native_value = reported_val
         super()._handle_coordinator_update()
 
 
 class EnergyConsumptionSensor(AquareaEnergySensor, SensorEntity, RestoreEntity):
-    """Energy consumed so far today, restored across restarts."""
+    """Energy consumed so far in the cloud's (UTC) day, restored across restarts."""
 
     entity_description: AquareaEnergyConsumptionSensorDescription
 
@@ -676,9 +693,16 @@ class EnergyConsumptionSensor(AquareaEnergySensor, SensorEntity, RestoreEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        now = dt_util.now()
-        today = now.date()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Each entry's data_time is the cloud's date, a UTC one (see
+        # statistics.cloud_date). Matching it against the local date moved to
+        # the next entry at local midnight, before the cloud did, and lost
+        # the energy used until the cloud's day ended; so the day, and its
+        # reset, follow the cloud's.
+        today = cloud_date(dt_util.utcnow())
+        today_start = datetime.combine(today, time(), CLOUD_TIME_ZONE)
+        if self._ahead_of_the_cloud(today_start):
+            super()._handle_coordinator_update()
+            return
         month_consumption = self.coordinator.month_consumption or []
         today_entry = None
         for c in month_consumption:

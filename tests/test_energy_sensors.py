@@ -3,7 +3,9 @@
 Background
 ----------
 Both energy sensor families read the coordinator's cached month list (one
-entry per day, `data_time` as `YYYYMMDD` or `YYYY-MM-DD`):
+entry per day, `data_time` as `YYYYMMDD` or `YYYY-MM-DD`). The cloud labels
+days by the UTC date, so "today" below is the UTC date and the clock is UTC
+(the local-timezone boundary is covered by tests/ha/test_energy.py):
 
 - `EnergyAccumulatedConsumptionSensor` (month to date) sums every entry dated
   today or earlier, per consumption type. Future-dated entries are ignored.
@@ -31,7 +33,7 @@ Intentionally dependency-free (stdlib only):
 import __future__
 
 import ast
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, time
 import os
 import sys
 import types
@@ -39,7 +41,7 @@ import types
 SENSOR = os.path.join(
     os.path.dirname(__file__), "..", "custom_components", "aquarea", "sensor.py"
 )
-TZ = timezone(timedelta(hours=1))
+TZ = UTC
 
 
 class ConsumptionType:
@@ -94,11 +96,21 @@ def _load(class_name):
         if isinstance(n, ast.FunctionDef) and n.name == "_handle_coordinator_update"
     )
     node.decorator_list = []
+    base = next(
+        n
+        for n in tree.body
+        if isinstance(n, ast.ClassDef) and n.name == "AquareaEnergySensor"
+    )
+    ahead = next(
+        n
+        for n in base.body
+        if isinstance(n, ast.FunctionDef) and n.name == "_ahead_of_the_cloud"
+    )
     flow = ast.ClassDef(
         name="Extracted",
         bases=[ast.Name("_Base", ast.Load())],
         keywords=[],
-        body=[node],
+        body=[node, ahead],
         decorator_list=[],
         type_params=[],
     )
@@ -107,7 +119,10 @@ def _load(class_name):
         "_Base": _Base,
         "aioaquarea": aioaquarea,
         "datetime": datetime,
-        "dt_util": types.SimpleNamespace(now=lambda: _Clock.now),
+        "dt_util": types.SimpleNamespace(utcnow=lambda: _Clock.now),
+        "cloud_date": lambda moment: moment.astimezone(UTC).date(),
+        "time": time,
+        "CLOUD_TIME_ZONE": UTC,
         "_LOGGER": LOGGER,
     }
     exec(

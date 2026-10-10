@@ -32,8 +32,9 @@ addopts = "--cov=custom_components/aquarea --cov-report=term-missing"
 # pytest-cov's unrounded summary line agrees with the gate);
 # 85.92 with the hourly statistics tests (85.9233%, rounded down);
 # 86.76 with the MFA code entry tests (86.7627%, rounded down);
-# 86.91 with the hourly statistics review follow-ups (86.9171%, rounded down).
-fail_under = 86.91
+# 86.91 with the hourly statistics review follow-ups (86.9171%, rounded down);
+# 91.62 with the energy sensor tests (91.6291%, rounded down).
+fail_under = 91.62
 precision = 2
 show_missing = true
 
