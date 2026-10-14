@@ -54,7 +54,7 @@ The integration follows the standard Home Assistant integration pattern, utilizi
 ### Water Heater (`water_heater.py`)
 - **Tank Control**: Represents the domestic hot water tank.
 - **Operation Modes**: Supports `heating` and `off`.
-- **Active State**: Determines if the tank is actively being heated by checking `device.current_direction` (WATER) or `device.current_action`.
+- **Active State**: Determines if the tank is actively being heated by checking `device.current_direction` (WATER) or `device.current_action`, and requires the pump to be running (`device.pump_duty == 1`; if the duty is unavailable, direction alone decides). The cloud keeps reporting WATER while the pump is stopped, e.g. during an outdoor-temperature heating stop.
 
 ### Sensors (`sensor.py`)
 - **Temperature Sensors**: Outdoor temperature and zone temperatures.
