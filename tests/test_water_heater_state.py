@@ -124,11 +124,13 @@ class _FakeDevice:
         is_on_error=False,
         current_action=None,
         current_direction=None,
+        pump_duty=None,
     ):
         self.tank = _FakeTank(operation_status)
         self.is_on_error = is_on_error
         self.current_action = current_action
         self.current_direction = current_direction
+        self.pump_duty = pump_duty
         self.device_id = "dev-1"
 
 
@@ -268,6 +270,63 @@ def main():
     check(
         "tank ON, action HEATING_WATER -> state is HEATING",
         wh.state == HEATING,
+        f"got={wh.state!r}",
+    )
+
+    # Direction WATER only means heating while the pump is actually running
+    # (pump_duty 1); the cloud keeps reporting WATER during a heating stop.
+    for name, duty, expected in (
+        ("pump running -> HEATING", 1, HEATING),
+        ("pump stopped -> IDLE", 0, IDLE),
+        ("pump duty unavailable -> HEATING (direction alone)", None, HEATING),
+    ):
+        wh = _FakeWaterHeater(
+            _FakeCoordinator(
+                _FakeDevice(
+                    operation_status=OperationStatus.ON,
+                    current_direction=DeviceDirection.WATER,
+                    current_action=DeviceAction.HEATING_WATER,
+                    pump_duty=duty,
+                )
+            )
+        )
+        wh._update_operation_state()
+        check(
+            f"tank ON, direction WATER, {name}",
+            wh.state == expected,
+            f"got={wh.state!r}",
+        )
+
+    for direction in (DeviceDirection.PUMP, DeviceDirection.IDLE):
+        wh = _FakeWaterHeater(
+            _FakeCoordinator(
+                _FakeDevice(
+                    operation_status=OperationStatus.ON,
+                    current_direction=direction,
+                    pump_duty=1,
+                )
+            )
+        )
+        wh._update_operation_state()
+        check(
+            f"tank ON, direction {direction.name}, pump running -> IDLE",
+            wh.state == IDLE,
+            f"got={wh.state!r}",
+        )
+
+    wh = _FakeWaterHeater(
+        _FakeCoordinator(
+            _FakeDevice(
+                operation_status=OperationStatus.OFF,
+                current_direction=DeviceDirection.WATER,
+                pump_duty=1,
+            )
+        )
+    )
+    wh._update_operation_state()
+    check(
+        "tank OFF, direction WATER, pump running -> STATE_OFF",
+        wh.state == STATE_OFF,
         f"got={wh.state!r}",
     )
 

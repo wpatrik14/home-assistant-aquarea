@@ -97,12 +97,19 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
 
         # The tank is heating only when the pump is directed at the water.
         # DeviceAction.HEATING means space heating (direction PUMP), not the tank.
-        is_heating = (
+        is_directed_at_water = (
             getattr(self.coordinator.device, "current_direction", None)
             == DeviceDirection.WATER
             or getattr(self.coordinator.device, "current_action", None)
             == DeviceAction.HEATING_WATER
         )
+
+        # The cloud keeps reporting direction WATER while the pump is stopped
+        # (e.g. the installer's outdoor-temperature heating stop), so the tank
+        # only counts as heating when the pump is actually running. If the pump
+        # duty is unavailable, fall back to the direction alone.
+        pump_duty = getattr(self.coordinator.device, "pump_duty", None)
+        is_heating = is_directed_at_water and (pump_duty is None or pump_duty == 1)
 
         self._attr_current_operation = HEATING if is_heating else IDLE
 
