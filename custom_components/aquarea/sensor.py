@@ -458,17 +458,28 @@ class AquareaEnergySensor(AquareaBaseEntity):
     _hourly_consumption_fetched_at: datetime | None = None
     _period_being_processed: datetime | None = None
 
-    def _ahead_of_the_cloud(self, period_start: datetime) -> bool:
+    def _ahead_of_the_cloud(self, period_first_day: date) -> bool:
         """Return whether the value belongs to a period after the cloud's current one.
 
-        Versions up to 1.5.1 followed the local day and month, which start
-        before the cloud's. Restored between the two, the value already
-        belongs to the new local period (typically 0 after its reset); the
-        cloud's current period would count again energy the recorder has
-        metered already, so the value is kept until the cloud catches up.
+        Versions up to 1.5.3 followed the local day and month. East of UTC
+        they start before the cloud's; restored between the two, the value
+        already belongs to the new local period (typically 0 after its
+        reset), and the cloud's current period would count again energy the
+        recorder has metered already, so the value is kept until the cloud
+        catches up.
+
+        The periods are compared by their first day: the local date of the
+        restored period's start against the cloud's. As instants they can't
+        be compared, since a local midnight west of UTC comes after the
+        cloud's. A period stored since this change starts at the cloud's
+        midnight, whose local date is never later than the cloud's date, so
+        this only holds a value restored from those versions; it can go once
+        upgrades from them no longer need care.
         """
         previous = self._period_being_processed
-        return previous is not None and previous > period_start
+        return previous is not None and dt_util.as_local(previous).date() > (
+            period_first_day
+        )
 
     async def async_added_to_hass(self) -> None:
         """Follow the hourly consumption fetches, and use the one already made."""
@@ -532,7 +543,6 @@ class EnergyAccumulatedConsumptionSensor(
         """Initialize the sensor from its description."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{super().unique_id}_{description.key}"
-        self._period_being_processed: datetime | None = None
         self._accumulated_period_being_processed: float | None = None
         self.entity_description = description
 
@@ -582,7 +592,7 @@ class EnergyAccumulatedConsumptionSensor(
         # EnergyConsumptionSensor).
         today = cloud_date(dt_util.utcnow())
         month_start = datetime.combine(today.replace(day=1), time(), CLOUD_TIME_ZONE)
-        if self._ahead_of_the_cloud(month_start):
+        if self._ahead_of_the_cloud(month_start.date()):
             super()._handle_coordinator_update()
             return
         month_consumption = self.coordinator.month_consumption
@@ -656,7 +666,6 @@ class EnergyConsumptionSensor(AquareaEnergySensor, SensorEntity, RestoreEntity):
         """Initialize the sensor from its description."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{super().unique_id}_{description.key}"
-        self._period_being_processed: datetime | None = None
         self.entity_description = description
 
     async def async_added_to_hass(self) -> None:
@@ -700,7 +709,7 @@ class EnergyConsumptionSensor(AquareaEnergySensor, SensorEntity, RestoreEntity):
         # reset, follow the cloud's.
         today = cloud_date(dt_util.utcnow())
         today_start = datetime.combine(today, time(), CLOUD_TIME_ZONE)
-        if self._ahead_of_the_cloud(today_start):
+        if self._ahead_of_the_cloud(today):
             super()._handle_coordinator_update()
             return
         month_consumption = self.coordinator.month_consumption or []

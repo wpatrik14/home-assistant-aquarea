@@ -23,6 +23,7 @@ import __future__
 
 import ast
 import asyncio
+from datetime import UTC
 import os
 import sys
 import types
@@ -137,7 +138,7 @@ def _load():
         "UpdateFailed": UpdateFailed,
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "dt_util": anything,
-        "cloud_date": lambda moment: moment.date(),
+        "cloud_date": lambda moment: moment.astimezone(UTC).date(),
         "timedelta": lambda **kw: 0,
         "DateType": types.SimpleNamespace(MONTH="month"),
         "_LOGGER": types.SimpleNamespace(

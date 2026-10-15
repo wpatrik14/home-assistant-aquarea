@@ -119,7 +119,9 @@ def _load(class_name):
         "_Base": _Base,
         "aioaquarea": aioaquarea,
         "datetime": datetime,
-        "dt_util": types.SimpleNamespace(utcnow=lambda: _Clock.now),
+        "dt_util": types.SimpleNamespace(
+            utcnow=lambda: _Clock.now, as_local=lambda moment: moment
+        ),
         "cloud_date": lambda moment: moment.astimezone(UTC).date(),
         "time": time,
         "CLOUD_TIME_ZONE": UTC,

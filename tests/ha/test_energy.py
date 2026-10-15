@@ -45,6 +45,7 @@ from custom_components.aquarea.const import DOMAIN
 from .conftest import DEVICE_ID
 
 WARSAW = ZoneInfo("Europe/Warsaw")
+NEW_YORK = ZoneInfo("America/New_York")
 TODAY = "sensor.heat_pump_heating_consumption"
 MONTH = "sensor.heat_pump_heating_accumulated_consumption"
 
@@ -76,8 +77,10 @@ def _month_queries(client: AsyncMock) -> list[str]:
     ]
 
 
-async def _setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:
-    await hass.config.async_set_time_zone("Europe/Warsaw")
+async def _setup(
+    hass: HomeAssistant, entry: MockConfigEntry, time_zone: str = "Europe/Warsaw"
+) -> None:
+    await hass.config.async_set_time_zone(time_zone)
     # The "today" sensors are disabled by default.
     er.async_get(hass).async_get_or_create(
         Platform.SENSOR,
@@ -183,6 +186,46 @@ async def test_month_sensor_keeps_the_last_hours_of_the_cloud_month(
     assert _metered(readings) == pytest.approx(0.5)
 
 
+async def test_the_new_year_starts_with_the_cloud_s(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """At 00:30 CET on 2027-01-01 the cloud is still in December 2026.
+
+    The month and the year roll over together at 01:00 CET: December is
+    requested, and counted, until then.
+    """
+    cloud: Cloud = {"202612": {"20261230": 50.0, "20261231": 3.0}}
+    mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
+    freezer.move_to(datetime(2026, 12, 31, 23, 30, tzinfo=WARSAW))
+    await _setup(hass, mock_config_entry)
+    await _at(hass, freezer, datetime(2026, 12, 31, 23, 31, tzinfo=WARSAW))
+    readings = [float(hass.states.get(MONTH).state)]
+    assert readings[-1] == 53.0
+
+    cloud["202612"]["20261231"] = 3.2
+    await _at(hass, freezer, datetime(2027, 1, 1, 0, 30, tzinfo=WARSAW))
+    readings.append(float(hass.states.get(MONTH).state))
+    assert readings[-1] == 53.2
+
+    cloud["202612"]["20261231"] = 3.4
+    cloud["202701"] = {"20270101": 0.1}
+    await _at(hass, freezer, datetime(2027, 1, 1, 1, 30, tzinfo=WARSAW))
+    readings.append(float(hass.states.get(MONTH).state))
+    assert readings[-1] == 0.1
+
+    assert _month_queries(mock_aquarea_client) == [
+        "20261201",
+        "20261201",
+        "20270101",
+    ]
+    # 0.2 kWh of December's last hour was published after the last fetch of
+    # the cloud's December: the residual described in the docs.
+    assert _metered(readings) == pytest.approx(0.3)
+
+
 async def test_month_sensor_counts_the_cloud_day_that_started_before_local_midnight(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
@@ -197,16 +240,39 @@ async def test_month_sensor_counts_the_cloud_day_that_started_before_local_midni
     """
     cloud: Cloud = {"202610": {"20261006": 5.0}}
     mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
-    new_york = ZoneInfo("America/New_York")
-    freezer.move_to(datetime(2026, 10, 6, 19, 30, tzinfo=new_york))
-    await _setup(hass, mock_config_entry)
-    await hass.config.async_set_time_zone("America/New_York")
-    await _at(hass, freezer, datetime(2026, 10, 6, 19, 31, tzinfo=new_york))
+    freezer.move_to(datetime(2026, 10, 6, 19, 30, tzinfo=NEW_YORK))
+    await _setup(hass, mock_config_entry, "America/New_York")
+    await _at(hass, freezer, datetime(2026, 10, 6, 19, 31, tzinfo=NEW_YORK))
     assert float(hass.states.get(MONTH).state) == 5.0
 
     cloud["202610"]["20261007"] = 0.3
-    await _at(hass, freezer, datetime(2026, 10, 6, 21, 0, tzinfo=new_york))
+    await _at(hass, freezer, datetime(2026, 10, 6, 21, 0, tzinfo=NEW_YORK))
     assert float(hass.states.get(MONTH).state) == 5.3
+
+
+async def test_today_sensor_moves_to_the_cloud_day_before_local_midnight(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """West of UTC the today sensor resets at 20:00 EDT, the cloud's midnight.
+
+    Matching the local date kept it on the cloud's 2026-10-06 until local
+    midnight, while the cloud was already filling 2026-10-07: the energy
+    used from 20:00 to 24:00 EDT was lost.
+    """
+    cloud: Cloud = {"202610": {"20261006": 2.0}}
+    mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
+    freezer.move_to(datetime(2026, 10, 6, 19, 30, tzinfo=NEW_YORK))
+    await _setup(hass, mock_config_entry, "America/New_York")
+    await _at(hass, freezer, datetime(2026, 10, 6, 19, 31, tzinfo=NEW_YORK))
+    assert float(hass.states.get(TODAY).state) == 2.0
+
+    cloud["202610"]["20261006"] = 2.1
+    cloud["202610"]["20261007"] = 0.05
+    await _at(hass, freezer, datetime(2026, 10, 6, 20, 30, tzinfo=NEW_YORK))
+    assert float(hass.states.get(TODAY).state) == 0.05
 
 
 # --- Upgrading from a version that followed the local day --------------------
@@ -282,6 +348,48 @@ async def test_a_month_sensor_restored_after_local_midnight_waits_for_the_cloud(
     cloud["202611"] = {"20261101": 0.2}
     await _at(hass, freezer, datetime(2026, 11, 1, 1, 30, tzinfo=WARSAW))
     assert float(hass.states.get(MONTH).state) == 0.2
+
+
+async def test_a_today_sensor_restored_west_of_utc_carries_on(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """Upgraded at 12:00 EDT: the restored day started at local midnight, 04:00 UTC.
+
+    Review of #125: compared as instants, that is later than the cloud day's
+    start (00:00 UTC), and the sensor was held until the next UTC midnight.
+    """
+    await hass.config.async_set_time_zone("America/New_York")
+    _restore(hass, TODAY, 3.0, datetime(2026, 10, 6, tzinfo=NEW_YORK))
+    cloud: Cloud = {"202610": {"20261006": 3.5}}
+    mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
+    freezer.move_to(datetime(2026, 10, 6, 12, 0, tzinfo=NEW_YORK))
+    await _setup(hass, mock_config_entry, "America/New_York")
+    await _at(hass, freezer, datetime(2026, 10, 6, 12, 1, tzinfo=NEW_YORK))
+    assert float(hass.states.get(TODAY).state) == 3.5
+
+
+async def test_a_month_sensor_restored_west_of_utc_carries_on(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """Upgraded mid-month in New York: the restored month started at 04:00 UTC.
+
+    Review of #125: compared as instants, the sensor was held until the
+    cloud's next month, up to a month.
+    """
+    await hass.config.async_set_time_zone("America/New_York")
+    _restore(hass, MONTH, 30.0, datetime(2026, 10, 1, tzinfo=NEW_YORK))
+    cloud: Cloud = {"202610": {"20261005": 30.0, "20261006": 4.0}}
+    mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
+    freezer.move_to(datetime(2026, 10, 6, 12, 0, tzinfo=NEW_YORK))
+    await _setup(hass, mock_config_entry, "America/New_York")
+    await _at(hass, freezer, datetime(2026, 10, 6, 12, 1, tzinfo=NEW_YORK))
+    assert float(hass.states.get(MONTH).state) == 34.0
 
 
 # --- With the hourly statistics correction, on the recorder ------------------
