@@ -156,6 +156,7 @@ def _load():
             get_time_zone=lambda *_: None,
         ),
         "timedelta": timedelta,
+        "cloud_date": lambda moment: moment.astimezone(UTC).date(),
         "DateType": types.SimpleNamespace(MONTH="month"),
         "_LOGGER": LOGGER,
     }

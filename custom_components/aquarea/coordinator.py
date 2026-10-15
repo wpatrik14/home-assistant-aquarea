@@ -22,14 +22,9 @@ from .const import (
     MFA_REQUIRED,
     YESTERDAY_REFETCH_HOURS,
 )
-from .statistics import CLOUD_TIME_ZONE
+from .statistics import CLOUD_TIME_ZONE, cloud_date
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _cloud_date(moment: datetime) -> date:
-    """Return the cloud's date (in CLOUD_TIME_ZONE) at a moment."""
-    return moment.astimezone(CLOUD_TIME_ZONE).date()
 
 
 # The entry's runtime data: one coordinator per device, keyed by device ID.
@@ -144,7 +139,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         The intervals run from the last request, so a failing query is
         retried at the same pace rather than on every poll.
         """
-        today = _cloud_date(now)
+        today = cloud_date(now)
         yesterday = today - timedelta(days=1)
         interval = timedelta(minutes=self.consumption_interval)
         complete_from = datetime.combine(today, time(), CLOUD_TIME_ZONE) + timedelta(
@@ -221,7 +216,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
             fetched = True
         # Keep the day before yesterday too: it is context for yesterday's
         # first hours, whose energy can be recorded after midnight.
-        oldest = _cloud_date(now) - timedelta(days=2)
+        oldest = cloud_date(now) - timedelta(days=2)
         for cache in (
             self._day_consumption,
             self._day_requested_at,
@@ -267,7 +262,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                 await self._device.refresh_data()
 
             # 2. Fetch monthly consumption (used by both today and month-to-date sensors)
-            # Also refetch as soon as the local date changes: the cache holds
+            # The month and the date are the cloud's (UTC, see
+            # statistics.cloud_date): requesting the local month would drop
+            # the cloud month's last hours at every month boundary.
+            # Also refetch as soon as the cloud's date changes: the cache holds
             # the list fetched for the previous day (or, after a month boundary,
             # the previous month's YYYYMM01 list), so waiting out the interval
             # would leave the "today" sensors on yesterday's value for up to
@@ -275,7 +273,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
             last_fetch = self._last_monthly_fetch_time
             fetch_monthly = (
                 last_fetch is None
-                or now.date() != last_fetch.date()
+                or cloud_date(now) != cloud_date(last_fetch)
                 or now - last_fetch >= timedelta(minutes=self.consumption_interval)
             )
 
@@ -284,7 +282,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                     "Fetching monthly consumption data from Cloud API (%sm interval)",
                     self.consumption_interval,
                 )
-                month_date_str = now.strftime("%Y%m01")
+                month_date_str = cloud_date(now).strftime("%Y%m01")
                 try:
                     self._month_consumption = await self._client.get_device_consumption(
                         self._device.long_id, DateType.MONTH, month_date_str

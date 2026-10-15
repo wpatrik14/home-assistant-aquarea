@@ -1,4 +1,4 @@
-"""Regression tests: the consumption cache is refetched when the local date changes.
+"""Regression tests: the consumption cache is refetched when the cloud's date changes.
 
 Background
 ----------
@@ -10,8 +10,11 @@ cache still held the data fetched yesterday, so for up to an hour the "today"
 sensors kept showing yesterday's value. At a month boundary it was worse: the
 cache was last month's list, fetched with last month's `YYYYMM01` date.
 
-The cache is now also refetched as soon as the local date differs from the
-date of the last successful fetch, which covers day, month and year rollover.
+The cache is now also refetched as soon as the date differs from the date of
+the last successful fetch, which covers day, month and year rollover. The date
+and the requested month are the cloud's, which are UTC ones (aioaquarea sends
+`osTimezone: +00:00`): most clocks below are UTC, and the last cases run on a
+CET clock, where the local month starts an hour before the cloud's.
 
 The real `_async_update_data` is loaded out of coordinator.py via AST and
 driven with a stub client and a controllable clock.
@@ -25,7 +28,7 @@ import __future__
 
 import ast
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 import os
 import sys
 import types
@@ -115,6 +118,7 @@ def _load():
             now=lambda: _Clock.now, get_time_zone=lambda *_: None
         ),
         "timedelta": timedelta,
+        "cloud_date": lambda moment: moment.astimezone(UTC).date(),
         "DateType": types.SimpleNamespace(MONTH="month"),
         "_LOGGER": types.SimpleNamespace(
             debug=lambda *a, **k: None, warning=lambda *a, **k: None
@@ -134,7 +138,8 @@ def _load():
 
 
 Extracted = _load()
-TZ = timezone(timedelta(hours=1))
+TZ = UTC
+CET = timezone(timedelta(hours=1))
 
 
 def _coordinator(interval=60):
@@ -148,8 +153,8 @@ def _coordinator(interval=60):
     return obj
 
 
-def _poll(obj, *args):
-    _Clock.now = datetime(*args, tzinfo=TZ)
+def _poll(obj, *args, tz=TZ):
+    _Clock.now = datetime(*args, tzinfo=tz)
     asyncio.run(obj._async_update_data())
 
 
@@ -230,6 +235,33 @@ def main():
         "failed fetch retried next tick",
         calls == ["20261001", "20261101", "20261101"]
         and obj._month_consumption == ["20261101"],
+        f"calls={calls}",
+    )
+
+    # CET: the local month starts at 00:00, the cloud's at 01:00. The cloud's
+    # October is still running, so local midnight neither refetches nor asks
+    # for November, whose first hour the cloud has not even started; asking
+    # for it dropped October's last hour.
+    obj = _coordinator()
+    _poll(obj, 2026, 10, 31, 23, 55, tz=CET)
+    _poll(obj, 2026, 11, 1, 0, 30, tz=CET)
+    calls = obj._client.consumption_calls
+    check(
+        "local midnight before the cloud's -> no refetch",
+        calls == ["20261001"],
+        f"calls={calls}",
+    )
+    # 00:59 is past the 60-minute interval since 23:55.
+    _poll(obj, 2026, 11, 1, 0, 59, tz=CET)
+    check(
+        "interval refetch before the cloud's midnight -> the cloud's month",
+        calls == ["20261001", "20261001"],
+        f"calls={calls}",
+    )
+    _poll(obj, 2026, 11, 1, 1, 1, tz=CET)
+    check(
+        "the cloud's midnight -> refetch for the new month",
+        calls == ["20261001", "20261001", "20261101"],
         f"calls={calls}",
     )
 
