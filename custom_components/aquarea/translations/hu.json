@@ -98,6 +98,18 @@
         "energy_consumption": {
           "name": "Fogyasztás"
         },
+        "heating_average_power": {
+          "name": "Átlagteljesítmény (fűtés)"
+        },
+        "tank_average_power": {
+          "name": "Átlagteljesítmény (tartály-fűtés)"
+        },
+        "cooling_average_power": {
+          "name": "Átlagteljesítmény (hűtés)"
+        },
+        "average_power": {
+          "name": "Átlagteljesítmény (összesen)"
+        },
         "outdoor_temperature": {
           "name": "Kültéri hőmérséklet"
         },

@@ -24,6 +24,7 @@ This integration is actively maintained. Please report any issues you find and a
 * Diagnostic sensor for the pump status and current direction (idle/pump/water).
 * Diagnostic sensors counting today's DHW heating, zone and defrost cycles.
 * Energy consumption sensors (accumulated and sensors that reset the cycle every hour)
+* Average power sensors (W) for heating, tank, cooling (disabled by default) and total, derived from the cloud's energy consumption, see [Average power](#average-power)
 * Quiet mode select entity
 * Request defrost
 * Powerful mode select entity
@@ -47,6 +48,13 @@ Panasonic has retired the Aquarea Smart Cloud website (`aquarea-smart.panasonic.
 If the integration suddenly fails to log in (e.g. `Error in get_token ... Missing required parameter: code`), log in to the official Comfort Cloud app with the same account first. Panasonic periodically publishes new terms/policies, and the login fails until they are accepted there. If the app doesn't ask, update it.
 
 Panasonic now enforces multi-factor authentication (2-step verification) on Panasonic IDs. Accounts that use SMS codes or an authenticator app are supported: after the password, setup and reauthentication ask for the 6-digit code (for SMS there is a "Send a new code" option). The integration then keeps the refresh token Panasonic returns, so a Home Assistant restart or an expired session does not ask for a code again; you are only asked when Panasonic stops accepting that token. Other methods (for example push notifications) are not supported and show "requires multi-factor authentication". Requires aioaquarea-ng 1.3.0 or newer. Discussion: [#112](https://github.com/wpatrik14/home-assistant-aquarea/issues/112).
+
+### Average power
+The Panasonic cloud has no live power reading. The average power sensors (`Average power (heating|tank|cooling|total)`, in W) take the energy the cloud reports for the day, subtract the value from the previous consumption fetch and divide by the time between the two fetches. So they are an average over the last interval, not an instantaneous value, and they lag reality by the 15-30 minutes the cloud needs to publish the energy; the cloud also publishes in steps, so one interval can read 0 W and the next one the energy of both.
+
+They can only change when the consumption data is fetched, so they follow the **consumption data refresh interval** (Settings > Devices & services > Aquarea > Configure; default 60 minutes). Set it to **15** for a reading every 15 minutes. Device state keeps refreshing every minute whatever you choose. Each fetch is one call to the Panasonic cloud, so 15 minutes means 4 calls an hour (more with the hourly statistics fetch); do not go lower, Panasonic may block IPs that poll too often.
+
+The sensors are unknown after a restart or reload until two fetches in a row have succeeded, across the cloud's (UTC) midnight when the day's energy starts over, and when a fetch was missed (more than two intervals since the last one). The attributes `interval_minutes` and `based_on_fetch_at` say which interval and fetch the value is based on.
 
 ### Minimum Home Assistant version required
 The minimum supported version of Home Assistant is **2025.8**. Older versions can keep using the last release that supports them: `v1.0.62` for 2024.12. A further raise to **2026.3** is planned about a month after the first release with this floor (see [#98](https://github.com/wpatrik14/home-assistant-aquarea/issues/98))

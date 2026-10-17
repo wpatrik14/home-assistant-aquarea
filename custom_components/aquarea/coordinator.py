@@ -22,6 +22,7 @@ from .const import (
     MFA_REQUIRED,
     YESTERDAY_REFETCH_HOURS,
 )
+from .power import CONSUMPTION_TYPES, EnergyReading, average_power, daily_energy
 from .statistics import CLOUD_TIME_ZONE, cloud_date
 
 _LOGGER = logging.getLogger(__name__)
@@ -54,6 +55,11 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         # Cached consumption results (lists of Consumption objects from aioaquarea.statistics)
         self._month_consumption = None
         self._last_monthly_fetch_time: datetime | None = None
+        # Average power between consecutive monthly consumption fetches (see
+        # power.py), by consumption type; None where it cannot be known.
+        self._energy_readings: dict[aioaquarea.ConsumptionType, EnergyReading] = {}
+        self._average_power: dict[aioaquarea.ConsumptionType, float | None] = {}
+        self._average_power_fetched_at: datetime | None = None
         # Hourly consumption (DAY queries) of the last three days, by the
         # cloud's date (UTC, see statistics.CLOUD_TIME_ZONE), with when each day was last asked for and last received. The
         # hourly fetch has its own cadence, independent of the monthly one.
@@ -106,6 +112,36 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
     def month_consumption(self):
         """Return the last cached month consumption entries or None."""
         return getattr(self, "_month_consumption", None)
+
+    @property
+    def average_power_fetched_at(self) -> datetime | None:
+        """Return when the average power was last derived, or None."""
+        return self._average_power_fetched_at
+
+    def average_power(
+        self, consumption_type: aioaquarea.ConsumptionType
+    ) -> float | None:
+        """Return the average power in W over the last interval, or None."""
+        return self._average_power.get(consumption_type)
+
+    def _update_average_power(self, now: datetime) -> None:
+        """Derive the average power from the month consumption just fetched."""
+        today = cloud_date(now)
+        energy = daily_energy(self._month_consumption, today)
+        interval = timedelta(minutes=self.consumption_interval)
+        for consumption_type in CONSUMPTION_TYPES:
+            if energy is None:
+                # Today's entry is not published yet (the cloud can be hours
+                # late after midnight): there is nothing to measure from.
+                self._energy_readings.pop(consumption_type, None)
+                self._average_power[consumption_type] = None
+                continue
+            reading = EnergyReading(today, energy[consumption_type], now)
+            self._average_power[consumption_type] = average_power(
+                self._energy_readings.get(consumption_type), reading, interval
+            )
+            self._energy_readings[consumption_type] = reading
+        self._average_power_fetched_at = now
 
     @property
     def hourly_consumption_first_day(self) -> date | None:
@@ -288,6 +324,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                         self._device.long_id, DateType.MONTH, month_date_str
                     )
                     self._last_monthly_fetch_time = now
+                    if self._month_consumption is not None:
+                        # None is aioaquarea's failure value: keep the
+                        # earlier readings; the gap limit decides their use.
+                        self._update_average_power(now)
                 except aioaquarea.AuthenticationError as ex:
                     # Since aioaquarea-ng 1.2.0 auth errors are raised by consumption
                     # calls (they used to return None). Credential failures must not

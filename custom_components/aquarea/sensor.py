@@ -14,7 +14,12 @@ from homeassistant.components.sensor import (
     SensorExtraStoredData,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfEnergy, UnitOfPressure, UnitOfTemperature
+from homeassistant.const import (
+    UnitOfEnergy,
+    UnitOfPower,
+    UnitOfPressure,
+    UnitOfTemperature,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -135,6 +140,51 @@ ENERGY_SENSORS = [
     ),
 ]
 
+AVERAGE_POWER_SENSORS = [
+    AquareaEnergyConsumptionSensorDescription(
+        key="heating_average_power",
+        translation_key="heating_average_power",
+        name="Average power (heating)",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        consumption_type=aioaquarea.ConsumptionType.HEAT,
+    ),
+    AquareaEnergyConsumptionSensorDescription(
+        key="tank_average_power",
+        translation_key="tank_average_power",
+        name="Average power (tank)",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        consumption_type=aioaquarea.ConsumptionType.WATER_TANK,
+        exists_fn=lambda coordinator: coordinator.device.has_tank,
+    ),
+    AquareaEnergyConsumptionSensorDescription(
+        key="cooling_average_power",
+        translation_key="cooling_average_power",
+        name="Average power (cooling)",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        consumption_type=aioaquarea.ConsumptionType.COOL,
+        entity_registry_enabled_default=False,
+    ),
+    AquareaEnergyConsumptionSensorDescription(
+        key="average_power",
+        translation_key="average_power",
+        name="Average power (total)",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        consumption_type=aioaquarea.ConsumptionType.TOTAL,
+    ),
+]
+
 
 def _is_heating_water(device: aioaquarea.Device) -> bool:
     direction = getattr(device, "current_direction", None)
@@ -231,6 +281,13 @@ async def async_setup_entry(
             [
                 EnergyConsumptionSensor(description, coordinator)
                 for description in ENERGY_SENSORS
+                if description.exists_fn(coordinator)
+            ]
+        )
+        entities.extend(
+            [
+                AveragePowerSensor(description, coordinator)
+                for description in AVERAGE_POWER_SENSORS
                 if description.exists_fn(coordinator)
             ]
         )
@@ -764,6 +821,46 @@ class EnergyConsumptionSensor(AquareaEnergySensor, SensorEntity, RestoreEntity):
 
         self._period_being_processed = today_start
         self._attr_native_value = reported_val
+        super()._handle_coordinator_update()
+
+
+class AveragePowerSensor(AquareaBaseEntity, SensorEntity):
+    """Average power over the interval between the last two consumption fetches.
+
+    The cloud has no instantaneous power: this is the energy it reported
+    between two fetches (see power.py) over the time between them, so it moves
+    once per consumption interval and lags the real load by the cloud's
+    publishing delay. Unknown until two fetches in a row have succeeded, and
+    over a cloud day change or a missed fetch.
+    """
+
+    entity_description: AquareaEnergyConsumptionSensorDescription
+
+    def __init__(
+        self,
+        description: AquareaEnergyConsumptionSensorDescription,
+        coordinator: AquareaDataUpdateCoordinator,
+    ) -> None:
+        """Initialize the sensor from its description."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{super().unique_id}_{description.key}"
+        self.entity_description = description
+
+    async def async_added_to_hass(self) -> None:
+        """Fill in the value from the data the coordinator already has."""
+        await super().async_added_to_hass()
+        self._handle_coordinator_update()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_native_value = self.coordinator.average_power(
+            self.entity_description.consumption_type
+        )
+        fetched_at = self.coordinator.average_power_fetched_at
+        self._attr_extra_state_attributes = {
+            "interval_minutes": self.coordinator.consumption_interval,
+            "based_on_fetch_at": fetched_at.isoformat() if fetched_at else None,
+        }
         super()._handle_coordinator_update()
 
 
