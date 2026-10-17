@@ -63,10 +63,13 @@ def _load_constants(*names):
 
 
 _CONSTANTS = _load_constants(
-    "CONF_CONSUMPTION_INTERVAL", "DEFAULT_CONSUMPTION_INTERVAL"
+    "CONF_CONSUMPTION_INTERVAL",
+    "DEFAULT_CONSUMPTION_INTERVAL",
+    "MIN_CONSUMPTION_INTERVAL",
 )
 CONF_CONSUMPTION_INTERVAL = _CONSTANTS["CONF_CONSUMPTION_INTERVAL"]
 DEFAULT_CONSUMPTION_INTERVAL = _CONSTANTS["DEFAULT_CONSUMPTION_INTERVAL"]
+MIN_CONSUMPTION_INTERVAL = _CONSTANTS["MIN_CONSUMPTION_INTERVAL"]
 
 
 # --- stub Home Assistant base class ---------------------------------------
@@ -136,6 +139,7 @@ def _load():
         "vol": _vol,
         "CONF_CONSUMPTION_INTERVAL": CONF_CONSUMPTION_INTERVAL,
         "DEFAULT_CONSUMPTION_INTERVAL": DEFAULT_CONSUMPTION_INTERVAL,
+        "MIN_CONSUMPTION_INTERVAL": MIN_CONSUMPTION_INTERVAL,
     }
     # config_flow.py has `from __future__ import annotations`; compile with the
     # same flag so its annotations are never evaluated, on any Python version.
@@ -240,6 +244,14 @@ def main():
     check(
         "form default falls back to DEFAULT_CONSUMPTION_INTERVAL",
         _default(result) == (CONF_CONSUMPTION_INTERVAL, DEFAULT_CONSUMPTION_INTERVAL),
+        f"got={_default(result)!r}",
+    )
+
+    entry = _Entry(options={CONF_CONSUMPTION_INTERVAL: 10})
+    result = asyncio.run(_create_flow(entry).async_step_init())
+    check(
+        "a stored value below the minimum is offered as the minimum",
+        _default(result) == (CONF_CONSUMPTION_INTERVAL, MIN_CONSUMPTION_INTERVAL),
         f"got={_default(result)!r}",
     )
 

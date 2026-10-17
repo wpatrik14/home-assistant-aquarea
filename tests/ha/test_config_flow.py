@@ -20,6 +20,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+import voluptuous as vol
 
 from custom_components.aquarea.config_flow import AquareaConfigFlow
 from custom_components.aquarea.const import CONF_CONSUMPTION_INTERVAL, DOMAIN
@@ -323,6 +324,40 @@ async def test_options_flow(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert mock_config_entry.options == {CONF_CONSUMPTION_INTERVAL: 15}
+
+
+@pytest.mark.parametrize(("value", "valid"), [(15, True), (14, False), (10, False)])
+async def test_options_flow_minimum_interval(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry, value: int, valid: bool
+) -> None:
+    """The cloud delivers consumption at most every 15 minutes: that is the floor."""
+    mock_config_entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    schema = result["data_schema"]
+
+    if valid:
+        assert schema({CONF_CONSUMPTION_INTERVAL: value}) == {
+            CONF_CONSUMPTION_INTERVAL: value
+        }
+    else:
+        with pytest.raises(vol.Invalid):
+            schema({CONF_CONSUMPTION_INTERVAL: value})
+
+
+async def test_options_flow_offers_minimum_for_lower_stored_value(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """A value stored below the minimum (older installs) is shown as 15."""
+    mock_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_config_entry, options={CONF_CONSUMPTION_INTERVAL: 10}
+    )
+
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+
+    schema = result["data_schema"].schema
+    default = next(key for key in schema if key == CONF_CONSUMPTION_INTERVAL).default()
+    assert default == 15
 
 
 async def test_options_flow_defaults_to_legacy_setup_value(

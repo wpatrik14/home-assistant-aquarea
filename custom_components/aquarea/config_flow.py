@@ -26,6 +26,7 @@ from .const import (
     MFA_EXPIRED,
     MFA_INVALID_CODE,
     MFA_REQUIRED,
+    MIN_CONSUMPTION_INTERVAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -405,13 +406,22 @@ class AquareaOptionsFlowHandler(config_entries.OptionsFlowWithReload):
                 {
                     vol.Required(
                         CONF_CONSUMPTION_INTERVAL,
-                        default=self.config_entry.options.get(
-                            CONF_CONSUMPTION_INTERVAL,
-                            self.config_entry.data.get(
-                                CONF_CONSUMPTION_INTERVAL, DEFAULT_CONSUMPTION_INTERVAL
+                        # A value stored below the minimum (older installs) keeps
+                        # working in the coordinator; the form only offers the
+                        # minimum so that saving it does not fail validation.
+                        default=max(
+                            MIN_CONSUMPTION_INTERVAL,
+                            self.config_entry.options.get(
+                                CONF_CONSUMPTION_INTERVAL,
+                                self.config_entry.data.get(
+                                    CONF_CONSUMPTION_INTERVAL,
+                                    DEFAULT_CONSUMPTION_INTERVAL,
+                                ),
                             ),
                         ),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=10)),
+                    ): vol.All(
+                        vol.Coerce(int), vol.Range(min=MIN_CONSUMPTION_INTERVAL)
+                    ),
                 }
             ),
         )
