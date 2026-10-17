@@ -64,7 +64,7 @@
           "consumption_interval": "Accumulated (monthly) consumption refresh interval (minutes)"
         },
         "data_description": {
-          "consumption_interval": "How often to fetch energy consumption from the Panasonic cloud, in minutes (minimum 10). The average power sensors update at this pace; 15 gives a reading every 15 minutes. Device state is refreshed every minute regardless of this setting."
+          "consumption_interval": "How often to fetch energy consumption from the Panasonic cloud, in minutes (minimum 10). The average power sensors update at this pace; the default of 15 gives a reading every 15 minutes. Device state is refreshed every minute regardless of this setting."
         }
       }
     }

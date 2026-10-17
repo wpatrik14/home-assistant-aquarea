@@ -12,7 +12,7 @@ CONF_CODE = "code"
 CONF_RESEND_CODE = "resend_code"
 
 DEFAULT_SCAN_INTERVAL = 60
-DEFAULT_CONSUMPTION_INTERVAL = 60
+DEFAULT_CONSUMPTION_INTERVAL = 15
 
 # Hours into the day during which yesterday's hourly consumption is refetched
 YESTERDAY_REFETCH_HOURS = 3

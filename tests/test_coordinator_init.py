@@ -68,7 +68,7 @@ def _load():
         "CONF_USERNAME": "username",
         "CONF_CONSUMPTION_INTERVAL": "consumption_interval",
         "DEFAULT_SCAN_INTERVAL": 60,
-        "DEFAULT_CONSUMPTION_INTERVAL": 60,
+        "DEFAULT_CONSUMPTION_INTERVAL": 15,
     }
     exec(
         compile(
