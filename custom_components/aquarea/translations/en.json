@@ -64,7 +64,7 @@
                     "consumption_interval": "Consumption data refresh interval (minutes)"
                 },
                 "data_description": {
-                    "consumption_interval": "How often to fetch energy consumption from the Panasonic cloud, in minutes (minimum 10). Device state is refreshed every minute regardless of this setting."
+                    "consumption_interval": "How often to fetch energy consumption from the Panasonic cloud, in minutes. The cloud delivers new consumption data at most every 15 minutes (with some delay), so 15 is the lowest useful value; lower values only add load. Device state is refreshed every minute regardless of this setting."
                 }
             }
         }
