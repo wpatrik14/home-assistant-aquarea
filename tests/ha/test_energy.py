@@ -40,7 +40,7 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
     do_adhoc_statistics,
 )
 
-from custom_components.aquarea.const import DOMAIN
+from custom_components.aquarea.const import CONF_CONSUMPTION_INTERVAL, DOMAIN
 
 from .conftest import DEVICE_ID
 
@@ -78,7 +78,10 @@ def _month_queries(client: AsyncMock) -> list[str]:
 
 
 async def _setup(
-    hass: HomeAssistant, entry: MockConfigEntry, time_zone: str = "Europe/Warsaw"
+    hass: HomeAssistant,
+    entry: MockConfigEntry,
+    time_zone: str = "Europe/Warsaw",
+    consumption_interval: int | None = None,
 ) -> None:
     await hass.config.async_set_time_zone(time_zone)
     # The "today" sensors are disabled by default.
@@ -89,6 +92,10 @@ async def _setup(
         suggested_object_id="heat_pump_heating_consumption",
     )
     entry.add_to_hass(hass)
+    if consumption_interval is not None:
+        hass.config_entries.async_update_entry(
+            entry, options={CONF_CONSUMPTION_INTERVAL: consumption_interval}
+        )
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
@@ -487,7 +494,7 @@ async def test_the_reset_at_the_cloud_midnight_keeps_the_hourly_statistics_right
     mock_aquarea_client.get_device_consumption.side_effect = _published_cloud
     period = datetime(2026, 10, 6, 14, tzinfo=UTC)
     freezer.move_to(period)
-    await _setup(hass, mock_config_entry)
+    await _setup(hass, mock_config_entry, consumption_interval=60)
     while period < datetime(2026, 10, 7, 9, tzinfo=UTC):
         await _at(hass, freezer, period + timedelta(seconds=30))
         await async_wait_recording_done(hass)

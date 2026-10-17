@@ -319,7 +319,7 @@ async def test_water_pressure_sensor_hidden_when_not_reported(
 @pytest.mark.parametrize(
     ("data", "options", "expected"),
     [
-        pytest.param({}, {}, 60, id="default"),
+        pytest.param({}, {}, 15, id="default"),
         pytest.param({}, {CONF_CONSUMPTION_INTERVAL: 15}, 15, id="option"),
         # Entries created while the interval was still asked at setup.
         pytest.param({CONF_CONSUMPTION_INTERVAL: 45}, {}, 45, id="legacy_data"),
@@ -339,7 +339,7 @@ async def test_consumption_interval_source(
     options: dict,
     expected: int,
 ) -> None:
-    """The option wins, then a value from the entry data, then 60 minutes."""
+    """The option wins, then a value from the entry data, then 15 minutes."""
     mock_config_entry.add_to_hass(hass)
     hass.config_entries.async_update_entry(
         mock_config_entry, data={**mock_config_entry.data, **data}, options=options

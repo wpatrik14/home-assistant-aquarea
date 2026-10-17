@@ -308,7 +308,7 @@ async def test_reauth_without_username_aborts(
 async def test_options_flow(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
-    """The options form defaults to 60 minutes and stores the new value."""
+    """The options form defaults to 15 minutes and stores the new value."""
     mock_config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
@@ -316,7 +316,7 @@ async def test_options_flow(
     assert result["step_id"] == "init"
     schema = result["data_schema"].schema
     default = next(key for key in schema if key == CONF_CONSUMPTION_INTERVAL).default()
-    assert default == 60
+    assert default == 15
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {CONF_CONSUMPTION_INTERVAL: 15}
