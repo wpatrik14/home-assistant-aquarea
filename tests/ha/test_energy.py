@@ -6,8 +6,8 @@ labels each day (and month) by the UTC date: in Europe/Warsaw the cloud day
 The sensors used to look up the local date instead. The month-to-date sensors
 lost the energy of the cloud's last two hours once a month, because the
 coordinator requested the local month. The "Consumption" sensors, which show
-the energy of the cloud's current hour (a momentary value), are covered at the
-end.
+the energy published since the previous fetch (a momentary value), are covered
+at the end.
 
 The cloud below is a stand-in that labels days in UTC, like the real one. The
 energy Home Assistant meters from each accumulated (TOTAL_INCREASING) sensor
@@ -439,41 +439,45 @@ def _hourly_cloud(
     return get_device_consumption
 
 
-async def test_the_consumption_sensor_shows_the_current_hour_and_rolls_to_zero(
+async def test_the_consumption_sensor_shows_what_arrived_since_the_last_fetch(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
     mock_aquarea_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
-    """The sensor reads the cloud's current UTC hour, and is 0 when it has no record."""
+    """The sensor shows the rise between two fetches, then 0 when nothing new came."""
     hours = {
-        datetime(2026, 10, 6, 10, tzinfo=UTC): 9.0,
-        datetime(2026, 10, 6, 11, tzinfo=UTC): 0.4,
+        datetime(2026, 10, 6, 9, tzinfo=UTC): 9.0,
+        datetime(2026, 10, 6, 10, tzinfo=UTC): 0.4,
     }
     mock_aquarea_client.get_device_consumption.side_effect = _hourly_cloud(hours)
     freezer.move_to(datetime(2026, 10, 6, 11, 5, tzinfo=UTC))
     await _setup(hass, mock_config_entry)
+    # The first fetch only sets the baseline.
     await _at(hass, freezer, datetime(2026, 10, 6, 11, 6, tzinfo=UTC))
     state = hass.states.get(TODAY)
     assert state is not None
-    assert float(state.state) == 0.4
+    assert float(state.state) == 0.0
     assert state.attributes["state_class"] == "measurement"
     assert state.attributes["unit_of_measurement"] == "kWh"
     assert "device_class" not in state.attributes
 
-    # The hour changes before the cloud has a record for the next one: 0
-    # within a minute, with no new fetch needed.
-    await _at(hass, freezer, datetime(2026, 10, 6, 12, 1, tzinfo=UTC))
-    assert float(hass.states.get(TODAY).state) == 0.0
-
-    # The next fetch (default 15-minute interval) brings the new hour's record.
-    hours[datetime(2026, 10, 6, 12, tzinfo=UTC)] = 0.25
-    await _at(hass, freezer, datetime(2026, 10, 6, 12, 20, tzinfo=UTC))
+    # The next fetch (15-minute interval) sees 0.25 kWh more, in a new hour.
+    hours[datetime(2026, 10, 6, 11, tzinfo=UTC)] = 0.25
+    await _at(hass, freezer, datetime(2026, 10, 6, 11, 21, tzinfo=UTC))
     assert float(hass.states.get(TODAY).state) == 0.25
 
-    # No record at all for the new hour after midnight: still 0, not the
-    # previous hours' energy.
-    await _at(hass, freezer, datetime(2026, 10, 7, 0, 30, tzinfo=UTC))
+    # The 60 s refreshes in between keep the value.
+    await _at(hass, freezer, datetime(2026, 10, 6, 11, 30, tzinfo=UTC))
+    assert float(hass.states.get(TODAY).state) == 0.25
+
+    # The hour's record grows by 0.1 at the next fetch, in the same hour.
+    hours[datetime(2026, 10, 6, 11, tzinfo=UTC)] = 0.35
+    await _at(hass, freezer, datetime(2026, 10, 6, 11, 40, tzinfo=UTC))
+    assert float(hass.states.get(TODAY).state) == pytest.approx(0.1)
+
+    # Nothing new at the following fetch: back to 0.
+    await _at(hass, freezer, datetime(2026, 10, 6, 11, 56, tzinfo=UTC))
     assert float(hass.states.get(TODAY).state) == 0.0
 
 

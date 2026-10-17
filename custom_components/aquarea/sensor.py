@@ -87,7 +87,7 @@ ACCUMULATED_ENERGY_SENSORS = [
     ),
 ]
 
-# The energy of the current cloud hour. The value drops back to 0, which rules
+# The energy published since the previous fetch. The value drops back to 0, which rules
 # out TOTAL_INCREASING, and Home Assistant does not accept the ENERGY device
 # class with MEASUREMENT, so these sensors have no device class.
 ENERGY_SENSORS = [
@@ -653,14 +653,18 @@ class EnergyAccumulatedConsumptionSensor(
 
 
 class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity):
-    """Energy of the cloud's current (UTC) hour, 0 when the cloud has no record.
+    """Energy the cloud published since the previous hourly consumption fetch.
 
-    This is a momentary value, not a meter: it drops back to 0 as the hour
-    changes, so it has no restored state and no long-term statistics
-    correction. Use the accumulated sensors for the Energy dashboard.
+    The value is the rise of the cached hourly records' total between two
+    fetches, kept until the next fetch and 0 when nothing new came. It is a
+    momentary value, not a meter: it has no restored state and no long-term
+    statistics correction. Use the accumulated sensors for the Energy
+    dashboard.
     """
 
     entity_description: AquareaEnergyConsumptionSensorDescription
+    _seen_fetch: datetime | None = None
+    _seen_total: float | None = None
 
     def __init__(
         self,
@@ -673,20 +677,33 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity):
         self.entity_description = description
         self._attr_native_value = 0.0
 
+    async def async_added_to_hass(self) -> None:
+        """Take the fetch already made as the baseline."""
+        await super().async_added_to_hass()
+        self._observe_fetch()
+
+    def _observe_fetch(self) -> None:
+        """Update the value once per hourly consumption fetch."""
+        fetched_at = self.coordinator.hourly_consumption_fetched_at
+        if fetched_at is None or fetched_at == self._seen_fetch:
+            return
+        self._seen_fetch = fetched_at
+        total = sum(
+            hourly_consumption(
+                self.coordinator.hourly_consumption or [],
+                self.entity_description.consumption_type,
+            ).values()
+        )
+        # The first fetch only sets the baseline. The total shrinks when a day
+        # leaves the cache: that is not consumption, so it reads 0 as well.
+        previous = self._seen_total
+        self._seen_total = total
+        delta = 0.0 if previous is None else total - previous
+        self._attr_native_value = delta if delta > 1e-6 else 0.0
+
     @callback
     def _handle_coordinator_update(self) -> None:
-        # The coordinator refreshes the state every minute, so the value
-        # returns to 0 within a minute of the cloud's hour changing.
-        hour_start = (
-            dt_util.utcnow()
-            .astimezone(CLOUD_TIME_ZONE)
-            .replace(minute=0, second=0, microsecond=0)
-        )
-        hourly = hourly_consumption(
-            self.coordinator.hourly_consumption or [],
-            self.entity_description.consumption_type,
-        )
-        self._attr_native_value = hourly.get(hour_start, 0.0)
+        self._observe_fetch()
         super()._handle_coordinator_update()
 
 

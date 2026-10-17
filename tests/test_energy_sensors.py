@@ -11,11 +11,13 @@ days by the UTC date, so "today" below is the UTC date and the clock is UTC
   today or earlier, per consumption type. Future-dated entries are ignored.
   When `total_consumption` is unusable it falls back to heat + cool + tank.
   An empty or missing list makes the value unknown.
-- `EnergyConsumptionSensor` (current hour) reports the energy of the latest
-  hourly record, the one labelled with the current UTC hour, and 0 when the
-  cloud has no record for that hour (or no hourly records at all). It drops
-  back to 0 when the hour changes. The total falls back like
-  `statistics._consumption_value`. It is a MEASUREMENT sensor without state.
+- `EnergyConsumptionSensor` reports the energy the cloud published since the
+  previous hourly consumption fetch: the rise of the total over all cached
+  hourly records, recomputed only when `hourly_consumption_fetched_at`
+  changes (not on every 60 s state refresh), kept until the next fetch, 0
+  when nothing new came. The first fetch only sets the baseline (0), and a
+  shrinking total (a day left the cache) reads 0. The total falls back like
+  `statistics._consumption_value`.
 
 The behaviour was listed as missing coverage, and the stale "today" value as
 a bug, in the audit (wpatrik14/fleet-backlog#88). The real `_handle_coordinator_update`
@@ -72,9 +74,14 @@ LOGGER = _Logger()
 
 
 class _Base:
-    def __init__(self, ctype, month, hourly=None):
+    _seen_fetch = None
+    _seen_total = None
+
+    def __init__(self, ctype, month, hourly=None, fetched_at=None):
         self.coordinator = types.SimpleNamespace(
-            month_consumption=month, hourly_consumption=hourly
+            month_consumption=month,
+            hourly_consumption=hourly,
+            hourly_consumption_fetched_at=fetched_at,
         )
         self.entity_description = types.SimpleNamespace(consumption_type=ctype)
         self._attr_native_value = "previous"
@@ -127,6 +134,11 @@ def _load(class_name):
         for n in tree.body
         if isinstance(n, ast.ClassDef) and n.name == "AquareaEnergySensor"
     )
+    extra = [
+        n
+        for n in cls.body
+        if isinstance(n, ast.FunctionDef) and n.name == "_observe_fetch"
+    ]
     ahead = next(
         n
         for n in base.body
@@ -136,7 +148,7 @@ def _load(class_name):
         name="Extracted",
         bases=[ast.Name("_Base", ast.Load())],
         keywords=[],
-        body=[node, ahead],
+        body=[node, ahead, *extra],
         decorator_list=[],
         type_params=[],
     )
@@ -194,12 +206,6 @@ MONTH = [
 
 def _hour(label, heat=0.0, cool=0.0, tank=0.0, total="sum"):
     return _day(label, heat=heat, cool=cool, tank=tank, total=total)
-
-
-def _hourly(ctype, hours):
-    obj = Today(ctype, MONTH, hours)
-    obj._handle_coordinator_update()
-    return obj
 
 
 def _update(cls, ctype, month):
@@ -288,89 +294,99 @@ def main():
     )
     _Clock.now = datetime(2026, 10, 14, 12, 0, tzinfo=TZ)
 
-    # --- current hour ----------------------------------------------------
-    HOURS = [
-        _hour("20261014 10", heat=9.0, tank=9.0),  # earlier hour: ignored
-        _hour("20261014 12", heat=0.75, cool=0.125, tank=0.5),
-        _hour("20261014 13", heat=7.0, tank=7.0),  # next hour: ignored
-        _hour("20261013 12", heat=8.0, tank=8.0),  # same hour, other day
-    ]
-    expected = {
-        ConsumptionType.HEAT: 0.75,
-        ConsumptionType.COOL: 0.125,
-        ConsumptionType.WATER_TANK: 0.5,
-        ConsumptionType.TOTAL: 1.375,
-    }
-    for ctype, value in expected.items():
-        obj = _hourly(ctype, HOURS)
+    # --- since the previous fetch ------------------------------------------
+    def fetch(obj, hours, minute):
+        obj.coordinator.hourly_consumption = hours
+        obj.coordinator.hourly_consumption_fetched_at = datetime(
+            2026, 10, 14, 12, minute, tzinfo=TZ
+        )
+        obj._handle_coordinator_update()
+        return obj._attr_native_value
+
+    H1 = _hour("20261014 10", heat=1.0, cool=0.5, tank=0.25)
+    H2 = _hour("20261014 11", heat=2.0, tank=1.0)
+    H3 = _hour("20261014 12", heat=0.5, tank=0.125)
+    H3b = _hour("20261014 12", heat=0.75, tank=0.25)
+
+    obj = Today(ConsumptionType.HEAT, MONTH, [H1, H2], None)
+    obj._handle_coordinator_update()
+    check(
+        "since-fetch: before any fetch, no recompute",
+        obj._attr_native_value == "previous" and obj.writes == 1,
+        f"value={obj._attr_native_value!r}",
+    )
+
+    obj = Today(ConsumptionType.HEAT, MONTH)
+    v1 = fetch(obj, [H1, H2], 0)
+    v2 = fetch(obj, [H1, H2, H3], 15)
+    v3 = fetch(obj, [H1, H2, H3b], 30)
+    v4 = fetch(obj, [H1, H2, H3b], 45)
+    check(
+        "since-fetch heat: first fetch 0, then the rise, then 0 when idle",
+        (v1, v2, v3, v4) == (0.0, 0.5, 0.25, 0.0),
+        f"values={(v1, v2, v3, v4)}",
+    )
+
+    obj = Today(ConsumptionType.HEAT, MONTH)
+    fetch(obj, [H1, H2, H3], 0)
+    writes = obj.writes
+    fetch(obj, [H1, H2, H3b], 15)
+    held = obj._attr_native_value
+    for _ in range(14):  # 60 s refreshes between fetches
+        obj._handle_coordinator_update()
+    check(
+        "since-fetch: value held (not recomputed) between fetches",
+        held == 0.25 and obj._attr_native_value == 0.25 and obj.writes == writes + 15,
+        f"value={obj._attr_native_value} writes={obj.writes}",
+    )
+
+    for ctype, expected_value in (
+        (ConsumptionType.COOL, 0.0),
+        (ConsumptionType.WATER_TANK, 0.125),
+        (ConsumptionType.TOTAL, 0.375),
+    ):
+        obj = Today(ctype, MONTH)
+        fetch(obj, [H1, H2, H3], 0)
+        value = fetch(obj, [H1, H2, H3b], 15)
         check(
-            f"hour {ctype}: the current hour's record only",
-            obj._attr_native_value == value and obj.writes == 1,
-            f"value={obj._attr_native_value}",
+            f"since-fetch {ctype}: rise of its own type",
+            value == expected_value,
+            f"value={value!r}",
         )
 
-    # The minute inside the hour doesn't matter.
-    _Clock.now = datetime(2026, 10, 14, 12, 59, 59, tzinfo=TZ)
-    obj = _hourly(ConsumptionType.HEAT, HOURS)
-    check(
-        "hour: late in the hour still reads that hour",
-        obj._attr_native_value == 0.75,
-        f"value={obj._attr_native_value}",
-    )
-    _Clock.now = datetime(2026, 10, 14, 12, 0, tzinfo=TZ)
+    # Hour/day boundary: the sum covers all cached hours, so a new hour's
+    # record or a new day's is just more energy.
+    obj = Today(ConsumptionType.HEAT, MONTH)
+    fetch(obj, [H1, H2], 0)
+    value = fetch(obj, [H1, H2, _hour("20261015 00", heat=0.125)], 15)
+    check("since-fetch across a day boundary: the new record", value == 0.125)
 
-    for label, hours in (("no records", []), ("no list", None)):
-        obj = _hourly(ConsumptionType.HEAT, hours)
-        check(
-            f"hour with {label}: 0, state written",
-            obj._attr_native_value == 0.0 and obj.writes == 1,
-            f"value={obj._attr_native_value!r}",
-        )
-
-    obj = _hourly(ConsumptionType.HEAT, HOURS[:1] + HOURS[2:])
+    # A day leaving the cache shrinks the total: 0, and a new baseline.
+    obj = Today(ConsumptionType.HEAT, MONTH)
+    fetch(obj, [_hour("20261012 10", heat=5.0), H1, H2], 0)
+    shrunk = fetch(obj, [H1, H2], 15)
+    after = fetch(obj, [H1, H2, H3], 30)
     check(
-        "hour with no record for the current hour: 0",
-        obj._attr_native_value == 0.0,
-        f"value={obj._attr_native_value!r}",
+        "since-fetch, total shrinks: 0, re-baselined",
+        shrunk == 0.0 and after == 0.5,
+        f"shrunk={shrunk!r} after={after!r}",
     )
 
-    obj = _hourly(ConsumptionType.HEAT, [_hour("20261014 12", heat=0.0)])
+    obj = Today(ConsumptionType.TOTAL, MONTH)
+    fetch(obj, [], 0)
+    value = fetch(
+        obj, [_hour("20261014 12", heat=1.0, cool=0.5, tank=0.25, total="n/a")], 15
+    )
     check(
-        "hour with a record of 0 kWh: 0",
-        obj._attr_native_value == 0.0,
-        f"value={obj._attr_native_value!r}",
+        "since-fetch total: falls back to heat+cool+tank",
+        value == 1.75,
+        f"value={value!r}",
     )
 
-    obj = _hourly(
-        ConsumptionType.TOTAL,
-        [_hour("20261014 12", heat=1.0, cool=0.5, tank=0.25, total="n/a")],
-    )
-    check(
-        "hour total: falls back to heat+cool+tank",
-        obj._attr_native_value == 1.75,
-        f"value={obj._attr_native_value!r}",
-    )
-
-    # The hour changes without a new fetch: back to 0 at the next update.
-    obj = _hourly(ConsumptionType.HEAT, HOURS)
-    _Clock.now = datetime(2026, 10, 14, 12, 59, tzinfo=TZ)
-    obj._handle_coordinator_update()
-    still = obj._attr_native_value
-    _Clock.now = datetime(2026, 10, 14, 14, 0, tzinfo=TZ)
-    obj._handle_coordinator_update()
-    check(
-        "hour rolls over to 0 when the next hour has no record yet",
-        still == 0.75 and obj._attr_native_value == 0.0,
-        f"before={still} after={obj._attr_native_value!r}",
-    )
-    _Clock.now = datetime(2026, 10, 14, 13, 5, tzinfo=TZ)
-    obj._handle_coordinator_update()
-    check(
-        "hour rolls over to the next hour's record when there is one",
-        obj._attr_native_value == 7.0,
-        f"value={obj._attr_native_value!r}",
-    )
-    _Clock.now = datetime(2026, 10, 14, 12, 0, tzinfo=TZ)
+    for label, hours in (("empty list", []), ("no list", None)):
+        obj = Today(ConsumptionType.HEAT, MONTH)
+        value = fetch(obj, hours, 0)
+        check(f"since-fetch with {label}: 0", value == 0.0, f"value={value!r}")
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")
