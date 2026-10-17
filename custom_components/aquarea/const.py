@@ -12,7 +12,7 @@ CONF_CODE = "code"
 CONF_RESEND_CODE = "resend_code"
 
 DEFAULT_SCAN_INTERVAL = 60
-DEFAULT_CONSUMPTION_INTERVAL = 60
+DEFAULT_CONSUMPTION_INTERVAL = 15
 # The cloud publishes new consumption data at most every ~15 minutes.
 MIN_CONSUMPTION_INTERVAL = 15
 

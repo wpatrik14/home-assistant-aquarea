@@ -84,8 +84,7 @@ Config Flow (config_flow.py)
 
 ### Coordinator Polling Intervals
 - **1 minute**: device state (`device.refresh_data()`)
-- **15 minutes**: daily energy consumption
-- **60 minutes**: monthly energy consumption
+- **15 minutes** (default, configurable, minimum 15): energy consumption (daily and monthly)
 
 ### Entity Pattern
 All entities extend HA base classes and `CoordinatorEntity`. After sending a command, entities apply **optimistic state updates** and schedule a 5–10 second delayed refresh to confirm the change from the device.
