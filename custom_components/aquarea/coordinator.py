@@ -261,14 +261,14 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                 )
                 await self._device.refresh_data()
 
-            # 2. Fetch monthly consumption (used by both today and month-to-date sensors)
+            # 2. Fetch monthly consumption (used by the month-to-date sensors)
             # The month and the date are the cloud's (UTC, see
             # statistics.cloud_date): requesting the local month would drop
             # the cloud month's last hours at every month boundary.
             # Also refetch as soon as the cloud's date changes: the cache holds
             # the list fetched for the previous day (or, after a month boundary,
             # the previous month's YYYYMM01 list), so waiting out the interval
-            # would leave the "today" sensors on yesterday's value for up to
+            # would leave the month-to-date sensors on yesterday's value for up to
             # consumption_interval minutes after midnight.
             last_fetch = self._last_monthly_fetch_time
             fetch_monthly = (

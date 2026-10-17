@@ -11,15 +11,11 @@ days by the UTC date, so "today" below is the UTC date and the clock is UTC
   today or earlier, per consumption type. Future-dated entries are ignored.
   When `total_consumption` is unusable it falls back to heat + cool + tank.
   An empty or missing list makes the value unknown.
-- `EnergyConsumptionSensor` (today) reports today's entry. With no list, or no
-  entry for today, it keeps its previous value while that value belongs to
-  today; once the value it holds is from an earlier day it drops to 0 for
-  the new day. Before that, yesterday's total stayed on the "today" sensor
-  until the cloud published an entry for the new day, which can take hours.
-  The drop happens only on a day change, never mid-day: these sensors are
-  TOTAL_INCREASING, so a transient 0 within a day would be read as a meter
-  reset and the day's consumption counted twice in long-term statistics.
-  A value with no recorded period (unknown day) is kept as is.
+- `EnergyConsumptionSensor` (current hour) reports the energy of the latest
+  hourly record, the one labelled with the current UTC hour, and 0 when the
+  cloud has no record for that hour (or no hourly records at all). It drops
+  back to 0 when the hour changes. The total falls back like
+  `statistics._consumption_value`. It is a MEASUREMENT sensor without state.
 
 The behaviour was listed as missing coverage, and the stale "today" value as
 a bug, in the audit (wpatrik14/fleet-backlog#88). The real `_handle_coordinator_update`
@@ -40,6 +36,9 @@ import types
 
 SENSOR = os.path.join(
     os.path.dirname(__file__), "..", "custom_components", "aquarea", "sensor.py"
+)
+STATISTICS = os.path.join(
+    os.path.dirname(__file__), "..", "custom_components", "aquarea", "statistics.py"
 )
 TZ = UTC
 
@@ -73,8 +72,10 @@ LOGGER = _Logger()
 
 
 class _Base:
-    def __init__(self, ctype, month):
-        self.coordinator = types.SimpleNamespace(month_consumption=month)
+    def __init__(self, ctype, month, hourly=None):
+        self.coordinator = types.SimpleNamespace(
+            month_consumption=month, hourly_consumption=hourly
+        )
         self.entity_description = types.SimpleNamespace(consumption_type=ctype)
         self._attr_native_value = "previous"
         self._period_being_processed = None
@@ -82,6 +83,31 @@ class _Base:
 
     def _handle_coordinator_update(self):
         self.writes += 1
+
+
+def _statistics_hourly_consumption():
+    """Load statistics.hourly_consumption (and its helpers) out of statistics.py."""
+    with open(STATISTICS, encoding="utf-8") as fh:
+        tree = ast.parse(fh.read())
+    wanted = {"_kwh", "_consumption_value", "hourly_consumption"}
+    body = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in wanted]
+    namespace = {
+        "aioaquarea": aioaquarea,
+        "datetime": datetime,
+        "CLOUD_TIME_ZONE": UTC,
+        "_LOGGER": types.SimpleNamespace(debug=lambda *a, **k: None),
+    }
+    exec(
+        compile(
+            ast.fix_missing_locations(ast.Module(body, [])),
+            STATISTICS,
+            "exec",
+            flags=__future__.annotations.compiler_flag,
+            dont_inherit=True,
+        ),
+        namespace,
+    )
+    return namespace["hourly_consumption"]
 
 
 def _load(class_name):
@@ -126,6 +152,7 @@ def _load(class_name):
         "time": time,
         "CLOUD_TIME_ZONE": UTC,
         "_LOGGER": LOGGER,
+        "hourly_consumption": _statistics_hourly_consumption(),
     }
     exec(
         compile(
@@ -165,6 +192,16 @@ MONTH = [
 ]
 
 
+def _hour(label, heat=0.0, cool=0.0, tank=0.0, total="sum"):
+    return _day(label, heat=heat, cool=cool, tank=tank, total=total)
+
+
+def _hourly(ctype, hours):
+    obj = Today(ctype, MONTH, hours)
+    obj._handle_coordinator_update()
+    return obj
+
+
 def _update(cls, ctype, month):
     obj = cls(ctype, month)
     obj._handle_coordinator_update()
@@ -181,7 +218,6 @@ def main():
 
     _Clock.now = datetime(2026, 10, 14, 12, 0, tzinfo=TZ)
     month_start = datetime(2026, 10, 1, tzinfo=TZ)
-    today_start = datetime(2026, 10, 14, tzinfo=TZ)
 
     # --- month to date ---------------------------------------------------
     expected = {
@@ -252,71 +288,86 @@ def main():
     )
     _Clock.now = datetime(2026, 10, 14, 12, 0, tzinfo=TZ)
 
-    # --- today -----------------------------------------------------------
+    # --- current hour ----------------------------------------------------
+    HOURS = [
+        _hour("20261014 10", heat=9.0, tank=9.0),  # earlier hour: ignored
+        _hour("20261014 12", heat=0.75, cool=0.125, tank=0.5),
+        _hour("20261014 13", heat=7.0, tank=7.0),  # next hour: ignored
+        _hour("20261013 12", heat=8.0, tank=8.0),  # same hour, other day
+    ]
     expected = {
-        ConsumptionType.HEAT: 3.0,
-        ConsumptionType.COOL: 0.0,
-        ConsumptionType.WATER_TANK: 2.0,
-        ConsumptionType.TOTAL: 5.0,
+        ConsumptionType.HEAT: 0.75,
+        ConsumptionType.COOL: 0.125,
+        ConsumptionType.WATER_TANK: 0.5,
+        ConsumptionType.TOTAL: 1.375,
     }
     for ctype, value in expected.items():
-        obj = _update(Today, ctype, MONTH)
+        obj = _hourly(ctype, HOURS)
         check(
-            f"today {ctype}: today's entry",
-            obj._attr_native_value == value
-            and obj._period_being_processed == today_start
-            and obj.writes == 1,
-            f"value={obj._attr_native_value} period={obj._period_being_processed}",
+            f"hour {ctype}: the current hour's record only",
+            obj._attr_native_value == value and obj.writes == 1,
+            f"value={obj._attr_native_value}",
         )
 
-    obj = _update(
-        Today,
-        ConsumptionType.TOTAL,
-        [_day("2026-10-14", heat=1.0, cool=0.5, tank=0.25, total="n/a")],
-    )
+    # The minute inside the hour doesn't matter.
+    _Clock.now = datetime(2026, 10, 14, 12, 59, 59, tzinfo=TZ)
+    obj = _hourly(ConsumptionType.HEAT, HOURS)
     check(
-        "today total: falls back to heat+cool+tank",
-        obj._attr_native_value == 1.75,
+        "hour: late in the hour still reads that hour",
+        obj._attr_native_value == 0.75,
         f"value={obj._attr_native_value}",
     )
+    _Clock.now = datetime(2026, 10, 14, 12, 0, tzinfo=TZ)
 
-    yesterday_start = datetime(2026, 10, 13, tzinfo=TZ)
-    for label, month in (("no list", None), ("no entry for today", MONTH[:2])):
-        for period, expected_value, expected_period, why in (
-            (None, "previous", None, "unknown day: keeps previous value"),
-            (today_start, "previous", today_start, "value is today's: keeps it"),
-            (yesterday_start, 0, today_start, "value is yesterday's: 0 for today"),
-        ):
-            obj = Today(ConsumptionType.HEAT, month)
-            obj._period_being_processed = period
-            obj._handle_coordinator_update()
-            check(
-                f"today with {label}, {why}",
-                obj._attr_native_value == expected_value
-                and obj._period_being_processed == expected_period
-                and obj.writes == 1,
-                f"value={obj._attr_native_value!r} "
-                f"period={obj._period_being_processed}",
-            )
+    for label, hours in (("no records", []), ("no list", None)):
+        obj = _hourly(ConsumptionType.HEAT, hours)
+        check(
+            f"hour with {label}: 0, state written",
+            obj._attr_native_value == 0.0 and obj.writes == 1,
+            f"value={obj._attr_native_value!r}",
+        )
 
-    # The day after, before the cloud has an entry for it: yesterday's value
-    # (written at 23:55) must not carry over past midnight.
-    _Clock.now = datetime(2026, 10, 14, 23, 55, tzinfo=TZ)
-    obj = _update(Today, ConsumptionType.HEAT, MONTH[:3])
-    _Clock.now = datetime(2026, 10, 15, 0, 5, tzinfo=TZ)
-    obj.coordinator.month_consumption = MONTH[:3]
-    obj._handle_coordinator_update()
+    obj = _hourly(ConsumptionType.HEAT, HOURS[:1] + HOURS[2:])
     check(
-        "today across midnight with no new entry: 0 for the new day",
-        obj._attr_native_value == 0
-        and obj._period_being_processed == datetime(2026, 10, 15, tzinfo=TZ),
-        f"value={obj._attr_native_value!r} period={obj._period_being_processed}",
+        "hour with no record for the current hour: 0",
+        obj._attr_native_value == 0.0,
+        f"value={obj._attr_native_value!r}",
     )
-    obj.coordinator.month_consumption = [*MONTH[:3], _day("20261015", heat=0.75)]
+
+    obj = _hourly(ConsumptionType.HEAT, [_hour("20261014 12", heat=0.0)])
+    check(
+        "hour with a record of 0 kWh: 0",
+        obj._attr_native_value == 0.0,
+        f"value={obj._attr_native_value!r}",
+    )
+
+    obj = _hourly(
+        ConsumptionType.TOTAL,
+        [_hour("20261014 12", heat=1.0, cool=0.5, tank=0.25, total="n/a")],
+    )
+    check(
+        "hour total: falls back to heat+cool+tank",
+        obj._attr_native_value == 1.75,
+        f"value={obj._attr_native_value!r}",
+    )
+
+    # The hour changes without a new fetch: back to 0 at the next update.
+    obj = _hourly(ConsumptionType.HEAT, HOURS)
+    _Clock.now = datetime(2026, 10, 14, 12, 59, tzinfo=TZ)
+    obj._handle_coordinator_update()
+    still = obj._attr_native_value
+    _Clock.now = datetime(2026, 10, 14, 14, 0, tzinfo=TZ)
     obj._handle_coordinator_update()
     check(
-        "today, entry for the new day appears: its value",
-        obj._attr_native_value == 0.75,
+        "hour rolls over to 0 when the next hour has no record yet",
+        still == 0.75 and obj._attr_native_value == 0.0,
+        f"before={still} after={obj._attr_native_value!r}",
+    )
+    _Clock.now = datetime(2026, 10, 14, 13, 5, tzinfo=TZ)
+    obj._handle_coordinator_update()
+    check(
+        "hour rolls over to the next hour's record when there is one",
+        obj._attr_native_value == 7.0,
         f"value={obj._attr_native_value!r}",
     )
     _Clock.now = datetime(2026, 10, 14, 12, 0, tzinfo=TZ)

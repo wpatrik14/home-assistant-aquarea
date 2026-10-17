@@ -87,13 +87,15 @@ ACCUMULATED_ENERGY_SENSORS = [
     ),
 ]
 
+# The energy of the current cloud hour. The value drops back to 0, which rules
+# out TOTAL_INCREASING, and Home Assistant does not accept the ENERGY device
+# class with MEASUREMENT, so these sensors have no device class.
 ENERGY_SENSORS = [
     AquareaEnergyConsumptionSensorDescription(
         key="heating_energy_consumption",
         translation_key="heating_energy_consumption",
         name="Heating Consumption",
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=aioaquarea.ConsumptionType.HEAT,
@@ -103,8 +105,7 @@ ENERGY_SENSORS = [
         key="tank_energy_consumption",
         translation_key="tank_energy_consumption",
         name="Tank Consumption",
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=aioaquarea.ConsumptionType.WATER_TANK,
@@ -115,8 +116,7 @@ ENERGY_SENSORS = [
         key="cooling_energy_consumption",
         translation_key="cooling_energy_consumption",
         name="Cooling Consumption",
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=aioaquarea.ConsumptionType.COOL,
@@ -126,8 +126,7 @@ ENERGY_SENSORS = [
         key="energy_consumption",
         translation_key="energy_consumption",
         name="Consumption",
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=2,
         consumption_type=aioaquarea.ConsumptionType.TOTAL,
@@ -653,8 +652,13 @@ class EnergyAccumulatedConsumptionSensor(
         super()._handle_coordinator_update()
 
 
-class EnergyConsumptionSensor(AquareaEnergySensor, SensorEntity, RestoreEntity):
-    """Energy consumed so far in the cloud's (UTC) day, restored across restarts."""
+class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity):
+    """Energy of the cloud's current (UTC) hour, 0 when the cloud has no record.
+
+    This is a momentary value, not a meter: it drops back to 0 as the hour
+    changes, so it has no restored state and no long-term statistics
+    correction. Use the accumulated sensors for the Energy dashboard.
+    """
 
     entity_description: AquareaEnergyConsumptionSensorDescription
 
@@ -667,103 +671,22 @@ class EnergyConsumptionSensor(AquareaEnergySensor, SensorEntity, RestoreEntity):
         super().__init__(coordinator)
         self._attr_unique_id = f"{super().unique_id}_{description.key}"
         self.entity_description = description
-
-    async def async_added_to_hass(self) -> None:
-        """Restore the last value and period before the first update."""
-        sensor_data = await self.async_get_last_sensor_data()
-        if sensor_data is not None:
-            self._attr_native_value = sensor_data.native_value
-            self._period_being_processed = sensor_data.period_being_processed
-        if self._attr_native_value is None:
-            self._attr_native_value = 0
-        await super().async_added_to_hass()
-
-    @property
-    def extra_restore_state_data(self) -> AquareaSensorExtraStoredData:
-        """Return the data to restore after a restart."""
-        return AquareaSensorExtraStoredData(
-            self.native_value,
-            self.native_unit_of_measurement,
-            self.period_being_processed,
-        )
-
-    async def async_get_last_sensor_data(self) -> AquareaSensorExtraStoredData | None:
-        """Return the restored sensor data, or None if there is none."""
-        if (restored_last_extra_data := await self.async_get_last_extra_data()) is None:
-            return None
-        return AquareaSensorExtraStoredData.from_dict(
-            restored_last_extra_data.as_dict()
-        )
-
-    @property
-    def period_being_processed(self) -> datetime | None:
-        """Return the day the current value belongs to."""
-        return self._period_being_processed
+        self._attr_native_value = 0.0
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        # Each entry's data_time is the cloud's date, a UTC one (see
-        # statistics.cloud_date). Matching it against the local date moved to
-        # the next entry at local midnight, before the cloud did, and lost
-        # the energy used until the cloud's day ended; so the day, and its
-        # reset, follow the cloud's.
-        today = cloud_date(dt_util.utcnow())
-        today_start = datetime.combine(today, time(), CLOUD_TIME_ZONE)
-        if self._ahead_of_the_cloud(today):
-            super()._handle_coordinator_update()
-            return
-        month_consumption = self.coordinator.month_consumption or []
-        today_entry = None
-        for c in month_consumption:
-            dt_str = c.data_time
-            if not dt_str:
-                continue
-            item_date = None
-            for fmt in ("%Y%m%d", "%Y-%m-%d"):
-                try:
-                    item_date = datetime.strptime(dt_str, fmt).date()
-                    break
-                except ValueError:
-                    continue
-            if item_date == today:
-                today_entry = c
-                break
-
-        if today_entry is None:
-            # The cloud publishes the new day's entry late, sometimes hours
-            # after midnight. Until then a value from an earlier day must not
-            # stand in for today's, so start the day at 0. Only on a day
-            # change, never within a day: these sensors are TOTAL_INCREASING,
-            # and a transient drop to 0 would count as a meter reset.
-            previous = self._period_being_processed
-            if previous is not None and previous < today_start:
-                self._period_being_processed = today_start
-                self._attr_native_value = 0
-            super()._handle_coordinator_update()
-            return
-
-        ctype = self.entity_description.consumption_type
-        if ctype == aioaquarea.ConsumptionType.HEAT:
-            reported_val = float(today_entry.heat_consumption or 0.0)
-        elif ctype == aioaquarea.ConsumptionType.COOL:
-            reported_val = float(today_entry.cool_consumption or 0.0)
-        elif ctype == aioaquarea.ConsumptionType.WATER_TANK:
-            reported_val = float(today_entry.tank_consumption or 0.0)
-        elif ctype == aioaquarea.ConsumptionType.TOTAL:
-            try:
-                reported_val = float(today_entry.total_consumption or 0.0)
-            except (ValueError, TypeError):
-                reported_val = float(
-                    (today_entry.heat_consumption or 0.0)
-                    + (today_entry.cool_consumption or 0.0)
-                    + (today_entry.tank_consumption or 0.0)
-                )
-        else:
-            super()._handle_coordinator_update()
-            return
-
-        self._period_being_processed = today_start
-        self._attr_native_value = reported_val
+        # The coordinator refreshes the state every minute, so the value
+        # returns to 0 within a minute of the cloud's hour changing.
+        hour_start = (
+            dt_util.utcnow()
+            .astimezone(CLOUD_TIME_ZONE)
+            .replace(minute=0, second=0, microsecond=0)
+        )
+        hourly = hourly_consumption(
+            self.coordinator.hourly_consumption or [],
+            self.entity_description.consumption_type,
+        )
+        self._attr_native_value = hourly.get(hour_start, 0.0)
         super()._handle_coordinator_update()
 
 
