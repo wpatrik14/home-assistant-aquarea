@@ -4,10 +4,10 @@ Background
 ----------
 `_async_update_data` caches the month's consumption list and refetches it only
 once `consumption_interval` minutes (default 15) have passed. Both energy
-sensor families read that one list: the "today" sensors look up today's entry
-and the accumulated sensors sum every entry up to today. After midnight the
-cache still held the data fetched yesterday, so for up to an hour the "today"
-sensors kept showing yesterday's value. At a month boundary it was worse: the
+sensor families read that one list (at the time): the "today" sensors looked
+up today's entry and the accumulated sensors sum every entry up to today.
+After midnight the cache still held the data fetched yesterday, so for up to
+an hour the "today" sensors kept showing yesterday's value. At a month boundary it was worse: the
 cache was last month's list, fetched with last month's `YYYYMM01` date.
 
 The cache is now also refetched as soon as the date differs from the date of

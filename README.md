@@ -23,7 +23,7 @@ This integration is actively maintained. Please report any issues you find and a
 * Diagnostic sensor for the current error/fault code (e.g. `H62`) and its description, when the device is in an error state.
 * Diagnostic sensor for the pump status and current direction (idle/pump/water).
 * Diagnostic sensors counting today's DHW heating, zone and defrost cycles.
-* Energy consumption sensors (accumulated and sensors that reset the cycle every hour)
+* Energy consumption sensors: Accumulated (month to date, for the Energy dashboard) and Consumption (disabled by default; the energy published by the cloud since the previous fetch, 0 when nothing new, updated every consumption interval)
 * Quiet mode select entity
 * Request defrost
 * Powerful mode select entity

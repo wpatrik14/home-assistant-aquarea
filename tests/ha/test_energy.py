@@ -1,17 +1,18 @@
-"""The energy sensors follow the cloud's UTC days, so no energy is lost at midnight.
+"""The accumulated energy sensors follow the cloud's UTC days; no energy is lost at midnight.
 
 aioaquarea queries consumption with osTimezone +00:00, so the Panasonic cloud
 labels each day (and month) by the UTC date: in Europe/Warsaw the cloud day
 "20261006" runs from 02:00 CEST on 2026-10-06 to 02:00 CEST on 2026-10-07.
-The sensors used to look up the local date instead. The "today" sensors then
-switched to the next day's entry at local midnight, two hours before the cloud
-did, and never counted the energy used between 00:00 and 02:00. The
-month-to-date sensors lost the same slice once a month, because the
-coordinator requested the local month.
+The sensors used to look up the local date instead. The month-to-date sensors
+lost the energy of the cloud's last two hours once a month, because the
+coordinator requested the local month. The "Consumption" sensors, which show
+the energy published since the previous fetch (a momentary value), are covered
+at the end.
 
 The cloud below is a stand-in that labels days in UTC, like the real one. The
-energy Home Assistant meters from each TOTAL_INCREASING sensor (each rise,
-plus the new value after a reset) must equal the energy the cloud recorded.
+energy Home Assistant meters from each accumulated (TOTAL_INCREASING) sensor
+(each rise, plus the new value after a reset) must equal the energy the cloud
+recorded.
 """
 
 from __future__ import annotations
@@ -84,7 +85,7 @@ async def _setup(
     consumption_interval: int | None = None,
 ) -> None:
     await hass.config.async_set_time_zone(time_zone)
-    # The "today" sensors are disabled by default.
+    # The current-hour sensors are disabled by default.
     er.async_get(hass).async_get_or_create(
         Platform.SENSOR,
         DOMAIN,
@@ -114,43 +115,6 @@ def _metered(values: list[float]) -> float:
     for previous, value in pairwise(values):
         total += value if value < previous else value - previous
     return total
-
-
-async def test_today_sensor_counts_the_hours_after_local_midnight(
-    hass: HomeAssistant,
-    freezer: FrozenDateTimeFactory,
-    mock_aquarea_client: AsyncMock,
-    mock_config_entry: MockConfigEntry,
-) -> None:
-    """Energy used 00:00-02:00 CEST lands in the previous cloud day and is kept."""
-    cloud: Cloud = {"202610": {"20261006": 5.0}}
-    mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
-    freezer.move_to(datetime(2026, 10, 6, 23, 30, tzinfo=WARSAW))
-    await _setup(hass, mock_config_entry)
-    # A new sensor shows 0 until the coordinator's next tick.
-    await _at(hass, freezer, datetime(2026, 10, 6, 23, 31, tzinfo=WARSAW))
-    readings = [float(hass.states.get(TODAY).state)]
-    assert readings[-1] == 5.0
-
-    # 00:30 and 01:59 CEST are still 2026-10-06 in UTC: the cloud adds the
-    # hours since local midnight to "20261006", and there is no "20261007".
-    for when, kwh in (
-        (datetime(2026, 10, 7, 0, 30), 5.2),
-        (datetime(2026, 10, 7, 1, 59), 5.4),
-    ):
-        cloud["202610"]["20261006"] = kwh
-        await _at(hass, freezer, when.replace(tzinfo=WARSAW))
-        readings.append(float(hass.states.get(TODAY).state))
-        assert readings[-1] == kwh
-
-    # 02:30 CEST: the cloud day "20261007" has started.
-    cloud["202610"]["20261007"] = 0.1
-    await _at(hass, freezer, datetime(2026, 10, 7, 2, 30, tzinfo=WARSAW))
-    readings.append(float(hass.states.get(TODAY).state))
-    assert readings[-1] == 0.1
-
-    # The cloud recorded 0.4 more for 2026-10-06 and 0.1 for 2026-10-07.
-    assert _metered(readings) == pytest.approx(0.5)
 
 
 async def test_month_sensor_keeps_the_last_hours_of_the_cloud_month(
@@ -257,31 +221,6 @@ async def test_month_sensor_counts_the_cloud_day_that_started_before_local_midni
     assert float(hass.states.get(MONTH).state) == 5.3
 
 
-async def test_today_sensor_moves_to_the_cloud_day_before_local_midnight(
-    hass: HomeAssistant,
-    freezer: FrozenDateTimeFactory,
-    mock_aquarea_client: AsyncMock,
-    mock_config_entry: MockConfigEntry,
-) -> None:
-    """West of UTC the today sensor resets at 20:00 EDT, the cloud's midnight.
-
-    Matching the local date kept it on the cloud's 2026-10-06 until local
-    midnight, while the cloud was already filling 2026-10-07: the energy
-    used from 20:00 to 24:00 EDT was lost.
-    """
-    cloud: Cloud = {"202610": {"20261006": 2.0}}
-    mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
-    freezer.move_to(datetime(2026, 10, 6, 19, 30, tzinfo=NEW_YORK))
-    await _setup(hass, mock_config_entry, "America/New_York")
-    await _at(hass, freezer, datetime(2026, 10, 6, 19, 31, tzinfo=NEW_YORK))
-    assert float(hass.states.get(TODAY).state) == 2.0
-
-    cloud["202610"]["20261006"] = 2.1
-    cloud["202610"]["20261007"] = 0.05
-    await _at(hass, freezer, datetime(2026, 10, 6, 20, 30, tzinfo=NEW_YORK))
-    assert float(hass.states.get(TODAY).state) == 0.05
-
-
 # --- Upgrading from a version that followed the local day --------------------
 
 
@@ -302,33 +241,6 @@ def _restore(
             )
         ],
     )
-
-
-async def test_a_today_sensor_restored_after_local_midnight_waits_for_the_cloud(
-    hass: HomeAssistant,
-    freezer: FrozenDateTimeFactory,
-    mock_aquarea_client: AsyncMock,
-    mock_config_entry: MockConfigEntry,
-) -> None:
-    """Upgraded at 00:30 CEST: the old version had reset to 0 at local midnight.
-
-    The cloud's day is still 2026-10-06 (5.2 kWh), which the recorder metered
-    before the reset. Showing it again would count those 5.2 kWh twice, so
-    the sensor keeps 0 until the cloud's day 2026-10-07 starts at 02:00.
-    """
-    await hass.config.async_set_time_zone("Europe/Warsaw")
-    _restore(hass, TODAY, 0.0, datetime(2026, 10, 7, tzinfo=WARSAW))
-    cloud: Cloud = {"202610": {"20261006": 5.2}}
-    mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
-    freezer.move_to(datetime(2026, 10, 7, 0, 30, tzinfo=WARSAW))
-    await _setup(hass, mock_config_entry)
-    await _at(hass, freezer, datetime(2026, 10, 7, 0, 31, tzinfo=WARSAW))
-    assert float(hass.states.get(TODAY).state) == 0.0
-
-    cloud["202610"]["20261006"] = 5.4
-    cloud["202610"]["20261007"] = 0.1
-    await _at(hass, freezer, datetime(2026, 10, 7, 2, 30, tzinfo=WARSAW))
-    assert float(hass.states.get(TODAY).state) == 0.1
 
 
 async def test_a_month_sensor_restored_after_local_midnight_waits_for_the_cloud(
@@ -355,27 +267,6 @@ async def test_a_month_sensor_restored_after_local_midnight_waits_for_the_cloud(
     cloud["202611"] = {"20261101": 0.2}
     await _at(hass, freezer, datetime(2026, 11, 1, 1, 30, tzinfo=WARSAW))
     assert float(hass.states.get(MONTH).state) == 0.2
-
-
-async def test_a_today_sensor_restored_west_of_utc_carries_on(
-    hass: HomeAssistant,
-    freezer: FrozenDateTimeFactory,
-    mock_aquarea_client: AsyncMock,
-    mock_config_entry: MockConfigEntry,
-) -> None:
-    """Upgraded at 12:00 EDT: the restored day started at local midnight, 04:00 UTC.
-
-    Review of #125: compared as instants, that is later than the cloud day's
-    start (00:00 UTC), and the sensor was held until the next UTC midnight.
-    """
-    await hass.config.async_set_time_zone("America/New_York")
-    _restore(hass, TODAY, 3.0, datetime(2026, 10, 6, tzinfo=NEW_YORK))
-    cloud: Cloud = {"202610": {"20261006": 3.5}}
-    mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
-    freezer.move_to(datetime(2026, 10, 6, 12, 0, tzinfo=NEW_YORK))
-    await _setup(hass, mock_config_entry, "America/New_York")
-    await _at(hass, freezer, datetime(2026, 10, 6, 12, 1, tzinfo=NEW_YORK))
-    assert float(hass.states.get(TODAY).state) == 3.5
 
 
 async def test_a_month_sensor_restored_west_of_utc_carries_on(
@@ -480,11 +371,9 @@ async def test_the_reset_at_the_cloud_midnight_keeps_the_hourly_statistics_right
     reset hour's own one is still to come. That holds when the reset is at
     the cloud's midnight.
 
-    The today sensor loses 22:00 and 23:00 UTC, which the cloud publishes after
-    the last fetch of its day (the hour the cloud publishes after its day has
-    ended, and up to a consumption interval before it), and no other hour
-    takes their energy; every other hour keeps its own energy, none of it
-    twice. The month sensor, which has no reset that night, keeps every hour.
+    The accumulated sensor has no reset that night and keeps every hour. The
+    current-hour sensor (TODAY) goes back to 0 every hour, so it is not
+    recorded as a meter: it has no hourly statistics at all.
 
     Live, 2026-10-09: with the reset at local midnight (22:00 UTC), the
     correction kept 22:00 UTC waiting for energy that never came and gave it
@@ -503,13 +392,18 @@ async def test_the_reset_at_the_cloud_midnight_keeps_the_hourly_statistics_right
         await async_wait_recording_done(hass)
         period += timedelta(minutes=5)
 
-    assert await _hourly_changes(hass, TODAY) == {
-        20: 0.1,
-        21: 0.1,
-        0: 0.4,
-        1: 0.5,
-        2: 1.2,
-    }
+    # The current-hour sensor is not a meter: it has no sum to correct.
+    rows = await hass.async_add_executor_job(
+        statistics_during_period,
+        hass,
+        datetime(2026, 10, 6, 18, tzinfo=UTC),
+        None,
+        {TODAY},
+        "hour",
+        None,
+        {"sum"},
+    )
+    assert all("sum" not in row for row in rows.get(TODAY, []))
     assert await _hourly_changes(hass, MONTH) == {
         20: 0.1,
         21: 0.1,
@@ -519,3 +413,83 @@ async def test_the_reset_at_the_cloud_midnight_keeps_the_hourly_statistics_right
         1: 0.5,
         2: 1.2,
     }
+
+
+# --- The current-hour sensor -------------------------------------------------
+
+
+def _hourly_cloud(
+    hours: dict[datetime, float],
+) -> Callable[..., list[Consumption]]:
+    """A cloud whose DAY answer holds `hours` (UTC hour start -> heating kWh)."""
+
+    def get_device_consumption(
+        long_id: str, date_type: DateType, date_str: str
+    ) -> list[Consumption]:
+        if date_type != DateType.DAY:
+            return []
+        return [
+            Consumption(
+                {"dataTime": hour.strftime("%Y%m%d %H"), "heatConsumption": kwh}
+            )
+            for hour, kwh in sorted(hours.items())
+            if hour.strftime("%Y%m%d") == date_str
+        ]
+
+    return get_device_consumption
+
+
+async def test_the_consumption_sensor_shows_what_arrived_since_the_last_fetch(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """The sensor shows the rise between two fetches, then 0 when nothing new came."""
+    hours = {
+        datetime(2026, 10, 6, 9, tzinfo=UTC): 9.0,
+        datetime(2026, 10, 6, 10, tzinfo=UTC): 0.4,
+    }
+    mock_aquarea_client.get_device_consumption.side_effect = _hourly_cloud(hours)
+    freezer.move_to(datetime(2026, 10, 6, 11, 5, tzinfo=UTC))
+    await _setup(hass, mock_config_entry)
+    # The first fetch only sets the baseline.
+    await _at(hass, freezer, datetime(2026, 10, 6, 11, 6, tzinfo=UTC))
+    state = hass.states.get(TODAY)
+    assert state is not None
+    assert float(state.state) == 0.0
+    assert state.attributes["state_class"] == "measurement"
+    assert state.attributes["unit_of_measurement"] == "kWh"
+    assert "device_class" not in state.attributes
+
+    # The next fetch (15-minute interval) sees 0.25 kWh more, in a new hour.
+    hours[datetime(2026, 10, 6, 11, tzinfo=UTC)] = 0.25
+    await _at(hass, freezer, datetime(2026, 10, 6, 11, 21, tzinfo=UTC))
+    assert float(hass.states.get(TODAY).state) == 0.25
+
+    # The 60 s refreshes in between keep the value.
+    await _at(hass, freezer, datetime(2026, 10, 6, 11, 30, tzinfo=UTC))
+    assert float(hass.states.get(TODAY).state) == 0.25
+
+    # The hour's record grows by 0.1 at the next fetch, in the same hour.
+    hours[datetime(2026, 10, 6, 11, tzinfo=UTC)] = 0.35
+    await _at(hass, freezer, datetime(2026, 10, 6, 11, 40, tzinfo=UTC))
+    assert float(hass.states.get(TODAY).state) == pytest.approx(0.1)
+
+    # Nothing new at the following fetch: back to 0.
+    await _at(hass, freezer, datetime(2026, 10, 6, 11, 56, tzinfo=UTC))
+    assert float(hass.states.get(TODAY).state) == 0.0
+
+
+async def test_the_consumption_sensor_is_zero_without_hourly_records(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """With no hourly records the sensor shows 0, not unknown."""
+    mock_aquarea_client.get_device_consumption.side_effect = _hourly_cloud({})
+    freezer.move_to(datetime(2026, 10, 6, 11, 5, tzinfo=UTC))
+    await _setup(hass, mock_config_entry)
+    await _at(hass, freezer, datetime(2026, 10, 6, 11, 6, tzinfo=UTC))
+    assert float(hass.states.get(TODAY).state) == 0.0
