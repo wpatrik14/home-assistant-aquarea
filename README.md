@@ -31,6 +31,7 @@ This integration is actively maintained. Please report any issues you find and a
 * Force DHW
 * Force heater
 * Set the device in eco mode/comfort mode (if the device supports it).
+* Diagnostics download (account, IDs and names redacted)
 
 ## Features in the works
 * Improve translations
