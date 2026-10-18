@@ -81,6 +81,9 @@
         },
         "uncontrollable": {
           "name": "Uncontrollable (adapter flag)"
+        },
+        "weekly_timer": {
+          "name": "Weekly schedule"
         }
       },
       "button": {
