@@ -49,6 +49,7 @@ The integration follows the standard Home Assistant integration pattern, utilizi
 ### Climate (`climate.py`)
 - **Zones**: Each physical zone in the Aquarea system is represented as a separate `climate` entity.
 - **HVAC Modes**: Maps Home Assistant `HVACMode` (HEAT, COOL, AUTO, OFF) to Aquarea's `UpdateOperationMode`.
+- **`auto_mode` attribute**: `HVACMode.AUTO` covers both `ExtendedOperationMode.AUTO_HEAT` and `AUTO_COOL`, so the entity exposes `auto_mode: "heat" | "cool"` while the zone is in AUTO (`null` otherwise), which also tells the sides apart while the HVAC action is idle.
 - **Presets**: Supports `ECO`, `COMFORT`, and `NONE` via the `special_status` feature of the heat pump.
 - **Temperature Control**: Only enabled if the zone supports it (`zone.supports_set_temperature`).
 

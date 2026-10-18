@@ -16,7 +16,7 @@ The integration uses [aioaquarea](https://github.com/cjaliaga/aioaquarea) to com
 This integration is actively maintained. Please report any issues you find and any feedback you may have. Thanks!
 
 ## Features
-* Climate entity per device zone that allows you to control the operation mode, read the current temperature of the water in the device/zone and (if the zone supports it), change the target temperature.
+* Climate entity per device zone that allows you to control the operation mode, read the current temperature of the water in the device/zone and (if the zone supports it), change the target temperature. In auto mode the `auto_mode` attribute (`heat` or `cool`) shows which side the heat pump has switched to, even while it is idle.
 * Sensor entity for the outdoor temperature.
 * Water heater entity for the hot water tank (if the device has one), that allows you to control the operation mode (enabled/disabled) and read the current temperature of the water in the tank.
 * Diagnostic sensor to indicate if the device has any problem (such not enough water flow).

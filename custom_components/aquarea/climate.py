@@ -40,6 +40,8 @@ SPECIAL_STATUS_LOOKUP: dict[str, SpecialStatus | None] = {
 SPECIAL_STATUS_REVERSE_LOOKUP = {v: k for k, v in SPECIAL_STATUS_LOOKUP.items()}
 
 
+ATTR_AUTO_MODE = "auto_mode"
+
 CLIMATE_DELAY_SHORT = 5.0
 CLIMATE_DELAY_LONG = 10.0
 
@@ -75,6 +77,24 @@ def get_hvac_mode_from_ext_op_mode(
     if mode in (ExtendedOperationMode.AUTO_COOL, ExtendedOperationMode.AUTO_HEAT):
         return HVACMode.AUTO
     return HVACMode.OFF
+
+
+def get_auto_mode_from_ext_op_mode(
+    mode: ExtendedOperationMode, hvac_mode: HVACMode
+) -> str | None:
+    """Return the side an AUTO zone is on: "heat", "cool" or None.
+
+    HVAC mode is AUTO for both AUTO_HEAT and AUTO_COOL, and the HVAC action
+    only tells them apart while the pump runs, so this is exposed as the
+    `auto_mode` state attribute. None whenever the zone isn't in AUTO.
+    """
+    if hvac_mode != HVACMode.AUTO:
+        return None
+    if mode == ExtendedOperationMode.AUTO_HEAT:
+        return "heat"
+    if mode == ExtendedOperationMode.AUTO_COOL:
+        return "cool"
+    return None
 
 
 def get_hvac_action_from_ext_action(action: DeviceAction) -> HVACAction:
@@ -136,6 +156,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             HVACMode.AUTO,
         ]
         self._attr_hvac_mode = HVACMode.OFF
+        self._attr_extra_state_attributes = {ATTR_AUTO_MODE: None}
 
     async def async_added_to_hass(self) -> None:
         """Fill in the state from the data the coordinator already has.
@@ -154,6 +175,11 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         self._attr_hvac_mode = get_hvac_mode_from_ext_op_mode(
             device.mode, zone.operation_status, device.operation_status
         )
+        self._attr_extra_state_attributes = {
+            ATTR_AUTO_MODE: get_auto_mode_from_ext_op_mode(
+                device.mode, self._attr_hvac_mode
+            )
+        }
         # The library's current_action resolves AUTO_HEAT / AUTO_COOL to
         # heating / cooling; the HVAC mode can't, as it is AUTO for both.
         self._attr_hvac_action = (

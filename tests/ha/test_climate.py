@@ -117,6 +117,54 @@ async def test_mode_selects_target_and_limits(
     assert (state.attributes[ATTR_MIN_TEMP], state.attributes[ATTR_MAX_TEMP]) == limits
 
 
+@pytest.mark.parametrize(
+    ("mode", "zone_status", "expected"),
+    [
+        (
+            aioaquarea.ExtendedOperationMode.AUTO_HEAT,
+            aioaquarea.OperationStatus.ON,
+            "heat",
+        ),
+        (
+            aioaquarea.ExtendedOperationMode.AUTO_COOL,
+            aioaquarea.OperationStatus.ON,
+            "cool",
+        ),
+        (aioaquarea.ExtendedOperationMode.HEAT, aioaquarea.OperationStatus.ON, None),
+        (aioaquarea.ExtendedOperationMode.COOL, aioaquarea.OperationStatus.ON, None),
+        (aioaquarea.ExtendedOperationMode.OFF, aioaquarea.OperationStatus.ON, None),
+        (
+            aioaquarea.ExtendedOperationMode.AUTO_HEAT,
+            aioaquarea.OperationStatus.OFF,
+            None,
+        ),
+    ],
+)
+async def test_auto_mode_attribute(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_device: MagicMock,
+    freezer: FrozenDateTimeFactory,
+    mode: aioaquarea.ExtendedOperationMode,
+    zone_status: aioaquarea.OperationStatus,
+    expected: str | None,
+) -> None:
+    """An idle AUTO zone tells heat from cool through `auto_mode` (#140)."""
+    await _setup(hass, mock_config_entry)
+
+    mock_device.mode = mode
+    mock_device.zones[1].operation_status = zone_status
+    mock_device.current_action = aioaquarea.DeviceAction.IDLE
+    await _poll(hass, freezer)
+
+    state = hass.states.get(ENTITY_ID)
+    assert state.attributes["auto_mode"] == expected
+    if expected is not None:
+        assert state.state == HVACMode.AUTO
+        assert state.attributes[ATTR_HVAC_ACTION] == HVACAction.IDLE
+
+
 async def test_limits_pinned_when_temperature_cannot_be_set(
     hass: HomeAssistant,
     mock_aquarea_client: AsyncMock,
