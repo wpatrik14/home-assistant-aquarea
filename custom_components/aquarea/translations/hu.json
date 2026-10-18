@@ -78,6 +78,9 @@
         },
         "status": {
           "name": "Állapot"
+        },
+        "uncontrollable": {
+          "name": "Uncontrollable (adapter flag)"
         }
       },
       "button": {

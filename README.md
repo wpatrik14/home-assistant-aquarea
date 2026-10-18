@@ -25,6 +25,7 @@ This integration is actively maintained. Please report any issues you find and a
 * Diagnostic sensor for the current error/fault code (e.g. `H62`) and its description, when the device is in an error state.
 * Diagnostic binary sensor for the electric anode flag of the hot water tank, disabled by default and only for devices with a tank. The meaning of its raw value is unverified, so the raw value is kept as an attribute.
 * Diagnostic sensor for the pump status and current direction (idle/pump/water).
+* Diagnostic binary sensor for the `uncontrollable` flag the adapter reports (enabled by default). It is informational only: no entity becomes unavailable when it is on, and a warning is logged when it turns on.
 * Diagnostic sensors counting today's DHW heating, zone and defrost cycles.
 * Energy consumption sensors: Accumulated (month to date, for the Energy dashboard) and Consumption (disabled by default; the energy published by the cloud since the previous fetch, 0 when nothing new, updated every consumption interval)
 * Quiet mode select entity
