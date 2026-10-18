@@ -73,6 +73,9 @@
         "defrost": {
           "name": "Atitirpinimas"
         },
+        "electric_anode": {
+          "name": "Electric anode"
+        },
         "status": {
           "name": "Būklė"
         }

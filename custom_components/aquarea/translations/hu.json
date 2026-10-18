@@ -73,6 +73,9 @@
         "defrost": {
           "name": "Leolvasztás"
         },
+        "electric_anode": {
+          "name": "Electric anode"
+        },
         "status": {
           "name": "Állapot"
         }

@@ -73,6 +73,9 @@
         "defrost": {
           "name": "Descongelar"
         },
+        "electric_anode": {
+          "name": "Electric anode"
+        },
         "status": {
           "name": "Estado"
         }
