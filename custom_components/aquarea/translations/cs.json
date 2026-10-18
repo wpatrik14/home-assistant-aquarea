@@ -73,6 +73,9 @@
         "defrost": {
           "name": "Odmrazování"
         },
+        "electric_anode": {
+          "name": "Electric anode"
+        },
         "status": {
           "name": "Stav"
         }

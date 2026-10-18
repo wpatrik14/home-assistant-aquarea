@@ -65,6 +65,14 @@ FLAG_BINARY_SENSORS: tuple[AquareaFlagBinarySensorDescription, ...] = (
         translation_key="external_heater",
         value_fn=lambda device: device.external_heater,
     ),
+    AquareaFlagBinarySensorDescription(
+        key="electric_anode",
+        translation_key="electric_anode",
+        value_fn=lambda device: device.electric_anode,
+        exists_fn=lambda device: (
+            device.has_tank is True and device.electric_anode is not None
+        ),
+    ),
 )
 
 

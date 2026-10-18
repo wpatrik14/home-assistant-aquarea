@@ -36,9 +36,14 @@ FLAGS = [
         "external_heater",
         id="external_heater",
     ),
+    pytest.param(
+        "binary_sensor.heat_pump_electric_anode",
+        "electric_anode",
+        id="electric_anode",
+    ),
 ]
 FLAG_ARGS = ("entity_id", "attribute")
-ALL_ATTRIBUTES = ("bivalent", "bivalent_actual", "external_heater")
+ALL_ATTRIBUTES = ("bivalent", "bivalent_actual", "external_heater", "electric_anode")
 
 
 def _report_nothing(device: MagicMock) -> None:
@@ -129,6 +134,23 @@ async def test_disabled_by_default_and_diagnostic(
     assert entry is not None
     assert entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
     assert entry.entity_category is er.EntityCategory.DIAGNOSTIC
+    assert hass.states.get(entity_id) is None
+
+
+async def test_electric_anode_needs_a_tank(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_device: MagicMock,
+) -> None:
+    """A device without a hot water tank gets no electric anode entity."""
+    _report_nothing(mock_device)
+    mock_device.electric_anode = 1
+    mock_device.has_tank = False
+    entity_id = "binary_sensor.heat_pump_electric_anode"
+    _enable(hass, mock_config_entry, entity_id, "electric_anode")
+    await _setup(hass, mock_config_entry)
+
     assert hass.states.get(entity_id) is None
 
 

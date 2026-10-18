@@ -83,6 +83,9 @@
         "defrost": {
           "name": "Defrost"
         },
+        "electric_anode": {
+          "name": "Electric anode"
+        },
         "status": {
           "name": "Status"
         }
