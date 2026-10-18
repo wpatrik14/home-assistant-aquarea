@@ -34,11 +34,14 @@ from homeassistant.components.climate import (
 )
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
+
+from .conftest import DEVICE_ID, _make_zone
 
 ENTITY_ID = "climate.heat_pump_house"
 
@@ -489,3 +492,72 @@ async def test_turn_on_off_failure_rolls_back(
         await _call(hass, service)
 
     assert hass.states.get(ENTITY_ID).state == start_mode
+
+
+async def test_orphaned_zone_entity_is_removed(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """A zone-2 entity left by the pre-1.4.0 placeholder zone is cleaned up."""
+    mock_config_entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    stale = registry.async_get_or_create(
+        "climate",
+        "aquarea",
+        f"{DEVICE_ID}_climate_2",
+        config_entry=mock_config_entry,
+        suggested_object_id="heat_pump_zone_2",
+    )
+    other = registry.async_get_or_create(
+        "sensor",
+        "aquarea",
+        f"{DEVICE_ID}_climate_2_unrelated",
+        config_entry=mock_config_entry,
+    )
+
+    await _setup(hass, mock_config_entry)
+
+    assert registry.async_get(stale.entity_id) is None
+    assert registry.async_get(other.entity_id) is not None
+    assert hass.states.get(ENTITY_ID) is not None
+
+
+async def test_second_zone_gets_its_own_entity(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_device: MagicMock,
+) -> None:
+    """A two-zone unit keeps both zone entities, named after the app's zones."""
+    zone2 = _make_zone()
+    zone2.zone_id = 2
+    zone2.name = "Bedroom"
+    mock_device.zones[2] = zone2
+
+    await _setup(hass, mock_config_entry)
+
+    assert hass.states.get(ENTITY_ID) is not None
+    assert hass.states.get("climate.heat_pump_bedroom") is not None
+
+
+async def test_orphan_cleanup_skipped_without_zones(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_device: MagicMock,
+) -> None:
+    """A device reporting no zones is a failed read: nothing is removed."""
+    mock_device.zones = {}
+    mock_config_entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    entry = registry.async_get_or_create(
+        "climate",
+        "aquarea",
+        f"{DEVICE_ID}_climate_1",
+        config_entry=mock_config_entry,
+    )
+
+    await _setup(hass, mock_config_entry)
+
+    assert registry.async_get(entry.entity_id) is not None

@@ -135,6 +135,8 @@ def _load():
     namespace = {
         "aioaquarea": aioaquarea,
         "MFA_REQUIRED": "MFA_REQUIRED",
+        "AGREEMENT_NOT_ACCEPTED_CODE": "4103",
+        "AGREEMENT_NOT_ACCEPTED_MESSAGE": "accept the terms",
         "UpdateFailed": UpdateFailed,
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "dt_util": anything,

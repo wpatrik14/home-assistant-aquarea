@@ -25,6 +25,7 @@ from homeassistant.components.climate import (
 )
 from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
@@ -53,6 +54,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Aquarea climate entities from config entry."""
     data: dict[str, AquareaDataUpdateCoordinator] = config_entry.runtime_data
+    _remove_orphaned_zone_entities(hass, config_entry, data)
     async_add_entities(
         [
             HeatPumpClimate(coordinator, zone_id)
@@ -60,6 +62,37 @@ async def async_setup_entry(
             for zone_id in coordinator.device.zones
         ]
     )
+
+
+def _remove_orphaned_zone_entities(
+    hass: HomeAssistant,
+    config_entry: AquareaConfigEntry,
+    coordinators: dict[str, AquareaDataUpdateCoordinator],
+) -> None:
+    """Remove zone climate entities of zones the device no longer reports.
+
+    Before aioaquarea-ng 1.4.0 a single-zone unit got a placeholder zone 2,
+    whose climate entity can still sit in the registry. A device without
+    zones is skipped: that is a failed read, not a unit with no zones.
+    """
+    registry = er.async_get(hass)
+    for device_id, coordinator in coordinators.items():
+        zones = coordinator.device.zones
+        if not zones:
+            continue
+        prefix = f"{device_id}_climate_"
+        for entry in er.async_entries_for_config_entry(registry, config_entry.entry_id):
+            if entry.domain != "climate" or not entry.unique_id.startswith(prefix):
+                continue
+            suffix = entry.unique_id.removeprefix(prefix)
+            if suffix.isdigit() and int(suffix) not in zones:
+                _LOGGER.info(
+                    "Removing %s: zone %s no longer exists on device %s",
+                    entry.entity_id,
+                    suffix,
+                    device_id,
+                )
+                registry.async_remove(entry.entity_id)
 
 
 def get_hvac_mode_from_ext_op_mode(

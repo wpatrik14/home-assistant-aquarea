@@ -350,3 +350,39 @@ async def test_consumption_interval_source(
     assert mock_config_entry.state is ConfigEntryState.LOADED
     [coordinator] = mock_config_entry.runtime_data.values()
     assert coordinator.consumption_interval == expected
+
+
+async def test_setup_entry_agreement_not_accepted_retries(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Unaccepted Panasonic terms (4103) retry with a clear message, no reauth."""
+    mock_aquarea_client.get_devices.side_effect = aioaquarea.AgreementNotAcceptedError()
+
+    await _setup(hass, mock_config_entry)
+
+    assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
+    assert _reauth_flows(hass, mock_config_entry) == []
+    assert "accept them" in caplog.text
+
+
+async def test_poll_agreement_not_accepted_is_clear(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_device: MagicMock,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A poll failing with 4103 logs the accept-in-the-app message, no reauth."""
+    await _setup(hass, mock_config_entry)
+
+    mock_device.refresh_data.side_effect = aioaquarea.AgreementNotAcceptedError()
+    freezer.tick(timedelta(minutes=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    assert "Panasonic Comfort Cloud app" in caplog.text
+    assert _reauth_flows(hass, mock_config_entry) == []

@@ -142,6 +142,8 @@ def _load_setup_entry(namespace_extra=None):
     namespace = {
         "aioaquarea": aioaquarea,
         "MFA_REQUIRED": "MFA_REQUIRED",
+        "AGREEMENT_NOT_ACCEPTED_CODE": "4103",
+        "AGREEMENT_NOT_ACCEPTED_MESSAGE": "accept the terms",
         "aiohttp": aiohttp,
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "ConfigEntryNotReady": ConfigEntryNotReady,

@@ -26,6 +26,15 @@ from .statistics import CLOUD_TIME_ZONE, cloud_date
 
 _LOGGER = logging.getLogger(__name__)
 
+# aioaquarea-ng 1.4.0 raises AgreementNotAcceptedError (an ApiError with this
+# code) when Panasonic's terms or privacy policy changed. Compared by code so
+# older library releases still import.
+AGREEMENT_NOT_ACCEPTED_CODE = "4103"
+AGREEMENT_NOT_ACCEPTED_MESSAGE = (
+    "Panasonic updated its terms or privacy policy: open the Panasonic Comfort "
+    "Cloud app and accept them, then Aquarea will recover on its own"
+)
+
 
 # The entry's runtime data: one coordinator per device, keyed by device ID.
 type AquareaConfigEntry = ConfigEntry[dict[str, AquareaDataUpdateCoordinator]]
@@ -315,6 +324,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                 raise ConfigEntryAuthFailed from err
             raise UpdateFailed(f"Authentication error: {err}") from err
         except aioaquarea.ClientError as err:
+            if getattr(err, "error_code", None) == AGREEMENT_NOT_ACCEPTED_CODE:
+                # aioaquarea-ng 1.4.0 AgreementNotAcceptedError: every request
+                # fails until the terms are accepted in the Panasonic app.
+                raise UpdateFailed(AGREEMENT_NOT_ACCEPTED_MESSAGE) from err
             # Covers RequestFailedError, non-auth ApiError and InvalidData,
             # which share only this base class. Anything else would reach
             # Home Assistant's generic handler and log a traceback every poll.
