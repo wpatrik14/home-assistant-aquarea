@@ -137,11 +137,15 @@ def _load():
     hourly_stub = ast.parse(
         "async def _async_fetch_hourly_consumption(self, now): pass"
     ).body[0]
+    # Same for the weekly schedule read (tests/ha/test_weekly_timer.py).
+    weekly_stub = ast.parse(
+        "async def _async_fetch_weekly_timer(self, now): pass"
+    ).body[0]
     flow = ast.ClassDef(
         name="Extracted",
         bases=[],
         keywords=[],
-        body=[node, hourly_stub],
+        body=[node, hourly_stub, weekly_stub],
         decorator_list=[],
         type_params=[],
     )

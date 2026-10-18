@@ -14,7 +14,9 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
+from .const import WEEKLY_TIMER_MAX_AGE
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 from .entity import AquareaBaseEntity
 
@@ -115,6 +117,7 @@ async def async_setup_entry(
     for coordinator in data.values():
         entities.append(AquareaStatusBinarySensor(coordinator))
         entities.append(AquareaDefrostBinarySensor(coordinator))
+        entities.append(AquareaWeeklyTimerBinarySensor(coordinator))
         entities.extend(
             AquareaFlagBinarySensor(coordinator, description)
             for description in FLAG_BINARY_SENSORS
@@ -218,3 +221,49 @@ class AquareaFlagBinarySensor(AquareaBaseEntity, BinarySensorEntity):
         """Return the raw value, as its meaning is not documented."""
         raw = self._raw
         return {"raw_value": raw if isinstance(raw, int) else None}
+
+
+class AquareaWeeklyTimerBinarySensor(AquareaBaseEntity, BinarySensorEntity):
+    """Whether the device's weekly schedule is switched on (read only)."""
+
+    _attr_translation_key = "weekly_timer"
+    _attr_icon = "mdi:calendar-clock"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+
+        self._attr_unique_id = f"{super().unique_id}_weekly_timer"
+
+    async def async_added_to_hass(self) -> None:
+        """Ask the coordinator to read the schedule while this entity is enabled."""
+        await super().async_added_to_hass()
+        self.async_on_remove(self.coordinator.subscribe_weekly_timer())
+
+    @property
+    def available(self) -> bool:
+        """Return true while the schedule was read recently."""
+        fetched_at = self.coordinator.weekly_timer_fetched_at
+        return (
+            super().available
+            and fetched_at is not None
+            and dt_util.now() - fetched_at <= WEEKLY_TIMER_MAX_AGE
+        )
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if the weekly schedule is switched on."""
+        timer = self.coordinator.weekly_timer
+        return None if timer is None else timer.enabled
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the days with a scheduled change and the number of changes."""
+        timer = self.coordinator.weekly_timer
+        days = [] if timer is None else timer.days
+        return {
+            "scheduled_days": [day.name for day in days if day.active_slots],
+            "slot_count": sum(len(day.active_slots) for day in days),
+        }

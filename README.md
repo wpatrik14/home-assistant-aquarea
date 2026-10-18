@@ -27,6 +27,7 @@ This integration is actively maintained. Please report any issues you find and a
 * Diagnostic sensor for the pump status and current direction (idle/pump/water).
 * Diagnostic binary sensor for the `uncontrollable` flag the adapter reports (enabled by default). It is informational only: no entity becomes unavailable when it is on, and a warning is logged when it turns on.
 * Diagnostic sensors counting today's DHW heating, zone and defrost cycles.
+* Read-only diagnostic binary sensor showing whether the weekly schedule is switched on, with the scheduled days and the number of scheduled changes as attributes. Disabled by default; the schedule is only read (at most hourly) while it is enabled.
 * Energy consumption sensors: Accumulated (month to date, for the Energy dashboard) and Consumption (disabled by default; the energy published by the cloud since the previous fetch, 0 when nothing new, updated every consumption interval)
 * Quiet mode select entity
 * Request defrost

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 import logging
 
@@ -20,6 +21,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MFA_REQUIRED,
+    WEEKLY_TIMER_INTERVAL,
     YESTERDAY_REFETCH_HOURS,
 )
 from .statistics import CLOUD_TIME_ZONE, cloud_date
@@ -34,6 +36,18 @@ AGREEMENT_NOT_ACCEPTED_MESSAGE = (
     "Panasonic updated its terms or privacy policy: open the Panasonic Comfort "
     "Cloud app and accept them, then Aquarea will recover on its own"
 )
+
+
+def _weekly_timer_due(
+    now: datetime, requested_at: datetime | None, interval: timedelta
+) -> bool:
+    """Return true if the weekly schedule is due for a read.
+
+    It is due when it was never requested, or the last request is at least
+    ``interval`` old. A failed request counts as a request, so a failing read
+    is not retried every poll.
+    """
+    return requested_at is None or now - requested_at >= interval
 
 
 # The entry's runtime data: one coordinator per device, keyed by device ID.
@@ -72,6 +86,13 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         # Days whose query came back empty, so the warning is logged once.
         self._day_missing: set[date] = set()
         self._hourly_consumption_fetched_at: datetime | None = None
+
+        # Weekly schedule: only read while an entity subscribes to it.
+        self._weekly_timer: aioaquarea.WeeklyTimer | None = None
+        self._weekly_timer_requested_at: datetime | None = None
+        self._weekly_timer_fetched_at: datetime | None = None
+        self._weekly_timer_subscribers = 0
+        self._weekly_timer_failed = False
 
         # Main device and zones are fixed at 1 minute
         scan_interval = DEFAULT_SCAN_INTERVAL
@@ -134,6 +155,54 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
     def hourly_consumption_fetched_at(self) -> datetime | None:
         """Return when the hourly consumption was last fetched, or None."""
         return self._hourly_consumption_fetched_at
+
+    @property
+    def weekly_timer(self) -> aioaquarea.WeeklyTimer | None:
+        """Return the last weekly schedule read, or None."""
+        return self._weekly_timer
+
+    @property
+    def weekly_timer_fetched_at(self) -> datetime | None:
+        """Return when the weekly schedule was last read, or None."""
+        return self._weekly_timer_fetched_at
+
+    def subscribe_weekly_timer(self) -> Callable[[], None]:
+        """Ask for the weekly schedule to be read; returns the unsubscribe callback."""
+        self._weekly_timer_subscribers += 1
+        unsubscribed = False
+
+        def _unsubscribe() -> None:
+            nonlocal unsubscribed
+            if not unsubscribed:
+                unsubscribed = True
+                self._weekly_timer_subscribers -= 1
+
+        return _unsubscribe
+
+    async def _async_fetch_weekly_timer(self, now: datetime) -> None:
+        """Read the weekly schedule if an entity wants it and it is due.
+
+        Every failure is swallowed, authentication errors included: the
+        schedule is optional, and the main device fetch handles reauth.
+        """
+        if self._weekly_timer_subscribers == 0 or not _weekly_timer_due(
+            now, self._weekly_timer_requested_at, WEEKLY_TIMER_INTERVAL
+        ):
+            return
+        self._weekly_timer_requested_at = now
+        try:
+            self._weekly_timer = await self._client.get_weekly_timer(
+                self._device.long_id
+            )
+        except Exception as ex:  # noqa: BLE001 - deliberate: optional data, keep the cached value
+            if self._weekly_timer_failed:
+                _LOGGER.debug("Failed to fetch the weekly schedule: %s", ex)
+            else:
+                self._weekly_timer_failed = True
+                _LOGGER.warning("Failed to fetch the weekly schedule: %s", ex)
+        else:
+            self._weekly_timer_failed = False
+            self._weekly_timer_fetched_at = now
 
     def _hourly_days_due(self, now: datetime) -> list[date]:
         """Return the days whose hourly consumption is due for a fetch, oldest first.
@@ -313,6 +382,9 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
 
             # 3. Fetch hourly consumption, on its own cadence
             await self._async_fetch_hourly_consumption(now)
+
+            # 4. Fetch the weekly schedule, only while an entity wants it
+            await self._async_fetch_weekly_timer(now)
 
             return self._device  # noqa: TRY300 - the handlers below cover the whole fetch
         except aioaquarea.AuthenticationError as err:

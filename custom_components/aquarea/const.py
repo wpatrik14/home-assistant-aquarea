@@ -1,5 +1,7 @@
 """Constants for the Aquarea Smart Cloud integration."""
 
+from datetime import timedelta
+
 DOMAIN = "aquarea"
 
 CONF_CONSUMPTION_INTERVAL = "consumption_interval"
@@ -15,6 +17,12 @@ DEFAULT_SCAN_INTERVAL = 60
 DEFAULT_CONSUMPTION_INTERVAL = 15
 # The cloud publishes new consumption data at most every ~15 minutes.
 MIN_CONSUMPTION_INTERVAL = 15
+
+# The weekly schedule changes rarely: read it at most this often, and only
+# while a weekly schedule entity is enabled.
+WEEKLY_TIMER_INTERVAL = timedelta(hours=1)
+# The weekly schedule entity is unavailable once the last read is older than this.
+WEEKLY_TIMER_MAX_AGE = timedelta(hours=3)
 
 # Hours into the day during which yesterday's hourly consumption is refetched
 YESTERDAY_REFETCH_HOURS = 3
