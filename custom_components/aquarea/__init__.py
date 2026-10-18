@@ -12,7 +12,12 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .const import CONF_REFRESH_TOKEN, MFA_REQUIRED
-from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
+from .coordinator import (
+    AGREEMENT_NOT_ACCEPTED_CODE,
+    AGREEMENT_NOT_ACCEPTED_MESSAGE,
+    AquareaConfigEntry,
+    AquareaDataUpdateCoordinator,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,6 +104,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
             f"Aquarea Smart Cloud authentication failed: {err}"
         ) from err
     except aioaquarea.ClientError as err:
+        if getattr(err, "error_code", None) == AGREEMENT_NOT_ACCEPTED_CODE:
+            raise ConfigEntryNotReady(AGREEMENT_NOT_ACCEPTED_MESSAGE) from err
         # ApiError, RequestFailedError, InvalidData - the cloud is reachable
         # but unhappy. Worth retrying.
         raise ConfigEntryNotReady(f"Aquarea Smart Cloud error: {err}") from err
