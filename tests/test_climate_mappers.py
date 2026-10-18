@@ -18,7 +18,10 @@ applies them per zone:
 - target temperature and limits come from the cool or heat values of the zone
   depending on the device mode. A zone that can't set its temperature, or a
   device that is off, gets min = max = current temperature (a locked slider);
-- the preset follows the device's special status when it is supported.
+- the preset follows the device's special status when it is supported;
+- the `auto_mode` state attribute tells AUTO_HEAT ("heat") from AUTO_COOL
+  ("cool") while the zone is in AUTO, None otherwise (issue #140: an idle AUTO
+  zone gave no hint which side the unit is on).
 
 These were listed as missing coverage in the audit (wpatrik14/fleet-backlog#88). The real functions and method are loaded
 out of climate.py via AST with stub enums.
@@ -142,6 +145,7 @@ def _load():
         "PRESET_ECO": "eco",
         "PRESET_COMFORT": "comfort",
         "PRESET_NONE": "none",
+        "ATTR_AUTO_MODE": "auto_mode",
     }
     exec(
         compile(
@@ -246,6 +250,23 @@ def main():
         got = ext_action(act)
         check(f"ext action: {act.name} -> {expected}", got == expected, f"got={got}")
 
+    # --- get_auto_mode_from_ext_op_mode ----------------------------------
+    auto_mode = NS["get_auto_mode_from_ext_op_mode"]
+    for mode, hmode, expected in (
+        (E.AUTO_HEAT, HVACMode.AUTO, "heat"),
+        (E.AUTO_COOL, HVACMode.AUTO, "cool"),
+        (E.HEAT, HVACMode.HEAT, None),
+        (E.COOL, HVACMode.COOL, None),
+        (E.OFF, HVACMode.OFF, None),
+        (E.AUTO_HEAT, HVACMode.OFF, None),
+    ):
+        got = auto_mode(mode, hmode)
+        check(
+            f"auto mode: {mode.name}, hvac {hmode} -> {expected}",
+            got == expected,
+            f"got={got!r}",
+        )
+
     # --- get_update_operation_mode_from_hvac_mode -------------------------
     update_mode = NS["get_update_operation_mode_from_hvac_mode"]
     for mode, expected in (
@@ -303,6 +324,28 @@ def main():
         (obj._attr_hvac_mode, obj._attr_hvac_action)
         == (HVACMode.AUTO, HVACAction.COOLING),
         f"got={vars(obj)}",
+    )
+
+    for mode, side in ((E.AUTO_HEAT, "heat"), (E.AUTO_COOL, "cool")):
+        obj = _climate(mode, _zone(), action=DeviceAction.IDLE)
+        check(
+            f"{mode.name}, idle: action idle, auto_mode attribute {side}",
+            (obj._attr_hvac_action, obj._attr_extra_state_attributes)
+            == (HVACAction.IDLE, {"auto_mode": side}),
+            f"got={vars(obj)}",
+        )
+    for mode in (E.HEAT, E.COOL, E.OFF):
+        obj = _climate(mode, _zone())
+        check(
+            f"{mode.name}: auto_mode attribute None",
+            obj._attr_extra_state_attributes == {"auto_mode": None},
+            f"got={obj._attr_extra_state_attributes!r}",
+        )
+    obj = _climate(E.AUTO_HEAT, _zone(status=S.OFF))
+    check(
+        "AUTO_HEAT, zone off: auto_mode attribute None",
+        obj._attr_extra_state_attributes == {"auto_mode": None},
+        f"got={obj._attr_extra_state_attributes!r}",
     )
 
     for mode in (E.HEAT, E.AUTO_HEAT):
