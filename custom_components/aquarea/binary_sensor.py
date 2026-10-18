@@ -1,11 +1,15 @@
 """Binary sensors for the Aquarea integration."""
 
+from collections.abc import Callable
+from dataclasses import dataclass
 import logging
+from typing import Any
 
 import aioaquarea
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
+    BinarySensorEntityDescription,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
@@ -15,6 +19,53 @@ from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 from .entity import AquareaBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _flag_state(raw: int | bool | None) -> bool | None:
+    """Turn a raw 0/1/2... flag reported by the device into on/off.
+
+    ``None`` means the device does not report the flag. The meaning of values
+    above 1 is not known, so any non-zero value counts as on and the raw value
+    is kept as an attribute.
+    """
+    if raw is None:
+        return None
+    return raw != 0
+
+
+@dataclass(frozen=True, kw_only=True)
+class AquareaFlagBinarySensorDescription(BinarySensorEntityDescription):
+    """Describes a diagnostic binary sensor backed by a raw device flag."""
+
+    value_fn: Callable[[aioaquarea.Device], int | bool | None]
+    exists_fn: Callable[[aioaquarea.Device], bool] | None = None
+    entity_category: EntityCategory | None = EntityCategory.DIAGNOSTIC
+    entity_registry_enabled_default: bool = False
+
+    def exists(self, device: aioaquarea.Device) -> bool:
+        """Return true if the device has this flag, so the entity is created."""
+        if self.exists_fn is not None:
+            return self.exists_fn(device)
+        return self.value_fn(device) is not None
+
+
+FLAG_BINARY_SENSORS: tuple[AquareaFlagBinarySensorDescription, ...] = (
+    AquareaFlagBinarySensorDescription(
+        key="bivalent",
+        translation_key="bivalent",
+        value_fn=lambda device: device.bivalent,
+    ),
+    AquareaFlagBinarySensorDescription(
+        key="bivalent_actual",
+        translation_key="bivalent_actual",
+        value_fn=lambda device: device.bivalent_actual,
+    ),
+    AquareaFlagBinarySensorDescription(
+        key="external_heater",
+        translation_key="external_heater",
+        value_fn=lambda device: device.external_heater,
+    ),
+)
 
 
 async def async_setup_entry(
@@ -31,6 +82,11 @@ async def async_setup_entry(
     for coordinator in data.values():
         entities.append(AquareaStatusBinarySensor(coordinator))
         entities.append(AquareaDefrostBinarySensor(coordinator))
+        entities.extend(
+            AquareaFlagBinarySensor(coordinator, description)
+            for description in FLAG_BINARY_SENSORS
+            if description.exists(coordinator.device)
+        )
 
     async_add_entities(entities)
 
@@ -76,3 +132,35 @@ class AquareaDefrostBinarySensor(AquareaBaseEntity, BinarySensorEntity):
             self.coordinator.device.device_mode_status
             is aioaquarea.DeviceModeStatus.DEFROST
         )
+
+
+class AquareaFlagBinarySensor(AquareaBaseEntity, BinarySensorEntity):
+    """A diagnostic binary sensor showing a raw flag reported by the device."""
+
+    entity_description: AquareaFlagBinarySensorDescription
+
+    def __init__(
+        self,
+        coordinator: AquareaDataUpdateCoordinator,
+        description: AquareaFlagBinarySensorDescription,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+
+        self.entity_description = description
+        self._attr_unique_id = f"{super().unique_id}_{description.key}"
+
+    @property
+    def _raw(self) -> int | bool | None:
+        """Return the raw flag as the device reports it."""
+        return self.entity_description.value_fn(self.coordinator.device)
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if the flag is set."""
+        return _flag_state(self._raw)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the raw value, as its meaning is not documented."""
+        return {"raw_value": self._raw}

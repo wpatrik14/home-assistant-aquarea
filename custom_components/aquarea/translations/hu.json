@@ -61,6 +61,15 @@
     },
     "entity": {
       "binary_sensor": {
+        "bivalent": {
+          "name": "Bivalent"
+        },
+        "bivalent_actual": {
+          "name": "Bivalent active (reported)"
+        },
+        "external_heater": {
+          "name": "External heater"
+        },
         "defrost": {
           "name": "Leolvasztás"
         },

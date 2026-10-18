@@ -21,6 +21,7 @@ This integration is actively maintained. Please report any issues you find and a
 * Sensor entity per zone for the zone temperature reported by the device. For zones that use a water temperature sensor this is the water (flow) temperature (inferred); for other sensor types it may be a room temperature.
 * Water heater entity for the hot water tank (if the device has one), that allows you to control the operation mode (enabled/disabled) and read the current temperature of the water in the tank.
 * Diagnostic sensor to indicate if the device has any problem (such not enough water flow).
+* Diagnostic binary sensors for the bivalent (second heat source) and external heater flags the device reports, disabled by default. The meaning of their raw values is unverified, so the raw value is kept as an attribute.
 * Diagnostic sensor for the current error/fault code (e.g. `H62`) and its description, when the device is in an error state.
 * Diagnostic sensor for the pump status and current direction (idle/pump/water).
 * Diagnostic sensors counting today's DHW heating, zone and defrost cycles.
