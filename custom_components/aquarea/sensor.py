@@ -189,6 +189,10 @@ async def async_setup_entry(
         entities.append(ErrorCodeSensor(coordinator))
         if coordinator.device.has_tank:
             entities.append(TankTemperatureSensor(coordinator))
+        entities.extend(
+            ZoneTemperatureSensor(coordinator, zone_id)
+            for zone_id in coordinator.device.zones
+        )
         # Not every unit reports a water pressure; skip the sensor then.
         if coordinator.device.water_pressure is not None:
             entities.append(WaterPressureSensor(coordinator))
@@ -349,6 +353,31 @@ class TankTemperatureSensor(AquareaStateSensor):
         if self.coordinator.device is None:
             return
         self._attr_native_value = self.coordinator.device.tank.temperature
+        super()._handle_coordinator_update()
+
+
+class ZoneTemperatureSensor(AquareaStateSensor):
+    """Temperature reported for one zone of the heat pump."""
+
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator, zone_id: int) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._zone_id = zone_id
+        zone = coordinator.device.zones[zone_id]
+        self._attr_translation_key = "zone_temperature"
+        self._attr_translation_placeholders = {"zone_name": zone.name}
+        self._attr_unique_id = f"{super().unique_id}_zone_{zone_id}_temperature"
+        self._attr_device_class = SensorDeviceClass.TEMPERATURE
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        # Keep the last value if the zone is gone from the data.
+        zone = self.coordinator.device.zones.get(self._zone_id)
+        if zone is None:
+            return
+        self._attr_native_value = zone.temperature
         super()._handle_coordinator_update()
 
 

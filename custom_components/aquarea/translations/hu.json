@@ -104,6 +104,9 @@
         "tank_temperature": {
           "name": "Tartály hőmérséklete"
         },
+        "zone_temperature": {
+          "name": "{zone_name} temperature"
+        },
         "water_pressure": {
           "name": "Víznyomás"
         },

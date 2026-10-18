@@ -18,6 +18,7 @@ This integration is actively maintained. Please report any issues you find and a
 ## Features
 * Climate entity per device zone that allows you to control the operation mode, read the current temperature of the water in the device/zone and (if the zone supports it), change the target temperature. In auto mode the `auto_mode` attribute (`heat` or `cool`) shows which side the heat pump has switched to, even while it is idle.
 * Sensor entity for the outdoor temperature.
+* Sensor entity per zone for the zone temperature reported by the device. For zones that use a water temperature sensor this is the water (flow) temperature (inferred); for other sensor types it may be a room temperature.
 * Water heater entity for the hot water tank (if the device has one), that allows you to control the operation mode (enabled/disabled) and read the current temperature of the water in the tank.
 * Diagnostic sensor to indicate if the device has any problem (such not enough water flow).
 * Diagnostic sensor for the current error/fault code (e.g. `H62`) and its description, when the device is in an error state.
