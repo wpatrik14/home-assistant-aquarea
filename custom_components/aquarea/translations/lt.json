@@ -78,6 +78,9 @@
         },
         "status": {
           "name": "Būklė"
+        },
+        "uncontrollable": {
+          "name": "Uncontrollable (adapter flag)"
         }
       },
       "button": {

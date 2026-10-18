@@ -78,6 +78,9 @@
             },
             "status": {
                 "name": "Статус"
+            },
+            "uncontrollable": {
+                "name": "Uncontrollable (adapter flag)"
             }
         },
         "button": {

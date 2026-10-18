@@ -11,7 +11,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -33,6 +33,17 @@ def _flag_state(raw: int | bool | None) -> bool | None:
     return raw != 0
 
 
+def _strict_flag_state(raw: Any) -> bool | None:
+    """Turn a real boolean flag into on/off, anything else counts as off.
+
+    ``None`` means the device does not report the flag. Only an actual ``True``
+    is on, so a value of an unexpected type never reads as set.
+    """
+    if raw is None:
+        return None
+    return raw is True
+
+
 @dataclass(frozen=True, kw_only=True)
 class AquareaFlagBinarySensorDescription(BinarySensorEntityDescription):
     """Describes a diagnostic binary sensor backed by a raw device flag."""
@@ -41,6 +52,8 @@ class AquareaFlagBinarySensorDescription(BinarySensorEntityDescription):
     exists_fn: Callable[[aioaquarea.Device], bool] | None = None
     entity_category: EntityCategory | None = EntityCategory.DIAGNOSTIC
     entity_registry_enabled_default: bool = False
+    state_fn: Callable[[Any], bool | None] = _flag_state
+    warn_when_on: str | None = None
 
     def exists(self, device: aioaquarea.Device) -> bool:
         """Return true if the device has this flag, so the entity is created."""
@@ -50,6 +63,18 @@ class AquareaFlagBinarySensorDescription(BinarySensorEntityDescription):
 
 
 FLAG_BINARY_SENSORS: tuple[AquareaFlagBinarySensorDescription, ...] = (
+    AquareaFlagBinarySensorDescription(
+        key="uncontrollable",
+        translation_key="uncontrollable",
+        value_fn=lambda device: device.uncontrollable,
+        state_fn=_strict_flag_state,
+        entity_registry_enabled_default=True,
+        warn_when_on=(
+            "The adapter of %s reports that the device is uncontrollable "
+            "(uncontrollableTaw1Flg). Commands may be ignored; the entities "
+            "stay available"
+        ),
+    ),
     AquareaFlagBinarySensorDescription(
         key="bivalent",
         translation_key="bivalent",
@@ -157,6 +182,26 @@ class AquareaFlagBinarySensor(AquareaBaseEntity, BinarySensorEntity):
 
         self.entity_description = description
         self._attr_unique_id = f"{super().unique_id}_{description.key}"
+        self._was_on: bool | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Note the first state, so a flag that is already set is reported."""
+        await super().async_added_to_hass()
+        self._warn_on_transition()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._warn_on_transition()
+        super()._handle_coordinator_update()
+
+    def _warn_on_transition(self) -> None:
+        """Log a warning once each time the flag turns on, if the sensor asks."""
+        is_on = self.is_on
+        message = self.entity_description.warn_when_on
+        if message is not None and is_on is True and self._was_on is not True:
+            _LOGGER.warning(message, self.coordinator.device_info.name)
+        self._was_on = is_on
 
     @property
     def _raw(self) -> int | bool | None:
@@ -166,9 +211,10 @@ class AquareaFlagBinarySensor(AquareaBaseEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if the flag is set."""
-        return _flag_state(self._raw)
+        return self.entity_description.state_fn(self._raw)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the raw value, as its meaning is not documented."""
-        return {"raw_value": self._raw}
+        raw = self._raw
+        return {"raw_value": raw if isinstance(raw, int) else None}
