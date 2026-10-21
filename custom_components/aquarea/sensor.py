@@ -487,22 +487,25 @@ class AquareaEnergySensor(AquareaBaseEntity):
     _period_being_processed: datetime | None = None
 
     def _ahead_of_the_cloud(self, period_first_day: date) -> bool:
-        """Return whether the value belongs to a period after the cloud's current one.
+        """Return whether the value belongs to a period after the one shown now.
 
-        Versions up to 1.5.3 followed the local day and month. East of UTC
-        they start before the cloud's; restored between the two, the value
-        already belongs to the new local period (typically 0 after its
-        reset), and the cloud's current period would count again energy the
-        recorder has metered already, so the value is kept until the cloud
-        catches up.
+        Earlier versions moved to the next month sooner: up to 1.5.3 at the
+        local midnight (east of UTC, before the cloud's), 1.5.4 to 1.8.0 at
+        the cloud's midnight, before the coordinator's consumption_month
+        moves on. Restored in between, the value already belongs to the next
+        month (typically 0 after its reset); showing the current one again
+        would count energy the recorder has metered already, so the value is
+        kept until the coordinator catches up.
 
         The periods are compared by their first day: the local date of the
-        restored period's start against the cloud's. As instants they can't
-        be compared, since a local midnight west of UTC comes after the
-        cloud's. A period stored since this change starts at the cloud's
-        midnight, whose local date is never later than the cloud's date, so
-        this only holds a value restored from those versions; it can go once
-        upgrades from them no longer need care.
+        restored period's start against the month shown. As instants they
+        can't be compared, since a local midnight west of UTC comes after the
+        cloud's. A start at the cloud's midnight on the 1st (1.5.4 to 1.8.0)
+        has the 1st as its local date, or west of UTC the previous month's
+        last day: either way later than the first day of the month before.
+        A period stored by this version starts at the cloud's midnight of a
+        month already shown, so this only holds a value restored from those
+        versions; it can go once upgrades from them no longer need care.
         """
         previous = self._period_being_processed
         return previous is not None and dt_util.as_local(previous).date() > (
@@ -616,15 +619,16 @@ class EnergyAccumulatedConsumptionSensor(
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        # The cloud's month, which the coordinator fetches (see
-        # EnergyConsumptionSensor).
-        today = cloud_date(dt_util.utcnow())
-        month_start = datetime.combine(today.replace(day=1), time(), CLOUD_TIME_ZONE)
-        if self._ahead_of_the_cloud(month_start.date()):
+        # The cloud month the coordinator fetched: it moves on a few hours
+        # after the cloud's midnight, once the old month's last hours are in.
+        # Within it, every day up to the cloud's current one counts.
+        month = self.coordinator.consumption_month
+        if month is not None and self._ahead_of_the_cloud(month):
             super()._handle_coordinator_update()
             return
+        today = cloud_date(dt_util.utcnow())
         month_consumption = self.coordinator.month_consumption
-        if not month_consumption:
+        if month is None or not month_consumption:
             self._attr_native_value = None
         else:
             month_heat = month_cool = month_tank = month_total = 0.0
@@ -676,7 +680,9 @@ class EnergyAccumulatedConsumptionSensor(
             elif ctype == aioaquarea.ConsumptionType.TOTAL:
                 reported_val = month_total
             if reported_val is not None:
-                self._period_being_processed = month_start
+                self._period_being_processed = datetime.combine(
+                    month, time(), CLOUD_TIME_ZONE
+                )
                 self._attr_native_value = reported_val
         super()._handle_coordinator_update()
 

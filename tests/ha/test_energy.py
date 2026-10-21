@@ -5,9 +5,15 @@ labels each day (and month) by the UTC date: in Europe/Warsaw the cloud day
 "20261006" runs from 02:00 CEST on 2026-10-06 to 02:00 CEST on 2026-10-07.
 The sensors used to look up the local date instead. The month-to-date sensors
 lost the energy of the cloud's last two hours once a month, because the
-coordinator requested the local month. The "Consumption" sensors, which show
-the energy published since the previous fetch (a momentary value), are covered
-at the end.
+coordinator requested the local month.
+
+Switching to the new month at the cloud's midnight still lost the old month's
+last hour, which the cloud publishes about an hour after it starts, after the
+month has ended. The coordinator now keeps the old month until it has fetched
+it complete, three hours into the new month, and moves on in the next hour.
+
+The "Consumption" sensors, which show the energy published since the previous
+fetch (a momentary value), are covered at the end.
 
 The cloud below is a stand-in that labels days in UTC, like the real one. The
 energy Home Assistant meters from each accumulated (TOTAL_INCREASING) sensor
@@ -123,7 +129,13 @@ async def test_month_sensor_keeps_the_last_hours_of_the_cloud_month(
     mock_aquarea_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
-    """Local October starts two hours before the cloud's; nothing is dropped."""
+    """The cloud's September ends at 02:00 CEST on 2026-10-01; its last hour later.
+
+    Local October starts two hours before the cloud's. September is requested
+    and counted past both midnights, through its final fetch at 05:00 CEST,
+    which still brings its last hour, and October from 06:00. Every kWh the
+    cloud recorded is metered once.
+    """
     cloud: Cloud = {"202609": {"20260929": 30.0, "20260930": 4.0}}
     mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
     freezer.move_to(datetime(2026, 9, 30, 23, 30, tzinfo=WARSAW))
@@ -132,29 +144,29 @@ async def test_month_sensor_keeps_the_last_hours_of_the_cloud_month(
     readings = [float(hass.states.get(MONTH).state)]
     assert readings[-1] == 34.0
 
-    # 00:30 and 01:59 CEST on 2026-10-01 are still September in UTC.
-    for when, kwh in (
-        (datetime(2026, 10, 1, 0, 30), 4.2),
-        (datetime(2026, 10, 1, 1, 59), 4.4),
+    # From 02:00 CEST the cloud fills October too, while September's late
+    # hours still come in. 05:00 is the final fetch; 05:59 is in its hour.
+    for when, last_day in (
+        (datetime(2026, 10, 1, 0, 31), 4.2),
+        (datetime(2026, 10, 1, 1, 32), 4.4),
+        (datetime(2026, 10, 1, 2, 33), 4.6),
+        (datetime(2026, 10, 1, 5, 0), 4.7),
+        (datetime(2026, 10, 1, 5, 59), 4.7),
     ):
-        cloud["202609"]["20260930"] = kwh
+        cloud["202609"]["20260930"] = last_day
+        cloud["202610"] = {"20261001": 0.5}
         await _at(hass, freezer, when.replace(tzinfo=WARSAW))
         readings.append(float(hass.states.get(MONTH).state))
-        assert readings[-1] == 30.0 + kwh
+        assert readings[-1] == 30.0 + last_day
 
-    # 02:30 CEST: the cloud's October has started.
-    cloud["202610"] = {"20261001": 0.1}
-    await _at(hass, freezer, datetime(2026, 10, 1, 2, 30, tzinfo=WARSAW))
+    cloud["202610"] = {"20261001": 0.7}
+    await _at(hass, freezer, datetime(2026, 10, 1, 6, 0, tzinfo=WARSAW))
     readings.append(float(hass.states.get(MONTH).state))
-    assert readings[-1] == 0.1
+    assert readings[-1] == 0.7
 
-    assert _month_queries(mock_aquarea_client) == [
-        "20260901",
-        "20260901",
-        "20260901",
-        "20261001",
-    ]
-    assert _metered(readings) == pytest.approx(0.5)
+    assert _month_queries(mock_aquarea_client) == ["20260901"] * 6 + ["20261001"]
+    # 0.7 more for September after 23:30, 0.7 for October.
+    assert _metered(readings) == pytest.approx(1.4)
 
 
 async def test_the_new_year_starts_with_the_cloud_s(
@@ -163,10 +175,10 @@ async def test_the_new_year_starts_with_the_cloud_s(
     mock_aquarea_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
-    """At 00:30 CET on 2027-01-01 the cloud is still in December 2026.
+    """The cloud's 2027 starts at 01:00 CET on 2027-01-01.
 
-    The month and the year roll over together at 01:00 CET: December is
-    requested, and counted, until then.
+    December is requested, and counted, through its final fetch at 04:00 CET,
+    and January from 05:00; nothing of December is lost.
     """
     cloud: Cloud = {"202612": {"20261230": 50.0, "20261231": 3.0}}
     mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
@@ -176,25 +188,24 @@ async def test_the_new_year_starts_with_the_cloud_s(
     readings = [float(hass.states.get(MONTH).state)]
     assert readings[-1] == 53.0
 
-    cloud["202612"]["20261231"] = 3.2
-    await _at(hass, freezer, datetime(2027, 1, 1, 0, 30, tzinfo=WARSAW))
-    readings.append(float(hass.states.get(MONTH).state))
-    assert readings[-1] == 53.2
+    for when, last_day in (
+        (datetime(2027, 1, 1, 0, 31), 3.2),
+        (datetime(2027, 1, 1, 1, 32), 3.4),
+        (datetime(2027, 1, 1, 4, 0), 3.5),
+    ):
+        cloud["202612"]["20261231"] = last_day
+        cloud["202701"] = {"20270101": 0.4}
+        await _at(hass, freezer, when.replace(tzinfo=WARSAW))
+        readings.append(float(hass.states.get(MONTH).state))
+        assert readings[-1] == 50.0 + last_day
 
-    cloud["202612"]["20261231"] = 3.4
-    cloud["202701"] = {"20270101": 0.1}
-    await _at(hass, freezer, datetime(2027, 1, 1, 1, 30, tzinfo=WARSAW))
+    cloud["202701"] = {"20270101": 0.6}
+    await _at(hass, freezer, datetime(2027, 1, 1, 5, 0, tzinfo=WARSAW))
     readings.append(float(hass.states.get(MONTH).state))
-    assert readings[-1] == 0.1
+    assert readings[-1] == 0.6
 
-    assert _month_queries(mock_aquarea_client) == [
-        "20261201",
-        "20261201",
-        "20270101",
-    ]
-    # 0.2 kWh of December's last hour was published after the last fetch of
-    # the cloud's December: the residual described in the docs.
-    assert _metered(readings) == pytest.approx(0.3)
+    assert _month_queries(mock_aquarea_client) == ["20261201"] * 4 + ["20270101"]
+    assert _metered(readings) == pytest.approx(1.1)
 
 
 async def test_month_sensor_counts_the_cloud_day_that_started_before_local_midnight(
@@ -249,11 +260,11 @@ async def test_a_month_sensor_restored_after_local_midnight_waits_for_the_cloud(
     mock_aquarea_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
-    """Upgraded at 00:30 CET on 2026-11-01: the old version showed November's 0.
+    """Upgraded at 00:30 CET on 2026-11-01 from 1.5.3, which showed November's 0.
 
-    The cloud's October runs until 01:00 CET; its 300 kWh were metered
-    already, and showing them again would add a month of energy to the
-    Energy dashboard in one hour.
+    The coordinator keeps the cloud's October until 05:00 CET; its 300 kWh
+    were metered already, and showing them again would add a month of
+    energy to the Energy dashboard in one hour.
     """
     await hass.config.async_set_time_zone("Europe/Warsaw")
     _restore(hass, MONTH, 0.0, datetime(2026, 11, 1, tzinfo=WARSAW))
@@ -265,7 +276,9 @@ async def test_a_month_sensor_restored_after_local_midnight_waits_for_the_cloud(
     assert float(hass.states.get(MONTH).state) == 0.0
 
     cloud["202611"] = {"20261101": 0.2}
-    await _at(hass, freezer, datetime(2026, 11, 1, 1, 30, tzinfo=WARSAW))
+    await _at(hass, freezer, datetime(2026, 11, 1, 4, 0, tzinfo=WARSAW))
+    assert float(hass.states.get(MONTH).state) == 0.0
+    await _at(hass, freezer, datetime(2026, 11, 1, 5, 0, tzinfo=WARSAW))
     assert float(hass.states.get(MONTH).state) == 0.2
 
 
@@ -290,6 +303,43 @@ async def test_a_month_sensor_restored_west_of_utc_carries_on(
     assert float(hass.states.get(MONTH).state) == 34.0
 
 
+@pytest.mark.parametrize(
+    ("time_zone", "upgraded_at"),
+    [
+        ("Europe/Warsaw", datetime(2026, 11, 1, 2, 30, tzinfo=WARSAW)),
+        ("America/New_York", datetime(2026, 10, 31, 21, 30, tzinfo=NEW_YORK)),
+    ],
+)
+async def test_a_month_sensor_restored_from_1_8_0_waits_for_the_new_month(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    time_zone: str,
+    upgraded_at: datetime,
+) -> None:
+    """Upgraded at 01:30 UTC on 2026-11-01 from 1.8.0, which reset at 00:00 UTC.
+
+    The restored month, November, starts at 00:00 UTC (in New York still
+    2026-10-31 locally). The coordinator shows October until 04:00 UTC;
+    showing it again would count its 300 kWh twice.
+    """
+    await hass.config.async_set_time_zone(time_zone)
+    _restore(hass, MONTH, 0.0, datetime(2026, 11, 1, tzinfo=UTC))
+    cloud: Cloud = {"202610": {"20261031": 300.0}, "202611": {"20261101": 0.1}}
+    mock_aquarea_client.get_device_consumption.side_effect = _consumption(cloud)
+    freezer.move_to(upgraded_at)
+    await _setup(hass, mock_config_entry, time_zone)
+    await _at(hass, freezer, upgraded_at + timedelta(minutes=1))
+    assert float(hass.states.get(MONTH).state) == 0.0
+
+    cloud["202611"]["20261101"] = 0.5
+    await _at(hass, freezer, datetime(2026, 11, 1, 3, 0, tzinfo=UTC))
+    assert float(hass.states.get(MONTH).state) == 0.0
+    await _at(hass, freezer, datetime(2026, 11, 1, 4, 0, tzinfo=UTC))
+    assert float(hass.states.get(MONTH).state) == 0.5
+
+
 # --- With the hourly statistics correction, on the recorder ------------------
 
 # Heating energy the cloud labels with each UTC hour; 00:00-02:00 CEST on
@@ -309,13 +359,26 @@ CLOUD_HOURS = {
 PUBLISH_LAG = timedelta(minutes=65)
 
 
-def _published_cloud(
-    long_id: str, date_type: DateType, date_str: str
+def _publishing(
+    hours: dict[datetime, float],
+) -> Callable[[str, DateType, str], list[Consumption]]:
+    """Return a stand-in cloud that publishes `hours` with PUBLISH_LAG."""
+
+    def published_cloud(
+        long_id: str, date_type: DateType, date_str: str
+    ) -> list[Consumption]:
+        return _published(hours, date_type, date_str)
+
+    return published_cloud
+
+
+def _published(
+    hours: dict[datetime, float], date_type: DateType, date_str: str
 ) -> list[Consumption]:
     """The cloud's MONTH and DAY answers at the frozen time, labelled in UTC."""
     published = {
         hour: kwh
-        for hour, kwh in CLOUD_HOURS.items()
+        for hour, kwh in hours.items()
         if hour + PUBLISH_LAG <= dt_util.utcnow()
     }
     if date_type == DateType.DAY:
@@ -337,12 +400,16 @@ def _published_cloud(
     ]
 
 
-async def _hourly_changes(hass: HomeAssistant, statistic_id: str) -> dict[int, float]:
-    """Return each UTC hour's energy on 2026-10-06/07 as the Energy dashboard sees it."""
+async def _hourly_changes(
+    hass: HomeAssistant,
+    statistic_id: str,
+    since: datetime = datetime(2026, 10, 6, 18, tzinfo=UTC),
+) -> dict[int, float]:
+    """Return each UTC hour's energy from `since` as the Energy dashboard sees it."""
     rows = await hass.async_add_executor_job(
         statistics_during_period,
         hass,
-        datetime(2026, 10, 6, 18, tzinfo=UTC),
+        since,
         None,
         {statistic_id},
         "hour",
@@ -380,7 +447,7 @@ async def test_the_reset_at_the_cloud_midnight_keeps_the_hourly_statistics_right
     the energy recorded at 03:03 CEST, which belongs to 00:00 UTC.
     """
     await hass.config.async_set_time_zone("Europe/Warsaw")
-    mock_aquarea_client.get_device_consumption.side_effect = _published_cloud
+    mock_aquarea_client.get_device_consumption.side_effect = _publishing(CLOUD_HOURS)
     period = datetime(2026, 10, 6, 14, tzinfo=UTC)
     freezer.move_to(period)
     await _setup(hass, mock_config_entry, consumption_interval=60)
@@ -413,6 +480,59 @@ async def test_the_reset_at_the_cloud_midnight_keeps_the_hourly_statistics_right
         1: 0.5,
         2: 1.2,
     }
+
+
+# Heating energy around the cloud's month end: 23:00 UTC on 2026-09-30 is the
+# cloud's September's last hour, published at 00:05 UTC on 2026-10-01.
+MONTH_END_HOURS = {
+    datetime(2026, 9, 30, 10, tzinfo=UTC): 30.0,
+    datetime(2026, 9, 30, 20, tzinfo=UTC): 0.1,
+    datetime(2026, 9, 30, 21, tzinfo=UTC): 0.1,
+    datetime(2026, 9, 30, 22, tzinfo=UTC): 0.2,
+    datetime(2026, 9, 30, 23, tzinfo=UTC): 0.3,
+    datetime(2026, 10, 1, 0, tzinfo=UTC): 0.4,
+    datetime(2026, 10, 1, 1, tzinfo=UTC): 0.5,
+    datetime(2026, 10, 1, 2, tzinfo=UTC): 1.2,
+    datetime(2026, 10, 1, 3, tzinfo=UTC): 0.1,
+}
+
+
+async def test_the_month_end_keeps_the_hourly_statistics_right(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """The month sensor's reset meets the correction of its hourly statistics.
+
+    The integration runs against a cloud that publishes each hour 65 minutes
+    after it starts, with the default 15-minute consumption interval, and
+    the recorder compiles its statistics every 5 minutes. The coordinator
+    keeps September until its final fetch at 03:00 UTC and resets the
+    sensor to October at 04:00 UTC. September's last hour (23:00 UTC),
+    published after the cloud's midnight, is recorded before the reset, and
+    October's first hours at it; the correction gives each hour its own
+    energy, none of it twice. Moving to October at the cloud's midnight
+    (1.5.4 to 1.8.0) lost 23:00 UTC.
+    """
+    await hass.config.async_set_time_zone("Europe/Warsaw")
+    mock_aquarea_client.get_device_consumption.side_effect = _publishing(
+        MONTH_END_HOURS
+    )
+    period = datetime(2026, 9, 30, 14, tzinfo=UTC)
+    freezer.move_to(period)
+    await _setup(hass, mock_config_entry)
+    while period < datetime(2026, 10, 1, 10, tzinfo=UTC):
+        await _at(hass, freezer, period + timedelta(seconds=30))
+        await async_wait_recording_done(hass)
+        freezer.move_to(period + timedelta(minutes=5, seconds=5))
+        do_adhoc_statistics(hass, start=period)
+        await async_wait_recording_done(hass)
+        period += timedelta(minutes=5)
+
+    assert await _hourly_changes(
+        hass, MONTH, since=datetime(2026, 9, 30, 18, tzinfo=UTC)
+    ) == {20: 0.1, 21: 0.1, 22: 0.2, 23: 0.3, 0: 0.4, 1: 0.5, 2: 1.2, 3: 0.1}
 
 
 # --- The current-hour sensor -------------------------------------------------

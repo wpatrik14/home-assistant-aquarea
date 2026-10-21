@@ -77,6 +77,9 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         # Cached consumption results (lists of Consumption objects from aioaquarea.statistics)
         self._month_consumption = None
         self._last_monthly_fetch_time: datetime | None = None
+        # The first day of the cloud month the cached list was fetched for,
+        # which the month-to-date sensors show (see consumption_month).
+        self._consumption_month: date | None = None
         # Hourly consumption (DAY queries) of the last three days, by the
         # cloud's date (UTC, see statistics.CLOUD_TIME_ZONE), with when each day was last asked for and last received. The
         # hourly fetch has its own cadence, independent of the monthly one.
@@ -136,6 +139,56 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
     def month_consumption(self):
         """Return the last cached month consumption entries or None."""
         return getattr(self, "_month_consumption", None)
+
+    @property
+    def consumption_month(self) -> date | None:
+        """Return the first day of the cloud month the cached list is for, or None.
+
+        It moves to the next month only once the old month has been fetched
+        complete, a few hours into the new one (see _monthly_month_due).
+        """
+        return self._consumption_month
+
+    def _monthly_month_due(self, now: datetime) -> date | None:
+        """Return the first day of the cloud month to fetch now, or None.
+
+        The cloud publishes an hour's consumption about an hour after the
+        hour starts, so a month's last hour appears only after the month has
+        ended. Requesting the new month at the cloud's midnight lost it. The
+        old month therefore stays until it has been fetched at least
+        YESTERDAY_REFETCH_HOURS into the new month, as the hourly fetch
+        treats yesterday as complete then; that fetch is due at once. The
+        new month follows in the next hour, so the recorder files the old
+        month's last energy and the new month's first in different hours,
+        and the hourly correction can tell them apart (statistics.py).
+        After a start, a month younger than YESTERDAY_REFETCH_HOURS waits
+        the same way, behind the previous one; an older one is fetched at
+        once, without the previous month's final fetch (the polls before
+        the start had its last hour by then).
+
+        Within a month the list is refetched every consumption interval, and
+        as soon as the cloud's date changes.
+        """
+        shown = self._consumption_month
+        last_fetch = self._last_monthly_fetch_time
+        settle = timedelta(hours=YESTERDAY_REFETCH_HOURS)
+        if shown is None or last_fetch is None:
+            return cloud_date(now - settle).replace(day=1)
+        month = cloud_date(now).replace(day=1)
+        complete_from = datetime.combine(month, time(), CLOUD_TIME_ZONE) + settle
+        if shown < month and now >= complete_from:
+            if last_fetch < complete_from:
+                return shown
+            fetched_hour = last_fetch.astimezone(CLOUD_TIME_ZONE).replace(
+                minute=0, second=0, microsecond=0
+            )
+            if now >= fetched_hour + timedelta(hours=1):
+                return month
+        if cloud_date(now) != cloud_date(last_fetch) or now - last_fetch >= timedelta(
+            minutes=self.consumption_interval
+        ):
+            return shown
+        return None
 
     @property
     def hourly_consumption_first_day(self) -> date | None:
@@ -340,32 +393,21 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                 await self._device.refresh_data()
 
             # 2. Fetch monthly consumption (used by the month-to-date sensors)
-            # The month and the date are the cloud's (UTC, see
-            # statistics.cloud_date): requesting the local month would drop
-            # the cloud month's last hours at every month boundary.
-            # Also refetch as soon as the cloud's date changes: the cache holds
-            # the list fetched for the previous day (or, after a month boundary,
-            # the previous month's YYYYMM01 list), so waiting out the interval
-            # would leave the month-to-date sensors on yesterday's value for up to
-            # consumption_interval minutes after midnight.
-            last_fetch = self._last_monthly_fetch_time
-            fetch_monthly = (
-                last_fetch is None
-                or cloud_date(now) != cloud_date(last_fetch)
-                or now - last_fetch >= timedelta(minutes=self.consumption_interval)
-            )
-
-            if fetch_monthly:
+            # The month is the cloud's (UTC, see statistics.cloud_date), and
+            # moves on a few hours after the cloud's midnight, once the old
+            # month's last hours are in (see _monthly_month_due).
+            if (month := self._monthly_month_due(now)) is not None:
                 _LOGGER.debug(
                     "Fetching monthly consumption data from Cloud API (%sm interval)",
                     self.consumption_interval,
                 )
-                month_date_str = cloud_date(now).strftime("%Y%m01")
+                month_date_str = month.strftime("%Y%m01")
                 try:
                     self._month_consumption = await self._client.get_device_consumption(
                         self._device.long_id, DateType.MONTH, month_date_str
                     )
                     self._last_monthly_fetch_time = now
+                    self._consumption_month = month
                 except aioaquarea.AuthenticationError as ex:
                     # Since aioaquarea-ng 1.2.0 auth errors are raised by consumption
                     # calls (they used to return None). Credential failures must not
