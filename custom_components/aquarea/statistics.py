@@ -33,7 +33,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Iterable, Mapping, Sequence
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 import itertools
 import logging
 from typing import Any, NamedTuple
@@ -171,8 +171,9 @@ def _recorded_hours(rows: Iterable[StatisticsRow]) -> list[RecordedHour]:
     """Reduce 5-minute rows to the sum at the end of each hour, as the recorder does.
 
     An hour is flagged as a reset when the sensor's state dropped in it: a
-    month-to-date sensor at the start of a month, a today sensor after
-    midnight. Cloud hours from before a reset are not recorded after it.
+    month-to-date sensor at the start of a month, a few hours after the
+    cloud's midnight. Cloud hours from before that midnight are not recorded
+    after it.
     """
     hours: dict[datetime, RecordedHour] = {}
     previous_state: float | None = None
@@ -187,6 +188,25 @@ def _recorded_hours(rows: Iterable[StatisticsRow]) -> list[RecordedHour]:
             previous_state = state
         hours[start] = RecordedHour(start, row_sum, reset)
     return list(hours.values())
+
+
+def _match_oldest_first(
+    energy: float, pending: deque[_Pending], matched: dict[datetime, float]
+) -> float:
+    """Match recorded energy to the waiting cloud hours, oldest first.
+
+    Fully matched hours leave `pending`; the energy left over is returned.
+    """
+    while energy > _EPSILON and pending:
+        item = pending[0]
+        used = min(energy, item.energy)
+        matched[item.cloud_hour] = matched.get(item.cloud_hour, 0.0) + used
+        energy -= used
+        if item.energy - used <= _EPSILON:
+            pending.popleft()
+        else:
+            pending[0] = item._replace(energy=item.energy - used)
+    return energy
 
 
 def corrected_sums(
@@ -224,32 +244,22 @@ def corrected_sums(
                 pending.append(_Pending(start, hourly[start]))
             next_cloud += 1
         if hour.reset:
-            # After a reset the sensor counts only what comes after it, so
-            # what this hour recorded is the energy since the reset. When the
-            # sensor was unavailable before this hour, the reset happened
-            # somewhere in that gap and later cloud hours are waiting too:
-            # the energy belongs to the latest of them, newest first. The
-            # older ones ended before the reset and are lost to the sensor.
-            # Only the newest waiting hour's remainder (normally this hour's
-            # own) can still be recorded later.
-            waiting = [
-                item
-                for item in pending
-                if item.cloud_hour > previous.start
-                and item.cloud_hour >= hour.start - max_lag
-            ]
-            energy = hour.sum - previous.sum
-            pending = deque()
-            for newest, item in enumerate(reversed(waiting)):
-                used = min(max(energy, 0.0), item.energy)
-                if used > _EPSILON:
-                    matched[item.cloud_hour] = matched.get(item.cloud_hour, 0.0) + used
-                    energy -= used
-                if newest == 0 and item.energy - used > _EPSILON:
-                    pending.append(item._replace(energy=item.energy - used))
-                if energy <= _EPSILON:
-                    break
-            unmatched[hour.start] = energy
+            # After a reset the sensor counts its new month from the start,
+            # so what this hour recorded is the energy of the cloud hours
+            # since the cloud's midnight. The coordinator moves to the new
+            # month a few hours after it, once the old month is complete, and
+            # in a later hour than the old month's last fetch, so this hour
+            # holds nothing of the old month: its waiting hours are lost to
+            # the sensor. The new month's hours are matched oldest first, as
+            # the cloud publishes them in order; those it hasn't published
+            # yet stay waiting.
+            period_start = datetime.combine(
+                cloud_date(hour.start), time(), CLOUD_TIME_ZONE
+            )
+            pending = deque(item for item in pending if item.cloud_hour >= period_start)
+            unmatched[hour.start] = _match_oldest_first(
+                hour.sum - previous.sum, pending, matched
+            )
             continue
         while pending and pending[0].cloud_hour < hour.start - max_lag:
             expired = pending.popleft()
@@ -258,17 +268,9 @@ def corrected_sums(
                 expired.energy,
                 expired.cloud_hour,
             )
-        energy = hour.sum - previous.sum
-        while energy > _EPSILON and pending:
-            item = pending[0]
-            used = min(energy, item.energy)
-            matched[item.cloud_hour] = matched.get(item.cloud_hour, 0.0) + used
-            energy -= used
-            if item.energy - used <= _EPSILON:
-                pending.popleft()
-            else:
-                pending[0] = item._replace(energy=item.energy - used)
-        unmatched[hour.start] = energy
+        unmatched[hour.start] = _match_oldest_first(
+            hour.sum - previous.sum, pending, matched
+        )
 
     # A cloud hour between two recorded hours that has none of its own (the
     # sensor was unavailable, e.g. while the cloud was unreachable) gets a

@@ -35,8 +35,10 @@ addopts = "--cov=custom_components/aquarea --cov-report=term-missing"
 # 86.91 with the hourly statistics review follow-ups (86.9171%, rounded down);
 # 91.62 with the energy sensor tests (91.6291%, rounded down);
 # 91.61 after the review of #125 deleted 2 covered lines (91.6183%; percentage
-# fell, no test lost).
-fail_under = 91.61
+# fell, no test lost);
+# 93.39 with the month-end tests (93.3908%, rounded down; main was at
+# 93.3488% with the tests added since 1.5.4).
+fail_under = 93.39
 precision = 2
 show_missing = true
 

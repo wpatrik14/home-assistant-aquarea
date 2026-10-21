@@ -23,7 +23,7 @@ import __future__
 
 import ast
 import asyncio
-from datetime import UTC
+from datetime import UTC, datetime, time, timedelta
 import os
 import sys
 import types
@@ -114,6 +114,11 @@ def _load():
         for n in cls.body
         if isinstance(n, ast.AsyncFunctionDef) and n.name == "_async_update_data"
     )
+    due = next(
+        n
+        for n in cls.body
+        if isinstance(n, ast.FunctionDef) and n.name == "_monthly_month_due"
+    )
     # The hourly (DAY) consumption fetch is covered by the pytest suite
     # (tests/ha/test_hourly_statistics.py); stub it out here.
     hourly_stub = ast.parse(
@@ -127,7 +132,7 @@ def _load():
         name="Extracted",
         bases=[],
         keywords=[],
-        body=[node, hourly_stub, weekly_stub],
+        body=[node, due, hourly_stub, weekly_stub],
         decorator_list=[],
         type_params=[],
     )
@@ -145,7 +150,11 @@ def _load():
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "dt_util": anything,
         "cloud_date": lambda moment: moment.astimezone(UTC).date(),
-        "timedelta": lambda **kw: 0,
+        "datetime": datetime,
+        "time": time,
+        "CLOUD_TIME_ZONE": UTC,
+        "YESTERDAY_REFETCH_HOURS": 3,
+        "timedelta": timedelta,
         "DateType": types.SimpleNamespace(MONTH="month"),
         "_LOGGER": types.SimpleNamespace(
             debug=lambda *a, **k: None, warning=lambda *a, **k: None
@@ -172,6 +181,7 @@ def _poll(exc, consumption=False):
     obj._client = _Client(exc)
     obj._client.consumption = consumption
     obj._last_monthly_fetch_time = None
+    obj._consumption_month = None
     obj.consumption_interval = 15
     obj._month_consumption = None
     obj._device_info = None

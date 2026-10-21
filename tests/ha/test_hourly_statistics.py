@@ -107,6 +107,22 @@ def _corrected(recorded: list[RecordedHour], hourly: dict) -> dict[tuple, float]
     }
 
 
+def _recorded_utc(*hours: tuple) -> list[RecordedHour]:
+    """Build recorded hours from (day, UTC hour, sum[, reset]) tuples."""
+    return [
+        RecordedHour(_cloud(day, hour), value, *rest)
+        for day, hour, value, *rest in hours
+    ]
+
+
+def _corrected_utc(recorded: list[RecordedHour], hourly: dict) -> dict[tuple, float]:
+    """Like _corrected, with the hours as (day, UTC hour), the cloud's own."""
+    sums = corrected_sums(
+        recorded, {_cloud(*key): value for key, value in hourly.items()}
+    )
+    return {(start.day, start.hour): round(value, 3) for start, value in sums.items()}
+
+
 def test_energy_moves_back_to_its_hour() -> None:
     """The 2026-09-01 case: 04-05 energy, recorded at 05:06, moves to 04-05."""
     recorded = _recorded(
@@ -170,55 +186,108 @@ def test_energy_not_recorded_yet_is_not_moved() -> None:
 
 
 def test_energy_lost_at_a_reset_does_not_shift_later_hours() -> None:
-    """A today sensor loses 23:00-24:00 at midnight; the next day is unaffected.
+    """An old-month hour the sensor never records doesn't take the new month's.
 
-    The cloud labels 0.7 kWh at 23:00 that the sensor never records: it drops
-    to 0 for the new day first. Without the reset, that hour would take the
-    energy recorded after midnight, which belongs to 00:00-01:00.
+    A month-to-date sensor; the dates are only labels here. The cloud labels
+    0.7 kWh at 23:00 UTC that the sensor never shows. It moves to the new
+    month at 04:00 UTC, after the cloud's midnight, with 00:00 (0.3) and
+    01:00 (0.2) in its value. Those keep their energy; 23:00 gets none of it.
     """
-    recorded = _recorded(
-        (4, 22, 10.0), (4, 23, 10.0), (5, 0, 10.0, True), (5, 1, 10.3), (5, 2, 10.3)
+    recorded = _recorded_utc(
+        (4, 22, 10.0),
+        (4, 23, 10.0),
+        (5, 0, 10.0),
+        (5, 1, 10.0),
+        (5, 2, 10.0),
+        (5, 3, 10.0),
+        (5, 4, 10.5, True),
+        (5, 5, 10.5),
     )
 
-    assert _corrected(recorded, {(4, 23): 0.7, (5, 0): 0.3}) == {
+    assert _corrected_utc(recorded, {(4, 23): 0.7, (5, 0): 0.3, (5, 1): 0.2}) == {
         (4, 22): 10.0,
         (4, 23): 10.0,
         (5, 0): 10.3,
-        (5, 1): 10.3,
-        (5, 2): 10.3,
+        (5, 1): 10.5,
+        (5, 2): 10.5,
+        (5, 3): 10.5,
+        (5, 4): 10.5,
+        (5, 5): 10.5,
     }
 
 
 def test_a_reset_during_an_outage_keeps_the_hours_after_it() -> None:
-    """The sensor was unavailable over midnight; the reset happened in the gap.
+    """The sensor was unavailable over the cloud's midnight and reset after it.
 
-    Review of wpatrik14/home-assistant-aquarea#111: a today sensor, unavailable
-    22:00-02:00. 23:00 (0.7 kWh) ended before the midnight reset and is lost
-    to the sensor; 00:00 (0.2) and 01:00 (0.3) came after it and are what
-    the sensor shows at 02:00. Those hours keep their energy instead of all
-    of it staying at 02:00.
+    Review of wpatrik14/home-assistant-aquarea#111: a month-to-date sensor,
+    unavailable 00:00-06:00 UTC. 23:00 (0.7 kWh) is the old month's, lost to
+    the sensor; 00:00 (0.2), 01:00 (0.3) and 02:00 (0.1) are the new
+    month's, which the sensor shows at 06:00. Those hours keep their energy instead
+    of all of it staying at 06:00.
     """
-    recorded = _recorded((5, 21, 10.0), (5, 22, 10.0), (6, 2, 10.5, True), (6, 3, 10.5))
+    recorded = _recorded_utc(
+        (5, 22, 10.0), (5, 23, 10.0), (6, 6, 10.6, True), (6, 7, 10.6)
+    )
 
-    assert _corrected(recorded, {(5, 23): 0.7, (6, 0): 0.2, (6, 1): 0.3}) == {
-        (5, 21): 10.0,
+    assert _corrected_utc(
+        recorded, {(5, 23): 0.7, (6, 0): 0.2, (6, 1): 0.3, (6, 2): 0.1}
+    ) == {
         (5, 22): 10.0,
         (5, 23): 10.0,
         (6, 0): 10.2,
         (6, 1): 10.5,
-        (6, 2): 10.5,
-        (6, 3): 10.5,
+        (6, 2): 10.6,
+        (6, 6): 10.6,
+        (6, 7): 10.6,
+    }
+
+
+def test_a_reset_matches_the_new_month_oldest_first() -> None:
+    """At the reset the cloud hasn't published the new month's latest hour yet.
+
+    The sensor moves to the new month at 04:00 UTC with 00:00-02:00 in its
+    value (0.4 + 0.5 + 1.2); 03:00 (0.3) comes at 05:05. Matched newest
+    first, 03:00 took energy of the earlier hours.
+    """
+    recorded = _recorded_utc(
+        (5, 22, 10.0),
+        (5, 23, 10.0),
+        (6, 0, 10.0),
+        (6, 1, 10.0),
+        (6, 2, 10.0),
+        (6, 3, 10.0),
+        (6, 4, 12.1, True),
+        (6, 5, 12.4),
+        (6, 6, 12.4),
+    )
+
+    assert _corrected_utc(
+        recorded, {(6, 0): 0.4, (6, 1): 0.5, (6, 2): 1.2, (6, 3): 0.3}
+    ) == {
+        (5, 22): 10.0,
+        (5, 23): 10.0,
+        (6, 0): 10.4,
+        (6, 1): 10.9,
+        (6, 2): 12.1,
+        (6, 3): 12.4,
+        (6, 4): 12.4,
+        (6, 5): 12.4,
+        (6, 6): 12.4,
     }
 
 
 def test_a_reset_keeps_its_own_hour_waiting() -> None:
-    """The reset hour's own energy that isn't recorded yet still can be later."""
-    recorded = _recorded((5, 23, 10.0), (6, 0, 10.1, True), (6, 1, 10.4))
+    """The reset hour's own energy that isn't recorded yet still can be later.
 
-    assert _corrected(recorded, {(5, 23): 0.5, (6, 0): 0.4}) == {
-        (5, 23): 10.0,
-        (6, 0): 10.4,
-        (6, 1): 10.4,
+    Hours in UTC: the sensor moves to the new month at 04:00, with 0.1 of
+    04:00's 0.4 kWh; the rest is recorded at 05:00 and stays with 04:00.
+    """
+    recorded = _recorded_utc((6, 3, 10.0), (6, 4, 10.1, True), (6, 5, 10.4))
+
+    assert _corrected_utc(recorded, {(6, 3): 0.0, (6, 4): 0.4}) == {
+        (6, 3): 10.0,
+        (6, 4): 10.4,
+        (6, 5): 10.4,
     }
 
 
@@ -342,15 +411,22 @@ def test_energy_recorded_within_its_own_hour_stays_there() -> None:
 
 
 def test_a_reset_keeps_the_hour_it_happens_in() -> None:
-    """A reset drops the hours before it, but not the hour it happens in."""
-    recorded = _recorded((4, 23, 10.0), (5, 0, 10.2, True), (5, 1, 10.5))
+    """A reset drops the old month's waiting hours, not the hour it happens in.
 
-    # 23:00's 0.7 kWh is lost at the reset; 00:00's 0.5 kWh is recorded
-    # within 00:00 (0.2) and in 01:00 (0.3), and all of it stays with 00:00.
-    assert _corrected(recorded, {(4, 23): 0.7, (5, 0): 0.5}) == {
-        (4, 23): 10.0,
-        (5, 0): 10.5,
-        (5, 1): 10.5,
+    Hours in UTC: 23:00's 0.7 kWh is never recorded and is lost at the reset
+    (at 04:00, after the cloud's midnight); 04:00's 0.5 kWh is recorded
+    within 04:00 (0.2) and in 05:00 (0.3), and all of it stays with 04:00.
+    """
+    recorded = _recorded_utc(
+        (5, 22, 10.0), (5, 23, 10.0), (6, 3, 10.0), (6, 4, 10.2, True), (6, 5, 10.5)
+    )
+
+    assert _corrected_utc(recorded, {(5, 23): 0.7, (6, 4): 0.5}) == {
+        (5, 22): 10.0,
+        (5, 23): 10.0,
+        (6, 3): 10.0,
+        (6, 4): 10.5,
+        (6, 5): 10.5,
     }
 
 
@@ -628,45 +704,46 @@ async def test_the_issue_case_on_the_recorder(sensor_recorder: _Sensor) -> None:
 async def test_every_hourly_run_builds_on_the_recorded_sums(
     sensor_recorder: _Sensor,
 ) -> None:
-    """Runs every hour, through a midnight reset that loses an hour, keep correcting.
+    """Runs every hour, through a reset after the cloud's midnight, keep correcting.
 
     Regression: an earlier version anchored each run on a row it had already
     rewritten, so energy the cloud labelled but the sensor never recorded
     became a permanent offset, and the correction stopped for good.
     """
-    sensor_recorder.start_at(_local(4, 16))
-    # A today sensor: 0.4 kWh for 21-22 recorded at 22:05; 23-24 (0.7) is
-    # lost at the midnight reset; 00-01 (0.3) recorded at 01:05; 01-02 (0.2)
-    # recorded at 03:01, two hours late.
+    sensor_recorder.start_at(_cloud(4, 14))
+    # A month-to-date sensor (the dates are only labels): 0.4 kWh for 21:00
+    # UTC recorded at 22:05; 23:00 (0.7), published after the cloud's
+    # midnight, recorded at 01:05; the new month from 04:05, with 00:00 (0.3) and 01:00 (0.2) in it; 02:00 (0.1)
+    # recorded at 05:05. Times in UTC.
     states = {
-        _local(4, 20): 5.0,
-        _local(4, 22, 5): 5.4,
-        _local(5, 0, 5): 0.0,
-        _local(5, 1, 5): 0.3,
-        _local(5, 3, 1): 0.5,
+        _cloud(4, 18): 5.0,
+        _cloud(4, 22, 5): 5.4,
+        _cloud(5, 1, 5): 6.1,
+        _cloud(5, 4, 5): 0.5,
+        _cloud(5, 5, 5): 0.6,
     }
     hourly = {
-        _local(4, 20): 0.0,
-        _local(4, 21): 0.4,
-        _local(4, 22): 0.0,
-        _local(4, 23): 0.7,
-        _local(5, 0): 0.3,
-        _local(5, 1): 0.2,
-        _local(5, 2): 0.0,
+        _cloud(4, 20): 0.0,
+        _cloud(4, 21): 0.4,
+        _cloud(4, 22): 0.0,
+        _cloud(4, 23): 0.7,
+        _cloud(5, 0): 0.3,
+        _cloud(5, 1): 0.2,
+        _cloud(5, 2): 0.1,
+        _cloud(5, 3): 0.0,
     }
-    for hour in (21, 22, 23, 24, 25, 26, 27, 28):
-        await sensor_recorder.run_until(_local(4, 0) + timedelta(hours=hour), states)
-        await sensor_recorder.correct(hourly, _local(4, 0))
+    for hour in range(21, 31):
+        await sensor_recorder.run_until(_cloud(4, 0) + timedelta(hours=hour), states)
+        await sensor_recorder.correct(hourly, _cloud(4, 0))
 
-    assert await sensor_recorder.hourly_changes(since=_local(4, 20)) == {
-        (4, 20): 0.0,
-        (4, 21): 0.4,
-        (4, 22): 0.0,
-        (4, 23): 0.0,
-        (5, 0): 0.3,
-        (5, 1): 0.2,
-        (5, 2): 0.0,
-        (5, 3): 0.0,
+    # The dashboard's hours are local (CEST): 21:00 UTC is 23:00.
+    changes = await sensor_recorder.hourly_changes(since=_cloud(4, 20))
+    assert {key: change for key, change in changes.items() if change} == {
+        (4, 23): 0.4,
+        (5, 1): 0.7,
+        (5, 2): 0.3,
+        (5, 3): 0.2,
+        (5, 4): 0.1,
     }
 
 

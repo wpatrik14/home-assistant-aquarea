@@ -73,12 +73,25 @@ class _Logger:
 LOGGER = _Logger()
 
 
+class _Coordinator(types.SimpleNamespace):
+    """The coordinator's caches, with the month list for the cloud's month.
+
+    When the coordinator moves to the next month (a few hours after the
+    cloud's midnight) is covered by tests/test_consumption_rollover.py and
+    tests/ha/test_energy.py.
+    """
+
+    @property
+    def consumption_month(self):
+        return _Clock.now.astimezone(UTC).date().replace(day=1)
+
+
 class _Base:
     _seen_fetch = None
     _seen_total = None
 
     def __init__(self, ctype, month, hourly=None, fetched_at=None):
-        self.coordinator = types.SimpleNamespace(
+        self.coordinator = _Coordinator(
             month_consumption=month,
             hourly_consumption=hourly,
             hourly_consumption_fetched_at=fetched_at,
@@ -158,7 +171,8 @@ def _load(class_name):
         "aioaquarea": aioaquarea,
         "datetime": datetime,
         "dt_util": types.SimpleNamespace(
-            utcnow=lambda: _Clock.now, as_local=lambda moment: moment
+            utcnow=lambda: _Clock.now,
+            as_local=lambda moment: moment,
         ),
         "cloud_date": lambda moment: moment.astimezone(UTC).date(),
         "time": time,
