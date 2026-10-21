@@ -267,6 +267,18 @@ def main():
         f"calls={calls}",
     )
 
+    # A start from 03:00 on the 1st begins with the new month, without the
+    # old month's final fetch: the polls before the start had its last hour.
+    obj = _coordinator()
+    _poll(obj, 2026, 11, 1, 3, 30)
+    _poll(obj, 2026, 11, 1, 4, 0)
+    calls = obj._client.consumption_calls
+    check(
+        "start at 03:30 on the 1st -> the new month at once",
+        calls == ["20261101"] and shown(obj) == "2026-11-01",
+        f"calls={calls} shown={shown(obj)}",
+    )
+
     # A long interval still gets the old month's final fetch at 03:00.
     obj = _coordinator(interval=180)
     _poll(obj, 2026, 11, 1, 0, 30)

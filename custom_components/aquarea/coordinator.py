@@ -162,7 +162,9 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         month's last energy and the new month's first in different hours,
         and the hourly correction can tell them apart (statistics.py).
         After a start, a month younger than YESTERDAY_REFETCH_HOURS waits
-        the same way, behind the previous one.
+        the same way, behind the previous one; an older one is fetched at
+        once, without the previous month's final fetch (the polls before
+        the start had its last hour by then).
 
         Within a month the list is refetched every consumption interval, and
         as soon as the cloud's date changes.

@@ -252,7 +252,10 @@ def corrected_sums(
             # holds nothing of the old month: its waiting hours are lost to
             # the sensor. The new month's hours are matched oldest first, as
             # the cloud publishes them in order; those it hasn't published
-            # yet stay waiting.
+            # yet stay waiting. If an outage delays the new month past the
+            # match lag, its first hours have expired before the reset and
+            # their energy stays in the reset hour: the total is kept, only
+            # the hour it is filed under moves.
             period_start = datetime.combine(
                 cloud_date(hour.start), time(), CLOUD_TIME_ZONE
             )
