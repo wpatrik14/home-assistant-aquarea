@@ -36,7 +36,7 @@ MFA_REQUIRED = "MFA_REQUIRED"
 MFA_INVALID_CODE = "MFA_INVALID_CODE"
 MFA_EXPIRED = "MFA_EXPIRED"
 
-# aioaquarea-ng, release after 1.4.1 (AppVersionRejectedError): Panasonic's login gate rejected
+# aioaquarea-ng 1.5.0 (AppVersionRejectedError): Panasonic's login gate rejected
 # the app version the library announces (code 4106), not the credentials.
 # Compared by the error code, as a string, so older releases (which never raise
 # it) still import; the library's exception subclasses AuthenticationError.
