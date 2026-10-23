@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    APP_VERSION_REJECTED,
     CONF_CONSUMPTION_INTERVAL,
     DEFAULT_CONSUMPTION_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
@@ -23,6 +24,11 @@ from .const import (
     MFA_REQUIRED,
     WEEKLY_TIMER_INTERVAL,
     YESTERDAY_REFETCH_HOURS,
+)
+from .issues import (
+    APP_VERSION_REJECTED_MESSAGE,
+    async_clear_app_version_issue,
+    async_create_app_version_issue,
 )
 from .statistics import CLOUD_TIME_ZONE, cloud_date
 
@@ -428,8 +434,14 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
             # 4. Fetch the weekly schedule, only while an entity wants it
             await self._async_fetch_weekly_timer(now)
 
+            # Panasonic accepts the app version again (or still does)
+            async_clear_app_version_issue(self.hass, self._entry)
             return self._device  # noqa: TRY300 - the handlers below cover the whole fetch
         except aioaquarea.AuthenticationError as err:
+            if err.error_code == APP_VERSION_REJECTED:
+                # Not a credentials problem: no reauth, keep polling.
+                async_create_app_version_issue(self.hass, self._entry)
+                raise UpdateFailed(APP_VERSION_REJECTED_MESSAGE) from err
             if err.error_code in (
                 aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
                 aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,

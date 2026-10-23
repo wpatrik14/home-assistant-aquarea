@@ -12,7 +12,8 @@
             "unknown": "Neočekávaná chyba",
             "api_error": "Chyba API: {api_error_msg}",
             "invalid_mfa_code": "Kód nebyl přijat. Zkontrolujte jej a zkuste to znovu.",
-            "mfa_expired": "Požadavek na ověření vypršel. Zadejte znovu své heslo, abyste získali nový kód."
+            "mfa_expired": "Požadavek na ověření vypršel. Zadejte znovu své heslo, abyste získali nový kód.",
+            "app_version_rejected": "Panasonic odmítl verzi aplikace, kterou tato integrace hlásí. Nejde o problém s vaším přihlášením: aktualizujte integraci (zkontrolujte HACS) a zkuste to znovu."
         },
         "step": {
             "user": {
@@ -57,6 +58,12 @@
                     "consumption_interval": "Interval obnovování dat o spotřebě (minuty)"
                 }
             }
+        }
+    },
+    "issues": {
+        "app_version_rejected": {
+            "title": "Panasonic odmítl verzi aplikace",
+            "description": "Servery Panasonicu už nepřijímají verzi aplikace, kterou hlásí integrace Aquarea Smart Cloud, proto se přihlášení nedaří. Problém není v uživatelském jménu ani hesle a nové ověření není potřeba. Jde o změnu na straně Panasonicu, kterou obvykle vyřeší aktualizace integrace (a její knihovny aioaquarea-ng): zkontrolujte aktualizace v HACS a restartujte Home Assistant. Pokud už máte aktuální verzi, nahlaste to v [issue trackeru]({issues_url}). Integrace to zkouší dál; tento problém po úspěšném přihlášení zmizí sám."
         }
     },
     "entity": {

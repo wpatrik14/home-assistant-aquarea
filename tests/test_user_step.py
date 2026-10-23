@@ -252,6 +252,7 @@ def _load_flow_class():
         "aioaquarea": aioaquarea,
         "MFA_REQUIRED": "MFA_REQUIRED",
         "MFA_EXPIRED": "MFA_EXPIRED",
+        "APP_VERSION_REJECTED": "APP_VERSION_REJECTED",
         "CONF_REFRESH_TOKEN": "refresh_token",
         "aiohttp": aiohttp,
         "async_create_clientsession": _create_clientsession,

@@ -11,12 +11,17 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-from .const import CONF_REFRESH_TOKEN, MFA_REQUIRED
+from .const import APP_VERSION_REJECTED, CONF_REFRESH_TOKEN, MFA_REQUIRED
 from .coordinator import (
     AGREEMENT_NOT_ACCEPTED_CODE,
     AGREEMENT_NOT_ACCEPTED_MESSAGE,
     AquareaConfigEntry,
     AquareaDataUpdateCoordinator,
+)
+from .issues import (
+    APP_VERSION_REJECTED_MESSAGE,
+    async_clear_app_version_issue,
+    async_create_app_version_issue,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -66,6 +71,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
 
     try:
         await client.login()
+        async_clear_app_version_issue(hass, entry)
         # Get all the devices, we will filter the disabled ones later
         devices = await client.get_devices()
 
@@ -90,6 +96,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
             raise ConfigEntryAuthFailed(
                 "Invalid Aquarea Smart Cloud credentials"
             ) from err
+        if err.error_code == APP_VERSION_REJECTED:
+            # Panasonic stopped accepting the app version: the credentials are
+            # fine, so no reauth (it would ask for a password that is not the
+            # problem). Show a repair issue, and retry: an update of the
+            # library or Panasonic accepting the version again fixes it.
+            async_create_app_version_issue(hass, entry)
+            raise ConfigEntryNotReady(APP_VERSION_REJECTED_MESSAGE) from err
         if err.error_code == MFA_REQUIRED:
             # Retrying cannot pass the challenge, and every attempt sends the
             # user a Panasonic login email. Reauth asks for the code.
@@ -118,6 +131,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
         ) from err
 
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> None:
+    """Drop the repair issue of a removed entry."""
+    async_clear_app_version_issue(hass, entry)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:

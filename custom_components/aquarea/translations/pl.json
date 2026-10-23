@@ -12,7 +12,8 @@
             "unknown": "Wystąpił nieznany błąd",
             "api_error": "Błąd API: {api_error_msg}",
             "invalid_mfa_code": "Kod nie został zaakceptowany. Sprawdź go i spróbuj ponownie.",
-            "mfa_expired": "Żądanie weryfikacji wygasło. Wpisz hasło ponownie, aby otrzymać nowy kod."
+            "mfa_expired": "Żądanie weryfikacji wygasło. Wpisz hasło ponownie, aby otrzymać nowy kod.",
+            "app_version_rejected": "Panasonic odrzucił wersję aplikacji, którą podaje ta integracja. To nie jest problem z logowaniem: zaktualizuj integrację (sprawdź HACS) i spróbuj ponownie."
         },
         "step": {
             "user": {
@@ -57,6 +58,12 @@
                     "consumption_interval": "Interwał odświeżania danych o zużyciu (minuty)"
                 }
             }
+        }
+    },
+    "issues": {
+        "app_version_rejected": {
+            "title": "Panasonic odrzucił wersję aplikacji",
+            "description": "Serwery Panasonic nie akceptują już wersji aplikacji, którą podaje integracja Aquarea Smart Cloud, dlatego logowanie się nie udaje. Problemem nie jest nazwa użytkownika ani hasło, ponowne uwierzytelnianie nie jest potrzebne. To zmiana po stronie Panasonic, którą zwykle rozwiązuje aktualizacja integracji (i biblioteki aioaquarea-ng): sprawdź aktualizacje w HACS i uruchom ponownie Home Assistanta. Jeśli masz już najnowszą wersję, zgłoś to w [systemie zgłoszeń]({issues_url}). Integracja nadal ponawia próby; ten problem zniknie sam po udanym logowaniu."
         }
     },
     "entity": {

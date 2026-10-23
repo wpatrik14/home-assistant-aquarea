@@ -12,7 +12,8 @@
             "unknown": "Nežinoma klaida",
             "api_error": "API klaida: {api_error_msg}",
             "invalid_mfa_code": "Kodas nepriimtas. Patikrinkite jį ir bandykite dar kartą.",
-            "mfa_expired": "Patvirtinimo užklausos galiojimas baigėsi. Dar kartą įveskite slaptažodį, kad gautumėte naują kodą."
+            "mfa_expired": "Patvirtinimo užklausos galiojimas baigėsi. Dar kartą įveskite slaptažodį, kad gautumėte naują kodą.",
+            "app_version_rejected": "„Panasonic“ atmetė programėlės versiją, kurią praneša ši integracija. Tai ne prisijungimo problema: atnaujinkite integraciją (patikrinkite HACS) ir bandykite dar kartą."
         },
         "step": {
             "user": {
@@ -57,6 +58,12 @@
                     "consumption_interval": "Suvartojimo duomenų atnaujinimo intervalas (minutėmis)"
                 }
             }
+        }
+    },
+    "issues": {
+        "app_version_rejected": {
+            "title": "„Panasonic“ atmetė programėlės versiją",
+            "description": "„Panasonic“ serveriai nebepriima programėlės versijos, kurią praneša „Aquarea Smart Cloud“ integracija, todėl prisijungti nepavyksta. Problema ne vartotojo vardas ar slaptažodis, pakartotinis autentifikavimas nereikalingas. Tai pakeitimas „Panasonic“ pusėje, kuris paprastai išsprendžiamas atnaujinus integraciją (ir jos biblioteką aioaquarea-ng): patikrinkite naujinius HACS ir iš naujo paleiskite „Home Assistant“. Jei jau turite naujausią versiją, pranešite [problemų sekimo sistemoje]({issues_url}). Integracija ir toliau bando prisijungti; ši problema išnyks pati po sėkmingo prisijungimo."
         }
     },
     "entity": {

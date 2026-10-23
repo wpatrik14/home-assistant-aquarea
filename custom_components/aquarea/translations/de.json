@@ -12,7 +12,8 @@
             "unknown": "Unerwarteter Fehler",
             "api_error": "API-Fehler: {api_error_msg}",
             "invalid_mfa_code": "Der Code wurde nicht akzeptiert. Prüfe ihn und versuche es erneut.",
-            "mfa_expired": "Die Bestätigungsanfrage ist abgelaufen. Gib dein Passwort erneut ein, um einen neuen Code zu erhalten."
+            "mfa_expired": "Die Bestätigungsanfrage ist abgelaufen. Gib dein Passwort erneut ein, um einen neuen Code zu erhalten.",
+            "app_version_rejected": "Panasonic hat die App-Version abgelehnt, die diese Integration meldet. Das liegt nicht an deiner Anmeldung: Aktualisiere die Integration (siehe HACS) und versuche es erneut."
         },
         "step": {
             "user": {
@@ -57,6 +58,12 @@
                     "consumption_interval": "Aktualisierungsintervall der Verbrauchsdaten (Minuten)"
                 }
             }
+        }
+    },
+    "issues": {
+        "app_version_rejected": {
+            "title": "Panasonic hat die App-Version abgelehnt",
+            "description": "Die Panasonic-Server akzeptieren die App-Version, die die Aquarea-Smart-Cloud-Integration meldet, nicht mehr, daher schlägt die Anmeldung fehl. Benutzername und Passwort sind nicht das Problem, eine erneute Authentifizierung ist nicht nötig. Es handelt sich um eine Änderung auf Seiten von Panasonic, die meist durch ein Update der Integration (und ihrer Bibliothek aioaquarea-ng) behoben wird: Suche in HACS nach Updates und starte Home Assistant neu. Falls du bereits aktuell bist, melde es im [Issue-Tracker]({issues_url}). Die Integration versucht es weiter; dieses Problem verschwindet nach einer erfolgreichen Anmeldung von selbst."
         }
     },
     "entity": {

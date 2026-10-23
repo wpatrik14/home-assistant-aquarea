@@ -141,6 +141,10 @@ def _load_setup_entry(namespace_extra=None):
     )
     namespace = {
         "aioaquarea": aioaquarea,
+        "APP_VERSION_REJECTED": "APP_VERSION_REJECTED",
+        "APP_VERSION_REJECTED_MESSAGE": "app version rejected",
+        "async_clear_app_version_issue": lambda *_: None,
+        "async_create_app_version_issue": lambda *_: None,
         "MFA_REQUIRED": "MFA_REQUIRED",
         "AGREEMENT_NOT_ACCEPTED_CODE": "4103",
         "AGREEMENT_NOT_ACCEPTED_MESSAGE": "accept the terms",

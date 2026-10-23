@@ -69,6 +69,16 @@ LOGIN_ERRORS = [
         id="mfa_required",
     ),
     pytest.param(
+        # Panasonic's side, not the password. A plain string: releases before
+        # AppVersionRejectedError never raise it, and the integration compares
+        # the value.
+        aioaquarea.AuthenticationError(
+            "APP_VERSION_REJECTED", "message from the cloud"
+        ),
+        "app_version_rejected",
+        id="app_version_rejected",
+    ),
+    pytest.param(
         _auth_error(aioaquarea.AuthenticationErrorCodes.SESSION_CLOSED),
         "cannot_connect",
         id="session_closed",
