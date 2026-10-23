@@ -157,6 +157,10 @@ def _load():
     module = ast.fix_missing_locations(ast.Module([flow], []))
     namespace = {
         "aioaquarea": aioaquarea,
+        "APP_VERSION_REJECTED": "APP_VERSION_REJECTED",
+        "APP_VERSION_REJECTED_MESSAGE": "app version rejected",
+        "async_clear_app_version_issue": lambda *_: None,
+        "async_create_app_version_issue": lambda *_: None,
         "MFA_REQUIRED": "MFA_REQUIRED",
         "AGREEMENT_NOT_ACCEPTED_CODE": "4103",
         "AGREEMENT_NOT_ACCEPTED_MESSAGE": "accept the terms",
@@ -200,6 +204,7 @@ def _poll(client):
     obj._consumption_month = None
     obj.consumption_interval = 60
     obj.hass = types.SimpleNamespace(config=types.SimpleNamespace(time_zone="UTC"))
+    obj._entry = None
     try:
         result = asyncio.run(obj._async_update_data())
     except (UpdateFailed, ConfigEntryAuthFailed) as err:

@@ -23,6 +23,7 @@ Intentionally dependency-free (stdlib only):
 import glob
 import json
 import os
+import re
 import sys
 
 BASE = os.path.join(os.path.dirname(__file__), "..", "custom_components", "aquarea")
@@ -85,6 +86,23 @@ def main():
                     f"{name}: {flow}.{step_id} descriptions",
                     not stray,
                     f"extra={stray}",
+                )
+
+    # Repair issues: every translation has a title and a description with the
+    # same {placeholders} as strings.json.
+    issues = strings.get("issues", {})
+    for path in files:
+        translation = _load(path)
+        name = os.path.basename(path)
+        for issue_id, issue in issues.items():
+            have = translation.get("issues", {}).get(issue_id, {})
+            for field in ("title", "description"):
+                wanted = set(re.findall(r"\{(\w+)\}", issue.get(field, "")))
+                got = set(re.findall(r"\{(\w+)\}", have.get(field, "")))
+                check(
+                    f"{name}: issues.{issue_id}.{field}",
+                    bool(have.get(field, "").strip()) and wanted == got,
+                    f"placeholders {sorted(wanted)} vs {sorted(got)}",
                 )
 
     print()

@@ -37,8 +37,9 @@ addopts = "--cov=custom_components/aquarea --cov-report=term-missing"
 # 91.61 after the review of #125 deleted 2 covered lines (91.6183%; percentage
 # fell, no test lost);
 # 93.39 with the month-end tests (93.3908%, rounded down; main was at
-# 93.3488% with the tests added since 1.5.4).
-fail_under = 93.39
+# 93.3488% with the tests added since 1.5.4);
+# 93.73 with the app version rejected tests (93.7359%, rounded down).
+fail_under = 93.73
 precision = 2
 show_missing = true
 

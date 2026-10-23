@@ -199,6 +199,7 @@ async def test_expired_restarts_login(
     ("error", "expected"),
     [
         (_error("API_ERROR"), "cannot_connect"),
+        (_error("APP_VERSION_REJECTED"), "app_version_rejected"),
         (aioaquarea.ApiError("E1", "maintenance"), "cannot_connect"),
         (aioaquarea.RequestFailedError("bad gateway"), "cannot_connect"),
         (aiohttp.ClientError(), "cannot_connect"),

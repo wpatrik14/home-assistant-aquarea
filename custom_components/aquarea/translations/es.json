@@ -12,7 +12,8 @@
             "unknown": "Error inesperado",
             "api_error": "Error de API: {api_error_msg}",
             "invalid_mfa_code": "No se aceptó el código. Compruébalo e inténtalo de nuevo.",
-            "mfa_expired": "La solicitud de verificación caducó. Introduce de nuevo tu contraseña para obtener un código nuevo."
+            "mfa_expired": "La solicitud de verificación caducó. Introduce de nuevo tu contraseña para obtener un código nuevo.",
+            "app_version_rejected": "Panasonic ha rechazado la versión de la app que anuncia esta integración. No es un problema de tu inicio de sesión: actualiza la integración (revisa HACS) e inténtalo de nuevo."
         },
         "step": {
             "user": {
@@ -57,6 +58,12 @@
                     "consumption_interval": "Intervalo de actualización de los datos de consumo (minutos)"
                 }
             }
+        }
+    },
+    "issues": {
+        "app_version_rejected": {
+            "title": "Panasonic ha rechazado la versión de la app",
+            "description": "Los servidores de Panasonic ya no aceptan la versión de la aplicación que anuncia la integración Aquarea Smart Cloud, por lo que el inicio de sesión falla. El problema no es tu usuario ni tu contraseña y no hace falta volver a autenticarse. Es un cambio por parte de Panasonic que normalmente se soluciona actualizando la integración (y su biblioteca aioaquarea-ng): busca actualizaciones en HACS y reinicia Home Assistant. Si ya estás al día, infórmalo en el [seguimiento de incidencias]({issues_url}). La integración sigue reintentando; este aviso desaparece solo tras un inicio de sesión correcto."
         }
     },
     "entity": {

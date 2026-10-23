@@ -12,7 +12,8 @@
             "unknown": "Unexpected error",
             "api_error": "API error: {api_error_msg}",
             "invalid_mfa_code": "The code was not accepted. Check it and try again.",
-            "mfa_expired": "The verification request expired. Enter your password again to get a new code."
+            "mfa_expired": "The verification request expired. Enter your password again to get a new code.",
+            "app_version_rejected": "Panasonic rejected the app version this integration announces. This is not a problem with your login: update the integration (check HACS) and try again."
         },
         "step": {
             "user": {
@@ -67,6 +68,12 @@
                     "consumption_interval": "How often to fetch energy consumption from the Panasonic cloud, in minutes. The cloud delivers new consumption data at most every 15 minutes (with some delay), so 15 is the lowest useful value; lower values only add load. Device state is refreshed every minute regardless of this setting."
                 }
             }
+        }
+    },
+    "issues": {
+        "app_version_rejected": {
+            "title": "Panasonic rejected the app version",
+            "description": "Panasonic's servers no longer accept the app version that the Aquarea Smart Cloud integration announces, so logging in fails. Your username and password are not the problem and no re-authentication is needed. This is a change on Panasonic's side, which is usually fixed by updating the integration (and its aioaquarea-ng library): check for updates in HACS and restart Home Assistant. If you are already up to date, report it in the [issue tracker]({issues_url}). The integration keeps retrying, and this issue disappears by itself after a successful login."
         }
     },
     "entity": {

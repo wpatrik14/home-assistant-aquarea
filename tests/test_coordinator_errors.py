@@ -143,6 +143,10 @@ def _load():
     )
     namespace = {
         "aioaquarea": aioaquarea,
+        "APP_VERSION_REJECTED": "APP_VERSION_REJECTED",
+        "APP_VERSION_REJECTED_MESSAGE": "app version rejected",
+        "async_clear_app_version_issue": lambda *_: None,
+        "async_create_app_version_issue": lambda *_: None,
         "MFA_REQUIRED": "MFA_REQUIRED",
         "AGREEMENT_NOT_ACCEPTED_CODE": "4103",
         "AGREEMENT_NOT_ACCEPTED_MESSAGE": "accept the terms",
@@ -186,6 +190,7 @@ def _poll(exc, consumption=False):
     obj._month_consumption = None
     obj._device_info = None
     obj.hass = types.SimpleNamespace(config=types.SimpleNamespace(time_zone="UTC"))
+    obj._entry = None
     try:
         asyncio.run(obj._async_update_data())
     except (UpdateFailed, ConfigEntryAuthFailed) as err:

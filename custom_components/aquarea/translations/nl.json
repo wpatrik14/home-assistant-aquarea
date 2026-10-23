@@ -12,7 +12,8 @@
             "unknown": "Onverwachte fout",
             "api_error": "API-fout: {api_error_msg}",
             "invalid_mfa_code": "De code is niet geaccepteerd. Controleer de code en probeer het opnieuw.",
-            "mfa_expired": "De verificatieaanvraag is verlopen. Voer je wachtwoord opnieuw in om een nieuwe code te krijgen."
+            "mfa_expired": "De verificatieaanvraag is verlopen. Voer je wachtwoord opnieuw in om een nieuwe code te krijgen.",
+            "app_version_rejected": "Panasonic heeft de app-versie die deze integratie opgeeft geweigerd. Dit ligt niet aan je login: werk de integratie bij (zie HACS) en probeer het opnieuw."
         },
         "step": {
             "user": {
@@ -57,6 +58,12 @@
                     "consumption_interval": "Vernieuwingsinterval verbruiksgegevens (minuten)"
                 }
             }
+        }
+    },
+    "issues": {
+        "app_version_rejected": {
+            "title": "Panasonic heeft de app-versie geweigerd",
+            "description": "De servers van Panasonic accepteren de app-versie die de Aquarea Smart Cloud-integratie opgeeft niet meer, daarom mislukt het inloggen. Je gebruikersnaam en wachtwoord zijn niet het probleem en opnieuw authenticeren is niet nodig. Het is een wijziging aan de kant van Panasonic die meestal wordt opgelost door de integratie (en de bibliotheek aioaquarea-ng) bij te werken: zoek naar updates in HACS en herstart Home Assistant. Ben je al up-to-date, meld het dan in de [issuetracker]({issues_url}). De integratie blijft het proberen; dit probleem verdwijnt vanzelf na een geslaagde login."
         }
     },
     "entity": {

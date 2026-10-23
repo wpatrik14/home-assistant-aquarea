@@ -122,6 +122,10 @@ def _load():
     module = ast.fix_missing_locations(ast.Module([flow], []))
     namespace = {
         "aioaquarea": aioaquarea,
+        "APP_VERSION_REJECTED": "APP_VERSION_REJECTED",
+        "APP_VERSION_REJECTED_MESSAGE": "app version rejected",
+        "async_clear_app_version_issue": lambda *_: None,
+        "async_create_app_version_issue": lambda *_: None,
         "UpdateFailed": type("UpdateFailed", (Exception,), {}),
         "ConfigEntryAuthFailed": type("ConfigEntryAuthFailed", (Exception,), {}),
         "dt_util": types.SimpleNamespace(
@@ -165,6 +169,7 @@ def _coordinator(interval=60):
     obj._consumption_month = None
     obj.consumption_interval = interval
     obj.hass = types.SimpleNamespace(config=types.SimpleNamespace(time_zone="UTC"))
+    obj._entry = None
     return obj
 
 

@@ -12,7 +12,8 @@
             "unknown": "Váratlan hiba",
             "api_error": "API hiba: {api_error_msg}",
             "invalid_mfa_code": "A kódot nem fogadta el a rendszer. Ellenőrizd, és próbáld újra.",
-            "mfa_expired": "Az ellenőrzési kérés lejárt. Add meg újra a jelszavadat, hogy új kódot kapj."
+            "mfa_expired": "Az ellenőrzési kérés lejárt. Add meg újra a jelszavadat, hogy új kódot kapj.",
+            "app_version_rejected": "A Panasonic elutasította az integráció által küldött alkalmazásverziót. Nem a bejelentkezési adatokkal van baj: frissítsd az integrációt (nézd meg a HACS-t), majd próbáld újra."
         },
         "step": {
             "user": {
@@ -57,6 +58,12 @@
                     "consumption_interval": "Fogyasztási adatok frissítési időköze (perc)"
                 }
             }
+        }
+    },
+    "issues": {
+        "app_version_rejected": {
+            "title": "A Panasonic elutasította az alkalmazás verzióját",
+            "description": "A Panasonic szerverei már nem fogadják el azt az alkalmazásverziót, amelyet az Aquarea Smart Cloud integráció küld, ezért a bejelentkezés sikertelen. Nem a felhasználónév vagy a jelszó a hiba, újrahitelesítésre nincs szükség. Ez a Panasonic oldalán történt változás, amit általában az integráció (és az aioaquarea-ng könyvtár) frissítése old meg: keress frissítést a HACS-ben, majd indítsd újra a Home Assistantet. Ha már a legfrissebb verziót használod, jelezd a [hibakövetőben]({issues_url}). Az integráció tovább próbálkozik; ez a probléma sikeres bejelentkezés után magától megszűnik."
         }
     },
     "entity": {

@@ -17,6 +17,7 @@ from homeassistant.helpers.aiohttp_client import async_create_clientsession
 import voluptuous as vol
 
 from .const import (
+    APP_VERSION_REJECTED,
     CONF_CODE,
     CONF_CONSUMPTION_INTERVAL,
     CONF_REFRESH_TOKEN,
@@ -203,6 +204,8 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return {"base": "invalid_mfa_code"}
             if err.error_code == MFA_EXPIRED:
                 return {"base": "mfa_expired"}
+            if err.error_code == APP_VERSION_REJECTED:
+                return {"base": "app_version_rejected"}
             _LOGGER.warning("Multi-factor authentication failed: %s", err)
             return {"base": "cannot_connect"}
         except (
@@ -339,6 +342,10 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "mfa_required"
             elif err.error_code == MFA_EXPIRED:
                 errors["base"] = "mfa_expired"
+            elif err.error_code == APP_VERSION_REJECTED:
+                # Panasonic's side, not the password: say so instead of
+                # sending the user to retype a correct one.
+                errors["base"] = "app_version_rejected"
             else:
                 errors["base"] = "invalid_auth"
         except aioaquarea.errors.ApiError as err:
