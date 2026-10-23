@@ -16,9 +16,9 @@
     "aioaquarea"
   ],
   "requirements": [
-    "aioaquarea-ng>=1.4.0"
+    "aioaquarea-ng>=1.4.1"
   ],
   "ssdp": [],
-  "version": "1.8.2",
+  "version": "1.8.3",
   "zeroconf": []
 }
