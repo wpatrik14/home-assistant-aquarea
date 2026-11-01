@@ -43,6 +43,13 @@ AGREEMENT_NOT_ACCEPTED_MESSAGE = (
     "Cloud app and accept them, then Aquarea will recover on its own"
 )
 
+# When the login itself is refused (an HTTP 403 "request is blocked" page from
+# Panasonic's edge security, for example) every poll would start another
+# login from the same blocked address, which can keep the block alive. After
+# such a failure the next login waits, doubling from the first to the last.
+LOGIN_BACKOFF_INITIAL = timedelta(minutes=5)
+LOGIN_BACKOFF_MAX = timedelta(minutes=30)
+
 
 def _weekly_timer_due(
     now: datetime, requested_at: datetime | None, interval: timedelta
@@ -102,6 +109,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         self._weekly_timer_fetched_at: datetime | None = None
         self._weekly_timer_subscribers = 0
         self._weekly_timer_failed = False
+
+        # Login back-off: failed logins in a row and when the next may start.
+        self._login_failures = 0
+        self._login_retry_at: datetime | None = None
 
         # Main device and zones are fixed at 1 minute
         scan_interval = DEFAULT_SCAN_INTERVAL
@@ -365,13 +376,47 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         if fetched:
             self._hourly_consumption_fetched_at = now
 
+    async def _async_login(self) -> None:
+        """Log in, waiting out a back-off after Panasonic refused the login.
+
+        Only an ``API_ERROR`` starts the back-off: wrong credentials, MFA and the
+        other typed failures have their own handling, and a network error is
+        not a refusal, so none of them delay the next attempt.
+        """
+        now = dt_util.utcnow()
+        if self._login_retry_at is not None and now < self._login_retry_at:
+            raise UpdateFailed(
+                "Panasonic refused the login; the next attempt is at "
+                f"{dt_util.as_local(self._login_retry_at):%H:%M}. If this keeps "
+                "happening, check whether your public IP address is blocked "
+                "(try another network or a VPN)."
+            )
+        try:
+            await self._client.login()
+        except aioaquarea.AuthenticationError as err:
+            if err.error_code == aioaquarea.AuthenticationErrorCodes.API_ERROR:
+                self._login_failures += 1
+                delay = min(
+                    LOGIN_BACKOFF_INITIAL * 2 ** (self._login_failures - 1),
+                    LOGIN_BACKOFF_MAX,
+                )
+                self._login_retry_at = now + delay
+                _LOGGER.warning(
+                    "Panasonic refused the login (%s); not trying again for %s",
+                    err,
+                    delay,
+                )
+            raise
+        self._login_failures = 0
+        self._login_retry_at = None
+
     async def _async_update_data(self) -> aioaquarea.Device:
         """Fetch data from Aquarea Smart Cloud Service with tiered intervals."""
         try:
             # Ensure we are logged in and token is valid
             if not self._client.is_logged:
                 _LOGGER.debug("Client not logged in or token expired, logging in")
-                await self._client.login()
+                await self._async_login()
 
             now = dt_util.now()
 
@@ -390,7 +435,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                 await self._device.refresh_data()
             except aioaquarea.AuthenticationError:
                 _LOGGER.debug("Token expired during refresh, logging in again")
-                await self._client.login()
+                await self._async_login()
                 self._device = await self._client.get_device(
                     device_info=self._device_info,
                     consumption_refresh_interval=timedelta(minutes=15),
