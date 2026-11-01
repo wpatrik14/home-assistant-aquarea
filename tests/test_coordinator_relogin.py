@@ -146,11 +146,16 @@ def _load():
     weekly_stub = ast.parse(
         "async def _async_fetch_weekly_timer(self, now): pass"
     ).body[0]
+    login = next(
+        n
+        for n in cls.body
+        if isinstance(n, ast.AsyncFunctionDef) and n.name == "_async_login"
+    )
     flow = ast.ClassDef(
         name="Extracted",
         bases=[],
         keywords=[],
-        body=[node, due, hourly_stub, weekly_stub],
+        body=[node, due, login, hourly_stub, weekly_stub],
         decorator_list=[],
         type_params=[],
     )
@@ -168,9 +173,12 @@ def _load():
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "dt_util": types.SimpleNamespace(
             now=lambda: datetime(2026, 10, 14, 12, 0, tzinfo=UTC),
+            utcnow=lambda: datetime(2026, 10, 14, 12, 0, tzinfo=UTC),
             get_time_zone=lambda *_: None,
         ),
         "timedelta": timedelta,
+        "LOGIN_BACKOFF_INITIAL": timedelta(minutes=5),
+        "LOGIN_BACKOFF_MAX": timedelta(minutes=30),
         "cloud_date": lambda moment: moment.astimezone(UTC).date(),
         "datetime": datetime,
         "time": time,
@@ -205,6 +213,8 @@ def _poll(client):
     obj.consumption_interval = 60
     obj.hass = types.SimpleNamespace(config=types.SimpleNamespace(time_zone="UTC"))
     obj._entry = None
+    obj._login_failures = 0
+    obj._login_retry_at = None
     try:
         result = asyncio.run(obj._async_update_data())
     except (UpdateFailed, ConfigEntryAuthFailed) as err:

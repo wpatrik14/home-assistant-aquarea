@@ -111,11 +111,16 @@ def _load():
     weekly_stub = ast.parse(
         "async def _async_fetch_weekly_timer(self, now): pass"
     ).body[0]
+    login = next(
+        n
+        for n in cls.body
+        if isinstance(n, ast.AsyncFunctionDef) and n.name == "_async_login"
+    )
     flow = ast.ClassDef(
         name="Extracted",
         bases=[],
         keywords=[],
-        body=[node, due, hourly_stub, weekly_stub],
+        body=[node, due, login, hourly_stub, weekly_stub],
         decorator_list=[],
         type_params=[],
     )
@@ -129,9 +134,13 @@ def _load():
         "UpdateFailed": type("UpdateFailed", (Exception,), {}),
         "ConfigEntryAuthFailed": type("ConfigEntryAuthFailed", (Exception,), {}),
         "dt_util": types.SimpleNamespace(
-            now=lambda: _Clock.now, get_time_zone=lambda *_: None
+            now=lambda: _Clock.now,
+            utcnow=lambda: _Clock.now,
+            get_time_zone=lambda *_: None,
         ),
         "timedelta": timedelta,
+        "LOGIN_BACKOFF_INITIAL": timedelta(minutes=5),
+        "LOGIN_BACKOFF_MAX": timedelta(minutes=30),
         "cloud_date": lambda moment: moment.astimezone(UTC).date(),
         "datetime": datetime,
         "time": time,
@@ -170,6 +179,8 @@ def _coordinator(interval=60):
     obj.consumption_interval = interval
     obj.hass = types.SimpleNamespace(config=types.SimpleNamespace(time_zone="UTC"))
     obj._entry = None
+    obj._login_failures = 0
+    obj._login_retry_at = None
     return obj
 
 

@@ -128,17 +128,23 @@ def _load():
     weekly_stub = ast.parse(
         "async def _async_fetch_weekly_timer(self, now): pass"
     ).body[0]
+    login = next(
+        n
+        for n in cls.body
+        if isinstance(n, ast.AsyncFunctionDef) and n.name == "_async_login"
+    )
     flow = ast.ClassDef(
         name="Extracted",
         bases=[],
         keywords=[],
-        body=[node, due, hourly_stub, weekly_stub],
+        body=[node, due, login, hourly_stub, weekly_stub],
         decorator_list=[],
         type_params=[],
     )
     module = ast.fix_missing_locations(ast.Module([flow], []))
     anything = types.SimpleNamespace(
         now=lambda: __import__("datetime").datetime(2026, 1, 1),
+        utcnow=lambda: __import__("datetime").datetime(2026, 1, 1),
         get_time_zone=lambda *_: None,
     )
     namespace = {
@@ -159,6 +165,8 @@ def _load():
         "CLOUD_TIME_ZONE": UTC,
         "YESTERDAY_REFETCH_HOURS": 3,
         "timedelta": timedelta,
+        "LOGIN_BACKOFF_INITIAL": timedelta(minutes=5),
+        "LOGIN_BACKOFF_MAX": timedelta(minutes=30),
         "DateType": types.SimpleNamespace(MONTH="month"),
         "_LOGGER": types.SimpleNamespace(
             debug=lambda *a, **k: None, warning=lambda *a, **k: None
@@ -191,6 +199,8 @@ def _poll(exc, consumption=False):
     obj._device_info = None
     obj.hass = types.SimpleNamespace(config=types.SimpleNamespace(time_zone="UTC"))
     obj._entry = None
+    obj._login_failures = 0
+    obj._login_retry_at = None
     try:
         asyncio.run(obj._async_update_data())
     except (UpdateFailed, ConfigEntryAuthFailed) as err:
