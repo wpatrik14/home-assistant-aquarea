@@ -1,7 +1,5 @@
 """Diagnostics support for the Aquarea Smart Cloud integration."""
 
-from __future__ import annotations
-
 from enum import Enum
 from importlib.metadata import PackageNotFoundError, version as package_version
 from typing import Any

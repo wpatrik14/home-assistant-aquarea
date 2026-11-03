@@ -1,7 +1,5 @@
 """Climate entity to control a zone for a Panasonic Aquarea Device."""
 
-from __future__ import annotations
-
 import asyncio
 import logging
 from typing import Any

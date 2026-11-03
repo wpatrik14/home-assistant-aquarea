@@ -657,13 +657,13 @@ class EnergyAccumulatedConsumptionSensor(
                         month_tank += float(c.tank_consumption or 0.0)
                         try:
                             month_total += float(c.total_consumption or 0.0)
-                        except (ValueError, TypeError):
+                        except ValueError, TypeError:
                             month_total += float(
                                 (c.heat_consumption or 0.0)
                                 + (c.cool_consumption or 0.0)
                                 + (c.tank_consumption or 0.0)
                             )
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     _LOGGER.exception(
                         "Failed to parse month consumption item date: %s",
                         getattr(c, "data_time", None),
@@ -811,7 +811,7 @@ class DailyEdgeCounterSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
                     self._attr_native_value = 0
                 else:
                     self._attr_native_value = int(native)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 self._attr_native_value = 0
             self._attr_last_reset = restored.last_reset
             self._last_state = restored.last_state
