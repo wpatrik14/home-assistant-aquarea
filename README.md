@@ -57,7 +57,7 @@ Panasonic now enforces multi-factor authentication (2-step verification) on Pana
 If Home Assistant shows a repair "Panasonic rejected the app version", Panasonic changed which app version its login accepts. Your username and password are fine and you do not need to log in again. Update the integration (and, through it, aioaquarea-ng) and restart Home Assistant; the integration keeps retrying and the repair disappears after the next successful login. If you are up to date, [open an issue](https://github.com/wpatrik14/home-assistant-aquarea/issues). Needs aioaquarea-ng 1.5.0 or newer to show this message; older releases just report a failed login.
 
 ### Minimum Home Assistant version required
-The minimum supported version of Home Assistant is **2025.8**. Older versions can keep using the last release that supports them: `v1.0.62` for 2024.12. A further raise to **2026.3** is planned about a month after the first release with this floor (see [#98](https://github.com/wpatrik14/home-assistant-aquarea/issues/98))
+The minimum supported version of Home Assistant is **2026.3**. Older versions can keep using the last release that supports them: `v1.9.1` for 2025.8 to 2026.2, and `v1.0.62` for 2024.12 (see [#98](https://github.com/wpatrik14/home-assistant-aquarea/issues/98))
 
 ## Installation
 

@@ -29,8 +29,6 @@ else; energy the sensor records but the cloud does not label stays where it
 was recorded.
 """
 
-from __future__ import annotations
-
 from collections import deque
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import date, datetime, time, timedelta
@@ -97,7 +95,7 @@ def _kwh(value: Any) -> float:
     """Return a consumption field as kWh, or 0 when the cloud sent no number."""
     try:
         return float(value or 0.0)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         _LOGGER.debug("Ignoring a non-numeric hourly consumption value %r", value)
         return 0.0
 
@@ -120,7 +118,7 @@ def _consumption_value(
         return _kwh(record.tank_consumption)
     try:
         return float(record.total_consumption or 0.0)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return (
             _kwh(record.heat_consumption)
             + _kwh(record.cool_consumption)
@@ -142,7 +140,7 @@ def hourly_consumption(
         label = record.data_time
         try:
             naive = datetime.strptime(label, "%Y%m%d %H")
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             _LOGGER.debug("Skipping hourly consumption record labelled %r", label)
             continue
         start = naive.replace(tzinfo=CLOUD_TIME_ZONE)

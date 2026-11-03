@@ -1,7 +1,5 @@
 """Base entity for the Aquarea Smart Cloud integration."""
 
-from __future__ import annotations
-
 from collections.abc import Coroutine
 from typing import Any
 
