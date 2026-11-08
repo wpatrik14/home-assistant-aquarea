@@ -44,3 +44,36 @@ APP_VERSION_REJECTED = "APP_VERSION_REJECTED"
 
 IDLE = "idle"
 HEATING = "heating"
+
+# Lifetime energy totals (lifetime.py).
+# The backfill walks back through the cloud's history with one YEAR query per
+# 24 months, never further than this many years.
+LIFETIME_MAX_YEARS_BACK = 15
+# It stops after this many windows in a row without any consumption.
+LIFETIME_EMPTY_WINDOWS_STOP = 2
+# Pause before the first request of a sync (the setup has just made its own
+# requests) and between two requests, in seconds.
+LIFETIME_START_DELAY = 30
+LIFETIME_REQUEST_DELAY = 5
+# The backfill takes "no data" answers as the end of the history only when the
+# registration month of the unit never became known, and then only after this
+# many such answers spread over at least this long (the library cannot tell
+# "no data" from a failed request). Otherwise they are failures to retry.
+LIFETIME_NO_DATA_MIN_RESPONSES = 5
+LIFETIME_NO_DATA_MIN_SPAN = timedelta(hours=72)
+# A month with more energy than this (per kind) is not plausible: stored data
+# holding one is treated as corrupt.
+LIFETIME_MAX_MONTH_KWH = 50_000
+# A finished month is looked up once more this long after it ended, for hours
+# the cloud published late; the larger figure wins.
+LIFETIME_RECONCILE_DELAY = timedelta(hours=24)
+# Wait before the next attempt after a failed sync: doubles from the first to
+# the maximum; an authentication or access failure (for example an HTTP 403
+# block) starts at the longer one.
+LIFETIME_RETRY_INITIAL = timedelta(hours=1)
+LIFETIME_RETRY_AUTH_INITIAL = timedelta(hours=6)
+LIFETIME_RETRY_MAX = timedelta(hours=12)
+# How much hourly history the today sensors keep across restarts.
+LIFETIME_HOURS_KEPT = timedelta(days=4)
+# Delay before a changed state is written to storage.
+LIFETIME_SAVE_DELAY = 30

@@ -94,11 +94,38 @@
         }
       },
       "button": {
+        "rebuild_lifetime_consumption": {
+          "name": "Perkurti visą suvartojimą"
+        },
         "request_defrost": {
           "name": "Užsakyti atitirpinimą"
         }
       },
       "sensor": {
+        "heating_lifetime_energy_consumption": {
+          "name": "Visas šildymo suvartojimas (nuo pradžios)"
+        },
+        "cooling_lifetime_energy_consumption": {
+          "name": "Visas šaldymo suvartojimas (nuo pradžios)"
+        },
+        "tank_lifetime_energy_consumption": {
+          "name": "Visas vandens šildymo suvartojimas (nuo pradžios)"
+        },
+        "lifetime_energy_consumption": {
+          "name": "Visas suvartojimas (nuo pradžios)"
+        },
+        "heating_today_energy_consumption": {
+          "name": "Šiandienos šildymo suvartojimas"
+        },
+        "cooling_today_energy_consumption": {
+          "name": "Šiandienos šaldymo suvartojimas"
+        },
+        "tank_today_energy_consumption": {
+          "name": "Šiandienos vandens šildymo suvartojimas"
+        },
+        "today_energy_consumption": {
+          "name": "Šiandienos suvartojimas"
+        },
         "heating_accumulated_energy_consumption": {
           "name": "Sukauptas šildymo suvartojimas"
         },
@@ -185,5 +212,10 @@
           "name": "Atostogų laikmatis"
         }
       }
+    },
+    "exceptions": {
+        "lifetime_sync_running": {
+            "message": "Suvartojimo istorija šiuo metu skaitoma. Bandykite dar kartą, kai ji baigsis."
+        }
     }
 }

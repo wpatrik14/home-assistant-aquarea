@@ -4,6 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 import logging
+import math
 from typing import Any, Self
 
 import aioaquarea
@@ -23,6 +24,7 @@ from homeassistant.util import dt as dt_util
 
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 from .entity import AquareaBaseEntity
+from .lifetime import local_day_bounds
 from .statistics import (
     CLOUD_TIME_ZONE,
     async_redistribute_hourly_statistics,
@@ -85,6 +87,93 @@ ACCUMULATED_ENERGY_SENSORS = [
         suggested_display_precision=2,
         consumption_type=aioaquarea.ConsumptionType.TOTAL,
     ),
+]
+
+
+def _accumulated_variant(
+    description: AquareaEnergyConsumptionSensorDescription,
+    *,
+    key: str,
+    name: str,
+    enabled: bool | None = None,
+    **kwargs: Any,
+) -> AquareaEnergyConsumptionSensorDescription:
+    """Return a description for a sensor that mirrors an accumulated one.
+
+    It reports the same consumption type, for the same devices, and is
+    enabled by default on the same terms (the cooling one is not) unless
+    ``enabled`` says otherwise.
+    """
+    return AquareaEnergyConsumptionSensorDescription(
+        key=key,
+        translation_key=key,
+        name=name,
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=2,
+        consumption_type=description.consumption_type,
+        exists_fn=description.exists_fn,
+        entity_registry_enabled_default=(
+            description.entity_registry_enabled_default if enabled is None else enabled
+        ),
+        **kwargs,
+    )
+
+
+# All the energy since the first record of the cloud, for the Energy dashboard
+# (see lifetime.py). Unknown until the history has been read the first time.
+LIFETIME_ENERGY_SENSORS = [
+    _accumulated_variant(
+        description,
+        key=key,
+        name=name,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    )
+    for description, key, name in zip(
+        ACCUMULATED_ENERGY_SENSORS,
+        (
+            "heating_lifetime_energy_consumption",
+            "cooling_lifetime_energy_consumption",
+            "tank_lifetime_energy_consumption",
+            "lifetime_energy_consumption",
+        ),
+        (
+            "Heating Lifetime Consumption",
+            "Cooling Lifetime Consumption",
+            "Tank Lifetime Consumption",
+            "Lifetime Consumption",
+        ),
+        strict=True,
+    )
+]
+
+# The energy of the local calendar day, from the cloud's hourly records. TOTAL
+# with a last_reset at the local midnight: it counts back from zero every day.
+# Only the total is enabled by default.
+TODAY_ENERGY_SENSORS = [
+    _accumulated_variant(
+        description,
+        key=key,
+        name=name,
+        enabled=description.consumption_type == aioaquarea.ConsumptionType.TOTAL,
+        state_class=SensorStateClass.TOTAL,
+    )
+    for description, key, name in zip(
+        ACCUMULATED_ENERGY_SENSORS,
+        (
+            "heating_today_energy_consumption",
+            "cooling_today_energy_consumption",
+            "tank_today_energy_consumption",
+            "today_energy_consumption",
+        ),
+        (
+            "Heating Consumption Today",
+            "Cooling Consumption Today",
+            "Tank Consumption Today",
+            "Consumption Today",
+        ),
+        strict=True,
+    )
 ]
 
 # The energy published since the previous fetch. The value drops back to 0, which rules
@@ -234,6 +323,20 @@ async def async_setup_entry(
             [
                 EnergyConsumptionSensor(description, coordinator)
                 for description in ENERGY_SENSORS
+                if description.exists_fn(coordinator)
+            ]
+        )
+        entities.extend(
+            [
+                EnergyLifetimeSensor(description, coordinator)
+                for description in LIFETIME_ENERGY_SENSORS
+                if description.exists_fn(coordinator)
+            ]
+        )
+        entities.extend(
+            [
+                EnergyTodaySensor(description, coordinator)
+                for description in TODAY_ENERGY_SENSORS
                 if description.exists_fn(coordinator)
             ]
         )
@@ -739,6 +842,106 @@ class EnergyConsumptionSensor(AquareaBaseEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         self._observe_fetch()
+        super()._handle_coordinator_update()
+
+
+class EnergyLifetimeSensor(AquareaEnergySensor, SensorEntity, RestoreEntity):
+    """All the energy consumed since the cloud's first record.
+
+    The sum of the finished months, kept in storage, and the month being
+    shown, as of the latest fetch; unknown until the history before the
+    integration was installed has been read once (see lifetime.py). Like the
+    accumulated sensors, its hourly statistics follow the cloud's hour labels.
+    The last state Home Assistant restored is a floor, in case the stored
+    months were lost.
+    """
+
+    entity_description: AquareaEnergyConsumptionSensorDescription
+    _unrecorded_attributes = frozenset({"history_complete"})
+
+    def __init__(
+        self,
+        description: AquareaEnergyConsumptionSensorDescription,
+        coordinator: AquareaDataUpdateCoordinator,
+    ) -> None:
+        """Initialize the sensor from its description."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{super().unique_id}_{description.key}"
+        self.entity_description = description
+        self._restored_floor: float | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last value, which the value never goes below."""
+        if (last := await self.async_get_last_state()) is not None:
+            try:
+                value = float(last.state)
+            except ValueError:
+                value = None
+            if value is not None and math.isfinite(value) and value >= 0:
+                self._restored_floor = value
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self.coordinator.async_add_lifetime_listener(self.async_write_ha_state)
+        )
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the lifetime energy in kWh, or None until it is known."""
+        value = self.coordinator.lifetime.lifetime_value(
+            self.entity_description.consumption_type
+        )
+        if value is None or self._restored_floor is None:
+            return value
+        return max(value, self._restored_floor)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return whether the history has been read (the rest is in diagnostics)."""
+        return {"history_complete": self.coordinator.lifetime.complete}
+
+
+class EnergyTodaySensor(AquareaBaseEntity, SensorEntity):
+    """The energy consumed in the local calendar day, up to the last cloud hour.
+
+    Built from the cloud's hourly records (the same fetches as the hourly
+    statistics, no extra requests) that fall between the local midnights.
+    An hour the cloud revises replaces its old value, and an hour published
+    after midnight for the day before is counted in that day, not in this one.
+    """
+
+    entity_description: AquareaEnergyConsumptionSensorDescription
+
+    def __init__(
+        self,
+        description: AquareaEnergyConsumptionSensorDescription,
+        coordinator: AquareaDataUpdateCoordinator,
+    ) -> None:
+        """Initialize the sensor from its description."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{super().unique_id}_{description.key}"
+        self.entity_description = description
+        self._now = dt_util.now()
+
+    async def async_added_to_hass(self) -> None:
+        """Take the time of the first state write."""
+        self._now = dt_util.now()
+        await super().async_added_to_hass()
+
+    @property
+    def native_value(self) -> float | None:
+        """Return today's energy in kWh, or None before any hour is known."""
+        return self.coordinator.lifetime.today_value(
+            self.entity_description.consumption_type, self._now
+        )
+
+    @property
+    def last_reset(self) -> datetime:
+        """Return the start of the local day the value belongs to."""
+        return local_day_bounds(self._now)[0]
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._now = dt_util.now()
         super()._handle_coordinator_update()
 
 

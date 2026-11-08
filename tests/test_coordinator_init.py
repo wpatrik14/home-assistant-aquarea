@@ -40,6 +40,16 @@ class _Base:
 LOGGER = object()
 
 
+class _LifetimeStore:
+    """Stands in for LifetimeStore (covered by tests/ha/test_lifetime.py)."""
+
+    def __init__(self, hass, entry_id):
+        pass
+
+    def tracker(self, device_id):
+        return object()
+
+
 def _load():
     with open(COORDINATOR, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
@@ -64,6 +74,7 @@ def _load():
         "_Base": _Base,
         "_LOGGER": LOGGER,
         "timedelta": timedelta,
+        "LifetimeStore": _LifetimeStore,
         "DOMAIN": "aquarea",
         "CONF_USERNAME": "username",
         "CONF_CONSUMPTION_INTERVAL": "consumption_interval",
@@ -94,7 +105,9 @@ def main():
     Extracted = _load()
     hass = object()
     entry = types.SimpleNamespace(
-        data={"username": "user@example.com"}, options={"consumption_interval": 30}
+        entry_id="entry-1",
+        data={"username": "user@example.com"},
+        options={"consumption_interval": 30},
     )
     device_info = types.SimpleNamespace(device_id="dev1")
     obj = Extracted(hass, entry, object(), device_info)

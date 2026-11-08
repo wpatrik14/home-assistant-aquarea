@@ -94,11 +94,38 @@
         }
       },
       "button": {
+        "rebuild_lifetime_consumption": {
+          "name": "Élettartam fogyasztás újraépítése"
+        },
         "request_defrost": {
           "name": "Leolvasztás kérése"
         }
       },
       "sensor": {
+        "heating_lifetime_energy_consumption": {
+          "name": "Teljes élettartam fűtési fogyasztás"
+        },
+        "cooling_lifetime_energy_consumption": {
+          "name": "Teljes élettartam hűtési fogyasztás"
+        },
+        "tank_lifetime_energy_consumption": {
+          "name": "Teljes élettartam tartály-fűtési fogyasztás"
+        },
+        "lifetime_energy_consumption": {
+          "name": "Teljes élettartam fogyasztás"
+        },
+        "heating_today_energy_consumption": {
+          "name": "Mai fűtési fogyasztás"
+        },
+        "cooling_today_energy_consumption": {
+          "name": "Mai hűtési fogyasztás"
+        },
+        "tank_today_energy_consumption": {
+          "name": "Mai tartály-fűtési fogyasztás"
+        },
+        "today_energy_consumption": {
+          "name": "Mai fogyasztás"
+        },
         "heating_accumulated_energy_consumption": {
           "name": "Halmozott fűtési fogyasztás"
         },
@@ -185,5 +212,10 @@
           "name": "Szabadság-időzítő"
         }
       }
+    },
+    "exceptions": {
+        "lifetime_sync_running": {
+            "message": "A fogyasztási előzmények olvasása éppen folyamatban van. Próbálja újra, amikor végzett."
+        }
     }
 }

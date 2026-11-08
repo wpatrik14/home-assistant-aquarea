@@ -79,7 +79,7 @@ def main():
         failures += not ok
         print(f"[{'PASS' if ok else 'FAIL'}] {name:<58} {detail}")
 
-    entry = types.SimpleNamespace(entry_id="entry-1")
+    entry = types.SimpleNamespace(entry_id="entry-1", runtime_data={})
 
     hass = _hass(True)
     result = asyncio.run(async_unload_entry(hass, entry))

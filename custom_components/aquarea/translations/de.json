@@ -94,11 +94,38 @@
         }
       },
       "button": {
+        "rebuild_lifetime_consumption": {
+          "name": "Gesamtverbrauch neu aufbauen"
+        },
         "request_defrost": {
           "name": "Abtauen anfordern"
         }
       },
       "sensor": {
+        "heating_lifetime_energy_consumption": {
+          "name": "Gesamtverbrauch Heizung (gesamte Laufzeit)"
+        },
+        "cooling_lifetime_energy_consumption": {
+          "name": "Gesamtverbrauch Kühlung (gesamte Laufzeit)"
+        },
+        "tank_lifetime_energy_consumption": {
+          "name": "Gesamtverbrauch Warmwasserspeicher (gesamte Laufzeit)"
+        },
+        "lifetime_energy_consumption": {
+          "name": "Gesamtverbrauch (gesamte Laufzeit)"
+        },
+        "heating_today_energy_consumption": {
+          "name": "Verbrauch Heizung heute"
+        },
+        "cooling_today_energy_consumption": {
+          "name": "Verbrauch Kühlung heute"
+        },
+        "tank_today_energy_consumption": {
+          "name": "Verbrauch Warmwasserspeicher heute"
+        },
+        "today_energy_consumption": {
+          "name": "Verbrauch heute"
+        },
         "heating_accumulated_energy_consumption": {
           "name": "Kumulierter Verbrauch Heizung"
         },
@@ -185,5 +212,10 @@
           "name": "Urlaubs-Timer"
         }
       }
+    },
+    "exceptions": {
+        "lifetime_sync_running": {
+            "message": "Der Verbrauchsverlauf wird gerade gelesen. Versuchen Sie es erneut, wenn er fertig ist."
+        }
     }
 }

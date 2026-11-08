@@ -1,7 +1,10 @@
 """Coordinator for Aquarea."""
 
+import asyncio
 from collections.abc import Callable
+import contextlib
 from datetime import date, datetime, time, timedelta
+import inspect
 import logging
 
 import aioaquarea
@@ -9,7 +12,7 @@ from aioaquarea.statistics import DateType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_USERNAME
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, ServiceValidationError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -28,6 +31,7 @@ from .issues import (
     async_clear_app_version_issue,
     async_create_app_version_issue,
 )
+from .lifetime import LifetimeStore, LifetimeTracker, hourly_totals, month_totals
 from .statistics import CLOUD_TIME_ZONE, cloud_date
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,6 +44,20 @@ AGREEMENT_NOT_ACCEPTED_MESSAGE = (
     "Panasonic updated its terms or privacy policy: open the Panasonic Comfort "
     "Cloud app and accept them, then Aquarea will recover on its own"
 )
+
+# Whether the installed aioaquarea-ng's get_device_consumption_report accepts
+# raise_on_error (see _async_lifetime_sync).
+try:
+    LIBRARY_RAISES_ON_ERROR = (
+        "raise_on_error"
+        in inspect.signature(aioaquarea.Client.get_device_consumption_report).parameters
+    )
+except AttributeError, TypeError, ValueError:
+    LIBRARY_RAISES_ON_ERROR = False
+
+# hass.data[DOMAIN] key of the lock every history request holds, so that the
+# devices of all entries never read their history at the same time.
+LIFETIME_LOCK = "lifetime_history_lock"
 
 # When the login itself is refused (an HTTP 403 "request is blocked" page from
 # Panasonic's edge security, for example) every poll would start another
@@ -76,8 +94,13 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         entry: ConfigEntry,
         client: aioaquarea.Client,
         device_info: aioaquarea.data.DeviceInfo,
+        lifetime_store: LifetimeStore | None = None,
     ) -> None:
-        """Initialize a data updater per Device."""
+        """Initialize a data updater per Device.
+
+        ``lifetime_store`` is the entry's loaded store of the lifetime totals,
+        shared by its devices (see lifetime.py).
+        """
 
         self._client = client
         self._entry = entry
@@ -100,6 +123,16 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         # Days whose query came back empty, so the warning is logged once.
         self._day_missing: set[date] = set()
         self._hourly_consumption_fetched_at: datetime | None = None
+
+        # Lifetime and today totals, persisted (see lifetime.py), and the
+        # background task that reads the history they are built on.
+        self.lifetime_store = lifetime_store or LifetimeStore(hass, entry.entry_id)
+        self.lifetime: LifetimeTracker = self.lifetime_store.tracker(
+            device_info.device_id
+        )
+        self._lifetime_task: asyncio.Task[None] | None = None
+        self._lifetime_listeners: list[Callable[[], None]] = []
+        self._lifetime_hours_seen: datetime | None = None
 
         # Weekly schedule: only read while an entity subscribes to it.
         self._weekly_timer: aioaquarea.WeeklyTimer | None = None
@@ -374,6 +407,129 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         if fetched:
             self._hourly_consumption_fetched_at = now
 
+    async def _async_update_lifetime(self, now: datetime) -> None:
+        """Feed the lifetime tracker with this refresh's data; never raises."""
+        try:
+            month = self._consumption_month
+            if month is not None and self._month_consumption:
+                today = cloud_date(now)
+                self.lifetime.observe_month(
+                    month, month_totals(self._month_consumption, today), today
+                )
+            fetched_at = self._hourly_consumption_fetched_at
+            if fetched_at is not None and fetched_at != self._lifetime_hours_seen:
+                self._lifetime_hours_seen = fetched_at
+                self.lifetime.observe_hours(hourly_totals(self.hourly_consumption), now)
+            await self.lifetime.async_save_if_needed()
+            self._maybe_start_lifetime_sync(now)
+        except Exception:
+            _LOGGER.exception("Failed to update the lifetime consumption")
+
+    def _maybe_start_lifetime_sync(self, now: datetime) -> None:
+        """Start the background sync of the history when it is due.
+
+        Never while a sync runs, the login is backing off after a refusal, or
+        the sync's own back-off after a failure has not passed.
+        """
+        if self._lifetime_task is not None and not self._lifetime_task.done():
+            return
+        if self._login_retry_at is not None and now < self._login_retry_at:
+            return
+        if not self.lifetime.sync_due(now):
+            return
+        self._lifetime_task = self._entry.async_create_background_task(
+            self.hass,
+            self._async_lifetime_sync(),
+            name=f"{DOMAIN} lifetime consumption {self._device_info.device_id}",
+        )
+
+    async def _async_lifetime_sync(self) -> None:
+        """Read the history (backfill, finished months); abort on any failure.
+
+        A failure of any kind, an HTTP 403 block or a refused login included,
+        ends the run and sets the time of the next attempt (hours later,
+        doubling). The progress made is kept.
+        """
+
+        async def fetch(end: date) -> aioaquarea.ConsumptionReport | None:
+            # With raise_on_error (aioaquarea-ng releases that have it) a
+            # failure is an exception and "no data" an empty report; older
+            # ones return None for both, which the tracker takes as a failure.
+            kwargs = {"raise_on_error": True} if LIBRARY_RAISES_ON_ERROR else {}
+            return await self._client.get_device_consumption_report(
+                self.device.long_id, DateType.YEAR, end.strftime("%Y%m01"), **kwargs
+            )
+
+        lock = self.hass.data.setdefault(DOMAIN, {}).setdefault(
+            LIFETIME_LOCK, asyncio.Lock()
+        )
+        try:
+            await self.lifetime.async_sync(fetch, lock)
+        except Exception as err:  # noqa: BLE001 - deliberate: any failure aborts and retries later
+            self.lifetime.note_failure(
+                dt_util.utcnow(), access=isinstance(err, aioaquarea.ApiError)
+            )
+            retry_at = self.lifetime.retry_at
+            _LOGGER.warning(
+                "Reading the consumption history failed (%s); trying again at %s",
+                err,
+                f"{dt_util.as_local(retry_at):%H:%M}" if retry_at else "?",
+            )
+        else:
+            self.lifetime.note_success()
+        finally:
+            self._notify_lifetime_listeners()
+
+    def async_add_lifetime_listener(
+        self, listener: Callable[[], None]
+    ) -> Callable[[], None]:
+        """Call ``listener`` when the history was read or rebuilt; returns the remover.
+
+        Only the lifetime sensors need it: a coordinator-wide update would
+        rewrite the state of every entity at an arbitrary moment.
+        """
+        self._lifetime_listeners.append(listener)
+
+        def _remove() -> None:
+            self._lifetime_listeners.remove(listener)
+
+        return _remove
+
+    def _notify_lifetime_listeners(self) -> None:
+        for listener in list(self._lifetime_listeners):
+            listener()
+
+    @property
+    def lifetime_sync_running(self) -> bool:
+        """Return whether the history is being read now."""
+        return self._lifetime_task is not None and not self._lifetime_task.done()
+
+    async def async_stop_lifetime_sync(self) -> None:
+        """Cancel the history read and wait until it has stopped."""
+        task = self._lifetime_task
+        if task is not None and not task.done():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+    async def async_rebuild_lifetime(self) -> None:
+        """Forget the stored history and read it again (the rebuild button)."""
+        if self.lifetime_sync_running:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="lifetime_sync_running"
+            )
+        month = self._consumption_month
+        now = dt_util.now()
+        today = cloud_date(now)
+        totals = (
+            month_totals(self._month_consumption, today)
+            if month is not None and self._month_consumption
+            else None
+        )
+        await self.lifetime.async_rebuild(month, totals, now, today)
+        self._notify_lifetime_listeners()
+        self._maybe_start_lifetime_sync(now)
+
     async def _async_login(self) -> None:
         """Log in, waiting out a back-off after Panasonic refused the login.
 
@@ -476,6 +632,9 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
 
             # 4. Fetch the weekly schedule, only while an entity wants it
             await self._async_fetch_weekly_timer(now)
+
+            # 5. Lifetime and today totals, from the data fetched above
+            await self._async_update_lifetime(now)
 
             # Panasonic accepts the app version again (or still does)
             async_clear_app_version_issue(self.hass, self._entry)

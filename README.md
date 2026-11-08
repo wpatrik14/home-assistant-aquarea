@@ -29,6 +29,8 @@ This integration is actively maintained. Please report any issues you find and a
 * Diagnostic sensors counting today's DHW heating, zone and defrost cycles.
 * Read-only diagnostic binary sensor showing whether the weekly schedule is switched on, with the scheduled days and the number of scheduled changes as attributes. Disabled by default; the schedule is only read (at most hourly) while it is enabled.
 * Energy consumption sensors: Accumulated (month to date, for the Energy dashboard) and Consumption (disabled by default; the energy published by the cloud since the previous fetch, 0 when nothing new, updated every consumption interval)
+* Lifetime consumption sensors (heating, cooling, tank, total): all the energy since the cloud's first record, for the Energy dashboard, see [Lifetime consumption](#lifetime-consumption)
+* Consumption today sensors (total enabled by default, heating, cooling and tank disabled): the energy of the current calendar day in your Home Assistant time zone, see [Daily and other period totals](#daily-and-other-period-totals)
 * Quiet mode select entity
 * Request defrost
 * Powerful mode select entity
@@ -37,6 +39,26 @@ This integration is actively maintained. Please report any issues you find and a
 * Force heater
 * Set the device in eco mode/comfort mode (if the device supports it).
 * Diagnostics download (account, IDs and names redacted)
+
+## Lifetime consumption
+The *Lifetime consumption* sensors (total, heating, tank and cooling; the cooling one is disabled by default, like the Accumulated one) report all the energy the heat pump has used since the cloud's first record. They are `total_increasing` energy sensors in kWh, so you can use them in the Energy dashboard.
+
+How they work:
+* **First start only: the history is read once.** After the first setup the integration reads the past consumption from the Aquarea Smart Cloud in the background (one request per two years, a few seconds apart, and never more than 15 years back), and stops at the month your unit was registered in the cloud. It does not delay the setup. Until it has finished, the lifetime sensors are *unknown*; this is deliberate, because the Energy dashboard would otherwise show the whole history as one huge spike when the figure jumps from a partial to the full value.
+* **It is not read again** on a restart, a reload, a reconfiguration, an options change or an update of the integration, nor after a failed refresh. The finished months are kept in Home Assistant's storage (`.storage/aquarea.lifetime.<entry id>`), kept when the entry is reloaded, and deleted only when you delete the integration. Only three things read the history again: no stored data exists (first install, or the file was deleted), the stored data is found corrupt, or you press the **Rebuild lifetime consumption** button (a configuration entity, disabled by default).
+* **An interrupted read resumes** where it stopped. If Panasonic refuses the requests (for example an HTTP 403 block of your IP address) or anything else fails, the read is aborted and tried again hours later (6 hours after a refusal, 1 hour after other failures, doubling up to 12 hours). It never retries in a loop.
+* **It grows with every refresh.** The value is the finished months plus the current month as the cloud reports it at the latest consumption refresh, so new energy is added as soon as Panasonic publishes it, and a day that Panasonic revises later is replaced, not added twice. The value never decreases.
+* **Use the Lifetime *or* the Accumulated sensors in the Energy dashboard, not both**, or the energy is counted twice.
+
+If a rebuild finds more history than before (for example Panasonic added older data), the lifetime figure rises once by the difference, and the Energy dashboard shows it as consumption in that hour. You can correct that in Developer Tools > Statistics ("Fix issue" or adjust the sum).
+
+## Daily and other period totals
+The *Consumption today* sensors are built from the hourly records the integration already fetches, so they cost no extra requests. They count the hours of the **local calendar day** of your Home Assistant time zone (23 or 25 hours on the days the clocks change), reset at local midnight (`state_class: total` with `last_reset`), and replace the value of an hour when Panasonic revises it. An hour that Panasonic publishes after midnight for the previous day is counted in that day, not in today. The cloud labels its own days in UTC, which is why the Accumulated sensors reset a few hours after the cloud's midnight, while the today sensors follow your local day. Only the total is enabled by default.
+
+For other periods (weekly, monthly, yearly, or a daily total that follows tariff hours) the integration does not create helpers. Build a **Utility Meter** helper on top of a lifetime sensor:
+1. Settings > Devices & services > Helpers > Create helper > Utility Meter.
+2. Name it (for example "Heat pump energy weekly"), choose **Weekly** (or Daily, Monthly, ...) as the meter reset cycle, and pick the *Lifetime consumption* sensor of your heat pump as the input sensor. Leave *Periodically resetting* off: the lifetime sensor never resets. Add tariffs if you want peak and off-peak totals.
+3. Submit. The new sensor can be used in the Energy dashboard or on a dashboard card.
 
 ## Features in the works
 * Improve translations
@@ -86,7 +108,7 @@ The minimum supported version of Home Assistant is **2026.3**. Older versions ca
 This integration follows standard integration removal; no extra steps are required in Home Assistant.
 
 1. Go to **Settings** > **Devices & services** and select **Aquarea Smart Cloud**.
-2. Next to the entry, select the three dots **⋮** menu, then **Delete**.
+2. Next to the entry, select the three dots **⋮** menu, then **Delete**. This also deletes the stored consumption history of the lifetime sensors (`.storage/aquarea.lifetime.<entry id>`); removing only the files does not.
 
 To also remove the files:
 - **HACS:** open HACS, find **Aquarea Smart Cloud**, select the three dots **⋮** menu, then **Remove**, and restart Home Assistant.

@@ -20,6 +20,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.aquarea import lifetime
 from custom_components.aquarea.const import DOMAIN
 
 USERNAME = "User@Example.com"
@@ -39,6 +40,13 @@ def auto_enable_custom_integrations(
     the plugin's in-memory recorder. `recorder_mock` has to be requested
     before `hass`, which an autouse fixture guarantees.
     """
+
+
+@pytest.fixture(autouse=True)
+def no_lifetime_pauses(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Skip the pauses of the history backfill (30 s at the start, 5 s between requests)."""
+    monkeypatch.setattr(lifetime, "LIFETIME_START_DELAY", 0)
+    monkeypatch.setattr(lifetime, "LIFETIME_REQUEST_DELAY", 0)
 
 
 def _make_zone() -> MagicMock:
@@ -129,6 +137,10 @@ def mock_aquarea_client(
     client.get_devices.return_value = [mock_device_info]
     client.get_device.return_value = mock_device
     client.get_device_consumption.return_value = []
+    # The lifetime history backfill (a background task) asks for YEAR windows;
+    # None is "no data", which keeps it from finishing. tests/ha/test_lifetime.py
+    # sets real reports.
+    client.get_device_consumption_report.return_value = None
     with patch("aioaquarea.Client", return_value=client):
         yield client
 

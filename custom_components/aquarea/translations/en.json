@@ -104,11 +104,38 @@
         }
       },
       "button": {
+        "rebuild_lifetime_consumption": {
+          "name": "Rebuild lifetime consumption"
+        },
         "request_defrost": {
           "name": "Request defrost"
         }
       },
       "sensor": {
+        "heating_lifetime_energy_consumption": {
+          "name": "Heating lifetime consumption"
+        },
+        "cooling_lifetime_energy_consumption": {
+          "name": "Cooling lifetime consumption"
+        },
+        "tank_lifetime_energy_consumption": {
+          "name": "Tank lifetime consumption"
+        },
+        "lifetime_energy_consumption": {
+          "name": "Lifetime consumption"
+        },
+        "heating_today_energy_consumption": {
+          "name": "Heating consumption today"
+        },
+        "cooling_today_energy_consumption": {
+          "name": "Cooling consumption today"
+        },
+        "tank_today_energy_consumption": {
+          "name": "Tank consumption today"
+        },
+        "today_energy_consumption": {
+          "name": "Consumption today"
+        },
         "heating_accumulated_energy_consumption": {
           "name": "Heating accumulated consumption"
         },
@@ -195,5 +222,10 @@
           "name": "Holiday timer"
         }
       }
+    },
+    "exceptions": {
+        "lifetime_sync_running": {
+            "message": "The consumption history is being read right now. Try again when it has finished."
+        }
     }
 }

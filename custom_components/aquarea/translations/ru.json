@@ -94,11 +94,38 @@
             }
         },
         "button": {
+            "rebuild_lifetime_consumption": {
+                "name": "Пересобрать общее потребление"
+            },
             "request_defrost": {
                 "name": "Запросить разморозку"
             }
         },
         "sensor": {
+            "heating_lifetime_energy_consumption": {
+                "name": "Общее потребление на отопление за всё время"
+            },
+            "cooling_lifetime_energy_consumption": {
+                "name": "Общее потребление на охлаждение за всё время"
+            },
+            "tank_lifetime_energy_consumption": {
+                "name": "Общее потребление на нагрев бака за всё время"
+            },
+            "lifetime_energy_consumption": {
+                "name": "Общее потребление за всё время"
+            },
+            "heating_today_energy_consumption": {
+                "name": "Потребление на отопление сегодня"
+            },
+            "cooling_today_energy_consumption": {
+                "name": "Потребление на охлаждение сегодня"
+            },
+            "tank_today_energy_consumption": {
+                "name": "Потребление на нагрев бака сегодня"
+            },
+            "today_energy_consumption": {
+                "name": "Потребление сегодня"
+            },
             "heating_accumulated_energy_consumption": {
                 "name": "Накопленное потребление на отопление"
             },
@@ -184,6 +211,11 @@
             "holiday_timer": {
                 "name": "Таймер отпуска"
             }
+        }
+    },
+    "exceptions": {
+        "lifetime_sync_running": {
+            "message": "История потребления сейчас считывается. Повторите попытку после завершения."
         }
     }
 }
