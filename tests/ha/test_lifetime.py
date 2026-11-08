@@ -171,7 +171,7 @@ def test_a_state_with_history_round_trips() -> None:
 @pytest.mark.parametrize(
     "damage",
     [
-        lambda s: s.pop("months"),
+        lambda s: s.update(months="x"),
         lambda s: s.update(complete="yes"),
         lambda s: s.update(windows=-1),
         lambda s: s.update(cursor="2026-10"),
@@ -276,15 +276,15 @@ async def test_a_report_without_buckets_is_an_empty_window() -> None:
     assert tracker.lifetime_value(HEAT) == 1.0
 
 
-async def test_an_empty_report_without_a_registration_month_ends_after_two_windows() -> (
-    None
-):
-    """Two windows without energy end the history when the month is unknown."""
-    cloud = Cloud({}, register=None, empty=True)
+async def test_a_report_with_neither_buckets_nor_registration_is_a_glitch() -> None:
+    """Two such answers cannot end the history as "empty": they are failures."""
     tracker = started()
-    await sync(tracker, cloud)
-    assert cloud.calls == ["202609", "202409"]
-    assert tracker.state["ended_by"] == "empty"
+    for _ in range(2):
+        with pytest.raises(LifetimeSyncError, match="No consumption data"):
+            await sync(tracker, Cloud({}, register=None, empty=True))
+    assert not tracker.complete
+    assert tracker.state["windows"] == 0
+    assert tracker.state["none_responses"] == 2
 
 
 async def test_the_backfill_is_capped_at_fifteen_years() -> None:
@@ -292,7 +292,7 @@ async def test_the_backfill_is_capped_at_fifteen_years() -> None:
     cloud = Cloud(monthly("200001", "202609"), register=None)
     tracker = started()
     await sync(tracker, cloud)
-    assert len(cloud.calls) == lifetime.MAX_WINDOWS == 8
+    assert len(cloud.calls) == lifetime.MAX_WINDOWS == 7  # 14 years
     assert tracker.state["ended_by"] == "cap"
     assert tracker.complete
 
@@ -376,33 +376,56 @@ async def test_none_is_a_failure_once_the_registration_month_is_known() -> None:
     assert tracker.state["none_responses"] == 1
 
 
-async def test_none_never_ends_the_history_before_five_answers_over_three_days(
+async def test_none_ends_the_history_after_five_answers_over_three_days(
     freezer: FrozenDateTimeFactory,
 ) -> None:
-    """None never ends the history before five answers over three days."""
+    """With some history read, the old library's endless None is the start of it."""
     freezer.move_to(datetime(2026, 10, 20, 12, tzinfo=UTC))
     tracker = started()
-    for _ in range(4):
-        with pytest.raises(LifetimeSyncError):
-            await sync(tracker, Cloud({}, register=None, script=[None]))
+    months = monthly("202408", "202609")
+    with pytest.raises(LifetimeSyncError):
+        await sync(tracker, Cloud(months, script=["ok", None]))
+    assert tracker.state["windows"] == 1
+    for _ in range(3):
         freezer.tick(timedelta(hours=18))
+        with pytest.raises(LifetimeSyncError):
+            await sync(tracker, Cloud(months, script=[None]))
     assert tracker.state["none_responses"] == 4
-    # The 5th answer, 3 days after the first: taken as the end of the history.
-    await sync(tracker, Cloud({}, register=None, script=[None]))
+    # The 5th answer, 3 days after the first: taken as the start of the history.
+    freezer.tick(timedelta(hours=18))
+    await sync(tracker, Cloud(months, script=[None]))
     assert tracker.complete
     assert tracker.state["ended_by"] == "no_data"
+    assert tracker.lifetime_value(HEAT) == 2400.0
+
+
+async def test_none_for_the_first_window_never_ends_the_history(
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """With nothing read, there is no history to end: it stays a failure."""
+    freezer.move_to(datetime(2026, 10, 20, 12, tzinfo=UTC))
+    tracker = started()
+    for _ in range(8):
+        with pytest.raises(LifetimeSyncError):
+            await sync(tracker, Cloud({}, register=None, script=[None]))
+        freezer.tick(timedelta(hours=24))
+    assert not tracker.complete
+    assert tracker.state["none_responses"] == 8
 
 
 async def test_five_quick_nones_are_not_enough(
     freezer: FrozenDateTimeFactory,
 ) -> None:
-    """Five quick nones are not enough."""
+    """Five answers within hours are an outage, not the start of the history."""
     tracker = started()
+    months = monthly("202408", "202609")
+    with pytest.raises(LifetimeSyncError):
+        await sync(tracker, Cloud(months, script=["ok", None]))
     for _ in range(6):
         with pytest.raises(LifetimeSyncError):
-            await sync(tracker, Cloud({}, register=None, script=[None]))
+            await sync(tracker, Cloud(months, script=[None]))
     assert not tracker.complete
-    assert tracker.state["none_responses"] == 6
+    assert tracker.state["none_responses"] == 7
 
 
 async def test_a_good_window_resets_the_none_count() -> None:
@@ -902,3 +925,93 @@ async def test_repairing_a_future_open_month_drops_the_months_after_the_shown_on
     tracker.observe_month(OPEN, totals(heat=10.0), TODAY)
     assert tracker.state["months"] == {"202609": totals(heat=1.0)}
     assert not tracker.state["pending"]
+
+
+# --- implausible values, schema changes ----------------------------------------
+
+
+async def test_a_glitch_month_in_a_window_is_not_stored_and_the_state_stays_valid() -> (
+    None
+):
+    """A 60,000 kWh month would make the state look corrupt at the next start."""
+    months = monthly("202408", "202609")
+    months["202501"] = (60_000.0, 0.0, 0.0)
+    tracker = started()
+    await sync(tracker, Cloud(months))
+    assert "202501" not in tracker.state["months"]
+    assert validate_state(json.loads(json.dumps(tracker.state))) is not None
+    assert restart(tracker).complete
+    assert tracker.lifetime_value(HEAT) == 2500.0
+
+
+async def test_a_glitch_hour_is_not_stored_and_the_state_stays_valid() -> None:
+    """65,535 kWh in an hour is a cloud placeholder, not energy."""
+    tracker = new_tracker()
+    now = datetime(2026, 11, 8, 5, tzinfo=UTC)
+    tracker.observe_hours(
+        {
+            datetime(2026, 11, 8, 3, tzinfo=UTC): totals(heat=65_535.0),
+            datetime(2026, 11, 8, 4, tzinfo=UTC): totals(heat=0.5),
+        },
+        now,
+    )
+    assert validate_state(json.loads(json.dumps(tracker.state))) is not None
+    assert tracker.state["hours"]["2026-11-08T03:00:00+00:00"] == totals()
+    assert tracker.state["hours"]["2026-11-08T04:00:00+00:00"] == totals(heat=0.5)
+
+
+def test_a_glitch_day_does_not_count_in_the_month() -> None:
+    """A day above the plausibility limit is skipped; the others count."""
+    records = [
+        Consumption({"dataTime": "20261001", "heatConsumption": 1.0}),
+        Consumption({"dataTime": "20261002", "heatConsumption": 60_000.0}),
+    ]
+    month = lifetime.month_totals(records, TODAY)
+    assert month["heat"] == 1.0
+    tracker = new_tracker()
+    tracker.observe_month(OPEN, month, TODAY)
+    assert validate_state(json.loads(json.dumps(tracker.state))) is not None
+
+
+def test_observed_totals_above_the_limits_are_zeroed() -> None:
+    """The tracker does not trust its callers: nothing implausible is stored."""
+    tracker = new_tracker()
+    tracker.observe_month(OPEN, totals(heat=60_000.0, tank=3.0), TODAY)
+    assert tracker.state["open"] == totals(tank=3.0)
+
+
+async def test_today_is_rounded_to_three_decimals(hass: HomeAssistant) -> None:
+    """Float sums do not leak into the state."""
+    await set_zone(hass, "UTC")
+    tracker = new_tracker()
+    now = datetime(2026, 11, 8, 12, tzinfo=UTC)
+    tracker.observe_hours(
+        {
+            datetime(2026, 11, 8, 1, tzinfo=UTC): totals(heat=0.1),
+            datetime(2026, 11, 8, 2, tzinfo=UTC): totals(heat=0.2),
+        },
+        now,
+    )
+    assert tracker.today_value(HEAT, now) == 0.3
+
+
+def test_a_state_from_an_older_version_loads_in_a_newer_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A key added later takes its default: nobody reads the history again."""
+    tracker = started(heat=3.0)
+    tracker.state["complete"] = True
+    tracker.state["floor"] = totals(heat=1234.5)
+    tracker.state["months"] = {"202609": totals(heat=100.0)}
+    stored = json.loads(json.dumps(tracker.state))
+
+    original = lifetime.fresh_state
+    monkeypatch.setattr(lifetime, "fresh_state", lambda: {**original(), "added": 7})
+    loaded = validate_state(stored)
+    assert loaded is not None
+    assert loaded["added"] == 7
+    assert loaded["complete"] is True
+    assert loaded["floor"] == totals(heat=1234.5)
+    assert loaded["months"] == {"202609": totals(heat=100.0)}
+    # And a wrong type in a key the old version did not write is still invalid.
+    assert validate_state({**stored, "complete": "yes"}) is None

@@ -9,10 +9,12 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
 import aioaquarea
+from aioaquarea.decorators import auth_required
 from aioaquarea.statistics import Consumption, ConsumptionReport, DateType
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.components.recorder.statistics import statistics_during_period
@@ -812,10 +814,26 @@ async def test_the_today_sensor_follows_the_local_day(
     assert value(hass, TODAY) == 4.75
     assert value(hass, TODAY) == 4.75
 
-    # Local midnight: a new day, last_reset moves, only the new day counts.
-    world.hours["20261108"][23] = 0.4  # local 00:00 of the 9th
+    # Local midnight (23:00 UTC). The day's last hour (22:00 UTC, local 23:00)
+    # is published at about 00:05 local, after midnight: the sensor still shows
+    # the finished day, complete, with its own last_reset, until 03:00.
+    world.hours["20261108"][22] = 0.6
+    world.hours["20261108"][23] = 0.4  # local 00:00 of the 9th: the next day
     await at(hass, freezer, datetime(2026, 11, 8, 23, 20, tzinfo=UTC))
-    assert value(hass, TODAY) == 0.4
+    assert value(hass, TODAY) == 5.35
+    assert (
+        hass.states.get(TODAY)
+        .attributes["last_reset"]
+        .startswith("2026-11-08T00:00:00+01:00")
+    )
+    await at(hass, freezer, datetime(2026, 11, 9, 1, 50, tzinfo=UTC))
+    assert value(hass, TODAY) == 5.35
+
+    # From 03:00 local the new day is shown: only its own hours, a new
+    # last_reset.
+    world.hours["20261109"] = {1: 0.25}
+    await at(hass, freezer, datetime(2026, 11, 9, 2, 5, tzinfo=UTC))
+    assert value(hass, TODAY) == 0.65
     assert (
         hass.states.get(TODAY)
         .attributes["last_reset"]
@@ -926,6 +944,7 @@ async def test_the_library_is_asked_to_raise_on_error_when_it_can(
 ) -> None:
     """aioaquarea-ng releases with raise_on_error get it; older ones are not asked."""
     monkeypatch.setattr(coordinator_module, "LIBRARY_RAISES_ON_ERROR", False)
+    monkeypatch.setattr(coordinator_module, "LIBRARY_RETRY_LOGIN", False)
     await setup_entry(hass, mock_config_entry, freezer, NOW)
     kwargs = [
         c.kwargs
@@ -934,6 +953,7 @@ async def test_the_library_is_asked_to_raise_on_error_when_it_can(
     assert kwargs == [{}, {}]
 
     monkeypatch.setattr(coordinator_module, "LIBRARY_RAISES_ON_ERROR", True)
+    monkeypatch.setattr(coordinator_module, "LIBRARY_RETRY_LOGIN", True)
     mock_aquarea_client.get_device_consumption_report.reset_mock()
     coord = coordinator(mock_config_entry)
     await coord.async_rebuild_lifetime()
@@ -942,7 +962,7 @@ async def test_the_library_is_asked_to_raise_on_error_when_it_can(
         c.kwargs
         for c in mock_aquarea_client.get_device_consumption_report.call_args_list
     ]
-    assert kwargs == [{"raise_on_error": True}] * 2
+    assert kwargs == [{"raise_on_error": True, "retry_login": False}] * 2
 
 
 async def test_an_error_in_the_lifetime_update_does_not_fail_the_poll(
@@ -978,3 +998,203 @@ async def test_an_unreadable_storage_file_does_not_stop_the_setup(
         await setup_entry(hass, mock_config_entry, freezer, NOW)
     assert "Unreadable lifetime consumption storage" in caplog.text
     assert world.year.calls == ["202609", "202409"]
+
+
+async def test_the_recorder_gets_every_hour_of_the_day(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """The hour published after midnight is in the finished day's last state."""
+    world.hours["20261108"] = {21: 1.0}
+    await setup_entry(
+        hass, mock_config_entry, freezer, datetime(2026, 11, 8, 22, 40, tzinfo=UTC)
+    )
+    states = [value(hass, TODAY)]
+    assert states[-1] == 1.0
+    # 22:00-23:00 UTC is the day's last hour; it is published at 23:05 UTC.
+    world.hours["20261108"][22] = 0.5
+    for when in (
+        datetime(2026, 11, 8, 23, 6, tzinfo=UTC),
+        datetime(2026, 11, 9, 0, 30, tzinfo=UTC),
+        datetime(2026, 11, 9, 1, 50, tzinfo=UTC),
+    ):
+        await at(hass, freezer, when)
+        states.append(value(hass, TODAY))
+    assert states == [1.0, 1.5, 1.5, 1.5]
+
+
+# --- implausible data, locks, stopping ------------------------------------------------
+
+
+async def test_a_glitch_in_the_history_does_not_make_the_stored_state_invalid(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_config_entry: MockConfigEntry,
+    hass_storage: dict,
+) -> None:
+    """The next start accepts what this one wrote: no history read again."""
+    world.year.months["202501"] = (60_000.0, 0.0, 0.0)
+    world.hours["20261020"] = {3: 65_535.0, 4: 0.5}
+    await setup_entry(hass, mock_config_entry, freezer, NOW)
+    assert world.year.calls == ["202609", "202409"]
+    assert value(hass, HEATING) == BASE_HEAT - 100.0
+
+    assert await hass.config_entries.async_reload(mock_config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert world.year.calls == ["202609", "202409"]
+    assert value(hass, HEATING) == BASE_HEAT - 100.0
+
+
+async def test_two_config_entries_never_read_the_history_at_the_same_time(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_aquarea_client: AsyncMock,
+    mock_device_info: MagicMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """The lock is shared across entries, not just devices."""
+    second = MagicMock(spec=aioaquarea.DeviceInfo)
+    second.device_id = "second-device-id"
+    second.long_id = "second-long-id"
+    second.name = "Second pump"
+    second.model = "WH-TEST"
+    second.firmware_version = "1.0.0"
+    second.has_tank = True
+    mock_aquarea_client.get_devices.side_effect = [[mock_device_info], [second]]
+    other = MockConfigEntry(
+        domain=DOMAIN,
+        title="other@example.com",
+        unique_id="other@example.com",
+        data={"username": "other@example.com", "password": "x"},
+    )
+    other.add_to_hass(hass)
+    await setup_entry(hass, mock_config_entry, freezer, NOW)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert other.state is ConfigEntryState.LOADED
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    assert world.max_in_flight == 1
+    assert len(world.year.calls) == 4
+
+
+class _RefusingClient:
+    """A client with the library's real auth_required decorator, refused by a 403."""
+
+    logger = logging.getLogger("refusing client")
+    is_refresh_login_enabled = True
+    is_logged = True
+
+    def __init__(self) -> None:
+        self.requests = 0
+        self.logins = 0
+
+    async def login(self) -> None:
+        self.logins += 1
+        raise aioaquarea.AuthenticationError(
+            aioaquarea.AuthenticationErrorCodes.API_ERROR, "blocked"
+        )
+
+    @auth_required
+    async def get_device_consumption_report(
+        self, long_id: str, date_type: DateType, date_str: str, **kwargs: object
+    ) -> ConsumptionReport:
+        self.requests += 1
+        raise aioaquarea.AuthenticationError(
+            aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED,
+            "Request rejected with status 403",
+        )
+
+
+async def test_a_403_adds_no_request_and_the_other_device_waits_out_the_block(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_aquarea_client: AsyncMock,
+    mock_device_info: MagicMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """Through the library's real decorator: one request is sent, in all.
+
+    The decorator logs in again and repeats the request unless the call says
+    retry_login=False (releases that have it); a refused login is no worse
+    than one request plus one login attempt. The second device's request is
+    refused inside the lock, before it is sent, by the block the first found.
+    """
+    refusing = _RefusingClient()
+    mock_aquarea_client.get_device_consumption_report = (
+        refusing.get_device_consumption_report
+    )
+    second = MagicMock(spec=aioaquarea.DeviceInfo)
+    second.device_id = "second-device-id"
+    second.long_id = "second-long-id"
+    second.name = "Second pump"
+    second.model = "WH-TEST"
+    second.firmware_version = "1.0.0"
+    second.has_tank = True
+    mock_aquarea_client.get_devices.return_value = [mock_device_info, second]
+    await setup_entry(hass, mock_config_entry, freezer, NOW)
+
+    assert refusing.requests == 1
+    assert refusing.logins == (0 if coordinator_module.LIBRARY_RETRY_LOGIN else 1)
+    for coord in mock_config_entry.runtime_data.values():
+        assert not coord.lifetime.complete
+        assert coord.lifetime.retry_at >= NOW + timedelta(hours=6)
+    # The poll keeps working, and nothing is sent while the block lasts.
+    await at(hass, freezer, NOW + timedelta(hours=3))
+    await at(hass, freezer, NOW + timedelta(hours=5, minutes=59))
+    assert refusing.requests == 1
+    assert not hass.config_entries.flow.async_progress()
+
+
+async def test_a_device_does_not_send_while_the_login_is_refused_or_missing(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """Without a login the request is not sent: the poll logs in first."""
+    mock_aquarea_client.is_logged = False
+    await setup_entry(hass, mock_config_entry, freezer, NOW)
+    assert world.year.calls == []
+    tracker = coordinator(mock_config_entry).lifetime
+    assert tracker.state["failures"] == 1
+    assert tracker.retry_at == NOW + timedelta(hours=1)  # not the 6 h of a block
+
+    mock_aquarea_client.is_logged = True
+    await at(hass, freezer, NOW + timedelta(hours=1, minutes=1))
+    assert tracker.complete
+
+
+async def test_a_refresh_during_the_unload_cannot_start_or_save_anything(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_config_entry: MockConfigEntry,
+    hass_storage: dict,
+) -> None:
+    """After the stop, no new read and no save: no orphan file after a delete."""
+    await setup_entry(hass, mock_config_entry, freezer, NOW)
+    coord = coordinator(mock_config_entry)
+    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    calls = list(world.year.calls)
+
+    # A refresh that was already running reaches the end of its update.
+    world.months["202610"] = {"20261020": 77.0}
+    world.hours["20261020"] = {9: 1.0}
+    coord.lifetime.state["complete"] = False  # something that wants a sync
+    await coord._async_update_lifetime(NOW)  # noqa: SLF001
+    coord._maybe_start_lifetime_sync(NOW + timedelta(hours=9))  # noqa: SLF001
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert not coord.lifetime_sync_running
+    assert world.year.calls == calls
+
+    # Deleting the entry removes the file, and nothing writes it again.
+    await hass.config_entries.async_remove(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    async_fire_time_changed(hass, NOW + timedelta(minutes=5))
+    await hass.async_block_till_done()
+    assert store_key(mock_config_entry) not in hass_storage

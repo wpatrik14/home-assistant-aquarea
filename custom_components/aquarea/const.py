@@ -55,15 +55,21 @@ LIFETIME_EMPTY_WINDOWS_STOP = 2
 # requests) and between two requests, in seconds.
 LIFETIME_START_DELAY = 30
 LIFETIME_REQUEST_DELAY = 5
-# The backfill takes "no data" answers as the end of the history only when the
-# registration month of the unit never became known, and then only after this
-# many such answers spread over at least this long (the library cannot tell
-# "no data" from a failed request). Otherwise they are failures to retry.
+# A "no data" answer (aioaquarea-ng 1.5.0 returns None for it and for failures
+# alike) is a failure to retry; this many of them for the same window, over at
+# least this long, with some history already read, take it as the start of the
+# history. Libraries with raise_on_error never answer None.
 LIFETIME_NO_DATA_MIN_RESPONSES = 5
 LIFETIME_NO_DATA_MIN_SPAN = timedelta(hours=72)
-# A month with more energy than this (per kind) is not plausible: stored data
-# holding one is treated as corrupt.
+# Plausibility limits per kind. A bucket above them is a cloud glitch: it is
+# counted as 0 when read, so the stored data never holds such a value (a stored
+# value above the month limit is what makes the state look corrupt).
+LIFETIME_MAX_HOUR_KWH = 50
+LIFETIME_MAX_DAY_KWH = 1_200
 LIFETIME_MAX_MONTH_KWH = 50_000
+# The today sensors keep showing the previous local day until this long after
+# its end: the cloud publishes the last hour of a day about an hour after it.
+LIFETIME_TODAY_SETTLE = timedelta(hours=3)
 # A finished month is looked up once more this long after it ended, for hours
 # the cloud published late; the larger figure wins.
 LIFETIME_RECONCILE_DELAY = timedelta(hours=24)

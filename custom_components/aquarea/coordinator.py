@@ -1,7 +1,7 @@
 """Coordinator for Aquarea."""
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 import contextlib
 from datetime import date, datetime, time, timedelta
 import inspect
@@ -31,7 +31,13 @@ from .issues import (
     async_clear_app_version_issue,
     async_create_app_version_issue,
 )
-from .lifetime import LifetimeStore, LifetimeTracker, hourly_totals, month_totals
+from .lifetime import (
+    LifetimeBlockedError,
+    LifetimeStore,
+    LifetimeTracker,
+    hourly_totals,
+    month_totals,
+)
 from .statistics import CLOUD_TIME_ZONE, cloud_date
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,19 +51,25 @@ AGREEMENT_NOT_ACCEPTED_MESSAGE = (
     "Cloud app and accept them, then Aquarea will recover on its own"
 )
 
-# Whether the installed aioaquarea-ng's get_device_consumption_report accepts
-# raise_on_error (see _async_lifetime_sync).
+# Which optional arguments the installed aioaquarea-ng's
+# get_device_consumption_report accepts (see _async_lifetime_sync):
+# raise_on_error (failures raise, "no data" is an empty report) and retry_login
+# (False: an expired-token error is raised instead of logging in and asking
+# again). Older releases have neither.
 try:
-    LIBRARY_RAISES_ON_ERROR = (
-        "raise_on_error"
-        in inspect.signature(aioaquarea.Client.get_device_consumption_report).parameters
-    )
+    _REPORT_PARAMETERS: Collection[str] = inspect.signature(
+        aioaquarea.Client.get_device_consumption_report
+    ).parameters
 except AttributeError, TypeError, ValueError:
-    LIBRARY_RAISES_ON_ERROR = False
+    _REPORT_PARAMETERS = ()
+LIBRARY_RAISES_ON_ERROR = "raise_on_error" in _REPORT_PARAMETERS
+LIBRARY_RETRY_LOGIN = "retry_login" in _REPORT_PARAMETERS
 
-# hass.data[DOMAIN] key of the lock every history request holds, so that the
-# devices of all entries never read their history at the same time.
+# hass.data[DOMAIN] keys: the lock every history request holds, so that the
+# devices of all entries never read their history at the same time, and the
+# time until which none may be sent after one device was refused.
 LIFETIME_LOCK = "lifetime_history_lock"
+LIFETIME_BLOCKED_UNTIL = "lifetime_history_blocked_until"
 
 # When the login itself is refused (an HTTP 403 "request is blocked" page from
 # Panasonic's edge security, for example) every poll would start another
@@ -132,6 +144,7 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         )
         self._lifetime_task: asyncio.Task[None] | None = None
         self._lifetime_listeners: list[Callable[[], None]] = []
+        self._lifetime_stopped = False
         self._lifetime_hours_seen: datetime | None = None
 
         # Weekly schedule: only read while an entity subscribes to it.
@@ -409,6 +422,8 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
 
     async def _async_update_lifetime(self, now: datetime) -> None:
         """Feed the lifetime tracker with this refresh's data; never raises."""
+        if self._lifetime_stopped:
+            return
         try:
             month = self._consumption_month
             if month is not None and self._month_consumption:
@@ -431,6 +446,8 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         Never while a sync runs, the login is backing off after a refusal, or
         the sync's own back-off after a failure has not passed.
         """
+        if self._lifetime_stopped:
+            return
         if self._lifetime_task is not None and not self._lifetime_task.done():
             return
         if self._login_retry_at is not None and now < self._login_retry_at:
@@ -451,25 +468,52 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         doubling). The progress made is kept.
         """
 
+        data = self.hass.data.setdefault(DOMAIN, {})
+        lock = data.setdefault(LIFETIME_LOCK, asyncio.Lock())
+
+        def gate() -> None:
+            """Refuse a request that would add to a block or has no login."""
+            now = dt_util.utcnow()
+            blocked_until = data.get(LIFETIME_BLOCKED_UNTIL)
+            if blocked_until is not None and now < blocked_until:
+                raise LifetimeBlockedError(
+                    "Panasonic refused a history request; waiting", access=True
+                )
+            if not self._client.is_logged:
+                raise LifetimeBlockedError("Not logged in")
+            if self._login_retry_at is not None and now < self._login_retry_at:
+                raise LifetimeBlockedError("The login is backing off")
+
         async def fetch(end: date) -> aioaquarea.ConsumptionReport | None:
             # With raise_on_error (aioaquarea-ng releases that have it) a
             # failure is an exception and "no data" an empty report; older
             # ones return None for both, which the tracker takes as a failure.
-            kwargs = {"raise_on_error": True} if LIBRARY_RAISES_ON_ERROR else {}
+            # retry_login=False keeps the library from logging in and sending
+            # the request a second time after a 403.
+            kwargs: dict[str, bool] = {}
+            if LIBRARY_RAISES_ON_ERROR:
+                kwargs["raise_on_error"] = True
+            if LIBRARY_RETRY_LOGIN:
+                kwargs["retry_login"] = False
             return await self._client.get_device_consumption_report(
                 self.device.long_id, DateType.YEAR, end.strftime("%Y%m01"), **kwargs
             )
 
-        lock = self.hass.data.setdefault(DOMAIN, {}).setdefault(
-            LIFETIME_LOCK, asyncio.Lock()
-        )
         try:
-            await self.lifetime.async_sync(fetch, lock)
+            await self.lifetime.async_sync(fetch, lock, gate)
         except Exception as err:  # noqa: BLE001 - deliberate: any failure aborts and retries later
-            self.lifetime.note_failure(
-                dt_util.utcnow(), access=isinstance(err, aioaquarea.ApiError)
+            access = isinstance(err, aioaquarea.ApiError) or getattr(
+                err, "access", False
             )
+            self.lifetime.note_failure(dt_util.utcnow(), access=access)
             retry_at = self.lifetime.retry_at
+            if (
+                isinstance(err, aioaquarea.ApiError)
+                and retry_at is not None
+                and (data.get(LIFETIME_BLOCKED_UNTIL) or retry_at) <= retry_at
+            ):
+                # Every device waits for the same time, not just this one.
+                data[LIFETIME_BLOCKED_UNTIL] = retry_at
             _LOGGER.warning(
                 "Reading the consumption history failed (%s); trying again at %s",
                 err,
@@ -505,7 +549,12 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         return self._lifetime_task is not None and not self._lifetime_task.done()
 
     async def async_stop_lifetime_sync(self) -> None:
-        """Cancel the history read and wait until it has stopped."""
+        """Cancel the history read, wait until it has stopped, and stay stopped.
+
+        A refresh still running during an unload then neither starts another
+        read nor schedules a save after the final one.
+        """
+        self._lifetime_stopped = True
         task = self._lifetime_task
         if task is not None and not task.done():
             task.cancel()

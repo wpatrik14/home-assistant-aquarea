@@ -22,6 +22,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
+from .const import LIFETIME_TODAY_SETTLE
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 from .entity import AquareaBaseEntity
 from .lifetime import local_day_bounds
@@ -903,6 +904,7 @@ class EnergyLifetimeSensor(AquareaEnergySensor, SensorEntity, RestoreEntity):
 class EnergyTodaySensor(AquareaBaseEntity, SensorEntity):
     """The energy consumed in the local calendar day, up to the last cloud hour.
 
+    The day changes 3 hours after local midnight (see ``_presented_time``).
     Built from the cloud's hourly records (the same fetches as the hourly
     statistics, no extra requests) that fall between the local midnights.
     An hour the cloud revises replaces its old value, and an hour published
@@ -920,11 +922,22 @@ class EnergyTodaySensor(AquareaBaseEntity, SensorEntity):
         super().__init__(coordinator)
         self._attr_unique_id = f"{super().unique_id}_{description.key}"
         self.entity_description = description
-        self._now = dt_util.now()
+        self._now = self._presented_time()
+
+    @staticmethod
+    def _presented_time() -> datetime:
+        """Return a moment inside the day to present.
+
+        The cloud publishes the last hour of a day about an hour after it
+        ends, so the day only changes LIFETIME_TODAY_SETTLE after local
+        midnight; until then the finished day keeps being shown, complete, with
+        its own last_reset, and the recorder gets every hour of it.
+        """
+        return dt_util.now() - LIFETIME_TODAY_SETTLE
 
     async def async_added_to_hass(self) -> None:
         """Take the time of the first state write."""
-        self._now = dt_util.now()
+        self._now = self._presented_time()
         await super().async_added_to_hass()
 
     @property
@@ -941,7 +954,7 @@ class EnergyTodaySensor(AquareaBaseEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        self._now = dt_util.now()
+        self._now = self._presented_time()
         super()._handle_coordinator_update()
 
 

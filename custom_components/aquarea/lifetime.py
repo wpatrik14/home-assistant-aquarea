@@ -49,7 +49,9 @@ few days. "Today" is the sum of the hours that start within the local calendar
 day, from the local midnight to the next one (23 or 25 hours on the days the
 clocks change). An hour is a key of the stored map, so a revised hour replaces
 its old value, and an hour published after midnight for the previous day
-belongs to the previous day by its own timestamp and never to today.
+belongs to the previous day by its own timestamp and never to today. The
+sensors keep presenting a finished day for ``LIFETIME_TODAY_SETTLE`` after its
+end (see sensor.py), so that last hour is part of what they show.
 """
 
 import asyncio
@@ -70,6 +72,8 @@ from .const import (
     DOMAIN,
     LIFETIME_EMPTY_WINDOWS_STOP,
     LIFETIME_HOURS_KEPT,
+    LIFETIME_MAX_DAY_KWH,
+    LIFETIME_MAX_HOUR_KWH,
     LIFETIME_MAX_MONTH_KWH,
     LIFETIME_MAX_YEARS_BACK,
     LIFETIME_NO_DATA_MIN_RESPONSES,
@@ -98,7 +102,7 @@ KINDS_BY_TYPE: dict[aioaquarea.ConsumptionType, tuple[str, ...]] = {
 
 # One YEAR query returns this many months: 12 plus the 12 before them.
 WINDOW_MONTHS = 24
-MAX_WINDOWS = -(-LIFETIME_MAX_YEARS_BACK * 12 // WINDOW_MONTHS)
+MAX_WINDOWS = LIFETIME_MAX_YEARS_BACK * 12 // WINDOW_MONTHS
 # Looking up finished months is bounded per sync, as a safety net.
 MAX_RECONCILE_REQUESTS = 4
 # A ledger this much below the published floor is logged once.
@@ -113,6 +117,19 @@ type FetchYear = Callable[[date], Awaitable[aioaquarea.ConsumptionReport | None]
 
 class LifetimeSyncError(Exception):
     """A sync step failed in a way that is retried later (no usable response)."""
+
+
+class LifetimeBlockedError(LifetimeSyncError):
+    """A request was refused before it was sent (a block, or no login).
+
+    ``access`` is true for a block found by another device: the retry then
+    waits as long as after an access failure.
+    """
+
+    def __init__(self, message: str, *, access: bool = False) -> None:
+        """Initialize the error."""
+        super().__init__(message)
+        self.access = access
 
 
 # --- month arithmetic ------------------------------------------------------
@@ -148,22 +165,48 @@ def zero_totals() -> Totals:
     return dict.fromkeys(KINDS, 0.0)
 
 
-def _number(value: Any) -> float:
-    """Return a bucket value as a finite, non-negative number (else 0)."""
+_implausible_logged: set[str] = set()
+
+
+def _number(value: Any, limit: float) -> float:
+    """Return a bucket value as a finite, non-negative number up to ``limit``.
+
+    Anything else (text, infinity, negative, a cloud glitch above the
+    plausibility limit) is 0; a glitch is logged once per limit.
+    """
     try:
         number = float(value or 0.0)
     except TypeError, ValueError:
         return 0.0
-    return number if math.isfinite(number) and number > 0 else 0.0
+    if not math.isfinite(number) or number <= 0:
+        return 0.0
+    if number > limit:
+        if str(limit) not in _implausible_logged:
+            _implausible_logged.add(str(limit))
+            _LOGGER.warning(
+                "Ignoring an implausible consumption of %s kWh from the cloud "
+                "(limit %s kWh)",
+                number,
+                limit,
+            )
+        return 0.0
+    return number
 
 
-def bucket_totals(bucket: aioaquarea.Consumption) -> Totals:
-    """Return the three consumption kinds of a consumption bucket."""
+def bucket_totals(
+    bucket: aioaquarea.Consumption, limit: float = LIFETIME_MAX_MONTH_KWH
+) -> Totals:
+    """Return the three consumption kinds of a bucket (month by default)."""
     return {
-        "heat": _number(bucket.heat_consumption),
-        "cool": _number(bucket.cool_consumption),
-        "tank": _number(bucket.tank_consumption),
+        "heat": _number(bucket.heat_consumption, limit),
+        "cool": _number(bucket.cool_consumption, limit),
+        "tank": _number(bucket.tank_consumption, limit),
     }
+
+
+def _plausible(totals: Totals, limit: float) -> Totals:
+    """Return ``totals`` with the kinds above the limit set to 0."""
+    return {kind: _number(totals[kind], limit) for kind in KINDS}
 
 
 def _max_totals(first: Totals, second: Totals) -> Totals:
@@ -183,7 +226,7 @@ def month_totals(records: Iterable[aioaquarea.Consumption], today: date) -> Tota
                 continue
         if day is None or day > today:
             continue
-        for kind, value in bucket_totals(record).items():
+        for kind, value in bucket_totals(record, LIFETIME_MAX_DAY_KWH).items():
             totals[kind] += value
     return totals
 
@@ -200,7 +243,11 @@ def hourly_totals(
     }
     hours = set().union(*by_kind.values())
     return {
-        hour: {kind: by_kind[kind].get(hour, 0.0) for kind in KINDS} for hour in hours
+        hour: _plausible(
+            {kind: by_kind[kind].get(hour, 0.0) for kind in KINDS},
+            LIFETIME_MAX_HOUR_KWH,
+        )
+        for hour in hours
     }
 
 
@@ -280,9 +327,11 @@ def validate_state(raw: Any) -> dict[str, Any] | None:
     """
     if not isinstance(raw, dict):
         return None
+    # A key this version does not know yet (state written by an older
+    # version) takes its default; only wrong types and values are invalid, so
+    # adding a field never makes everyone read the history again.
     state = fresh_state()
-    if not set(state) <= set(raw):
-        return None
+    raw = {**state, **raw}
     for name in ("windows", "empty_windows", "none_responses", "failures"):
         if (
             not isinstance(raw[name], int)
@@ -400,6 +449,19 @@ class LifetimeStore:
     async def async_remove(self) -> None:
         """Delete the stored state (the config entry is deleted)."""
         await self._store.async_remove()
+
+
+def _is_blank(report: aioaquarea.ConsumptionReport) -> bool:
+    """Return whether a report holds nothing at all: no buckets, no registration.
+
+    A real window with no energy still names the registration month; a body
+    without both is a glitch and is taken like a missing answer.
+    """
+    return (
+        not report.history
+        and not report.last_year_history
+        and _register_month(report.device_register_time) is None
+    )
 
 
 def _buckets_by_month(
@@ -524,11 +586,14 @@ class LifetimeTracker:
             return None
         start, end = local_day_bounds(now)
         kinds = KINDS_BY_TYPE[consumption_type]
-        return sum(
-            totals[kind]
-            for key, totals in hours.items()
-            if start <= datetime.fromisoformat(key) < end
-            for kind in kinds
+        return round(
+            sum(
+                totals[kind]
+                for key, totals in hours.items()
+                if start <= datetime.fromisoformat(key) < end
+                for kind in kinds
+            ),
+            3,
         )
 
     # --- observing the coordinator's data ------------------------------------
@@ -539,6 +604,7 @@ class LifetimeTracker:
         ``today`` is the cloud's (UTC) date.
         """
         state = self.state
+        totals = _plausible(totals, LIFETIME_MAX_MONTH_KWH)
         key = month_key(shown)
         changed = False
         open_month = state["open_month"]
@@ -616,7 +682,8 @@ class LifetimeTracker:
         """Take the hourly records of a fetch: a known hour is replaced."""
         stored = self.state["hours"]
         changed = False
-        for start, totals in hours.items():
+        for start, raw_totals in hours.items():
+            totals = _plausible(raw_totals, LIFETIME_MAX_HOUR_KWH)
             key = start.astimezone(UTC).isoformat()
             if stored.get(key) != totals:
                 stored[key] = dict(totals)
@@ -677,21 +744,34 @@ class LifetimeTracker:
             state["retry_at"] = None
             self._store.schedule_save()
 
-    async def async_sync(self, fetch: FetchYear, lock: asyncio.Lock) -> None:
+    async def async_sync(
+        self,
+        fetch: FetchYear,
+        lock: asyncio.Lock,
+        gate: Callable[[], None] | None = None,
+    ) -> None:
         """Run the backfill if it is not complete, then look up due months.
 
         ``fetch`` queries one YEAR window and may raise. Every request holds
         ``lock``, which is shared by all devices and entries, and is followed
-        by a pause inside it, so requests never overlap and keep their
-        spacing. Progress is written after every window, so an exception (a
-        block, an authentication failure, a cancellation) leaves a state the
-        next run resumes from.
+        by a pause inside it (also after a failure), so requests never overlap
+        and keep their spacing. ``gate`` is called inside the lock before
+        every request and raises to refuse it (a block that another device
+        found while this one waited). Progress is written after every window,
+        so an exception (a block, an authentication failure, a cancellation)
+        leaves a state the next run resumes from.
         """
         self.running = True
 
         async def request(end: date) -> aioaquarea.ConsumptionReport | None:
             async with lock:
-                report = await fetch(end)
+                if gate is not None:
+                    gate()
+                try:
+                    report = await fetch(end)
+                except Exception:
+                    await asyncio.sleep(LIFETIME_REQUEST_DELAY)
+                    raise
                 await asyncio.sleep(LIFETIME_REQUEST_DELAY)
                 return report
 
@@ -734,7 +814,7 @@ class LifetimeTracker:
             end = parse_month(state["cursor"])
             report = await request(end)
             now = dt_util.utcnow()
-            if report is None:
+            if report is None or _is_blank(report):
                 await self._no_data(now, end)
                 return
             state["none_responses"] = 0
@@ -772,10 +852,11 @@ class LifetimeTracker:
     async def _no_data(self, now: datetime, end: date) -> None:
         """Handle a window answered with no data: raise, or end the history.
 
-        The library returns None for "no data" and for network errors, rate
-        limits and server errors alike, so this is a failure to retry. Only
-        when the registration month never became known, and the answers kept
-        coming for days, is it taken as the end of the history.
+        The library (without raise_on_error) returns None for "no data" and for
+        network errors, rate limits and server errors alike, so this is a
+        failure to retry. Only when some history was read already, and the
+        answers for the same window kept coming for days, is it taken as the
+        start of the history.
         """
         state = self.state
         state["none_responses"] += 1
@@ -783,7 +864,7 @@ class LifetimeTracker:
             state["none_since"] = now.isoformat()
         span = now - datetime.fromisoformat(state["none_since"])
         if (
-            state["register_month"] is None
+            state["windows"] >= 1
             and state["none_responses"] >= LIFETIME_NO_DATA_MIN_RESPONSES
             and span >= LIFETIME_NO_DATA_MIN_SPAN
         ):
@@ -827,7 +908,7 @@ class LifetimeTracker:
                 return
             end = parse_month(max(due))
             report = await request(end)
-            if report is None:
+            if report is None or _is_blank(report):
                 raise LifetimeSyncError(f"No consumption data for {month_key(end)}")
             months = _buckets_by_month(report)
             window = {
