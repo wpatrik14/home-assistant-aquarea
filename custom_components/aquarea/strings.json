@@ -75,5 +75,10 @@
       "title": "Panasonic rejected the app version",
       "description": "Panasonic's servers no longer accept the app version that the Aquarea Smart Cloud integration announces, so logging in fails. Your username and password are not the problem and no re-authentication is needed. This is a change on Panasonic's side, which is usually fixed by updating the integration (and its aioaquarea-ng library): check for updates in HACS and restart Home Assistant. If you are already up to date, report it in the [issue tracker]({issues_url}). The integration keeps retrying, and this issue disappears by itself after a successful login."
     }
+  },
+  "exceptions": {
+    "lifetime_sync_running": {
+      "message": "The consumption history is being read right now. Try again when it has finished."
+    }
   }
 }

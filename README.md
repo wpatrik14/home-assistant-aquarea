@@ -29,6 +29,8 @@ This integration is actively maintained. Please report any issues you find and a
 * Diagnostic sensors counting today's DHW heating, zone and defrost cycles.
 * Read-only diagnostic binary sensor showing whether the weekly schedule is switched on, with the scheduled days and the number of scheduled changes as attributes. Disabled by default; the schedule is only read (at most hourly) while it is enabled.
 * Energy consumption sensors: Accumulated (month to date, for the Energy dashboard) and Consumption (disabled by default; the energy published by the cloud since the previous fetch, 0 when nothing new, updated every consumption interval)
+* Lifetime consumption sensors (heating, cooling, tank, total): all the energy since the cloud's first record, for the Energy dashboard, see [Lifetime consumption](#lifetime-consumption)
+* Consumption today sensors (total enabled by default, heating, cooling and tank disabled): the energy of the current calendar day in your Home Assistant time zone, see [Daily and other period totals](#daily-and-other-period-totals)
 * Quiet mode select entity
 * Request defrost
 * Powerful mode select entity
@@ -37,6 +39,28 @@ This integration is actively maintained. Please report any issues you find and a
 * Force heater
 * Set the device in eco mode/comfort mode (if the device supports it).
 * Diagnostics download (account, IDs and names redacted)
+
+## Lifetime consumption
+The *Lifetime consumption* sensors (total, heating, tank and cooling; the cooling one is disabled by default, like the Accumulated one) report all the energy the heat pump has used since the cloud's first record. They are `total_increasing` energy sensors in kWh, so you can use them in the Energy dashboard.
+
+How they work:
+* **First start only: the history is read once.** After the first setup the integration reads the past consumption from the Aquarea Smart Cloud in the background (one request per two years, 30 seconds after the start and then 5 seconds apart, at most 7 requests, so never more than 15 years back), and stops at the month your unit was registered in the cloud. It does not delay the setup. Until it has finished, the lifetime sensors are *unknown*; this is deliberate, because the Energy dashboard would otherwise show the whole history as one huge spike when the figure jumps from a partial to the full value.
+* **It is not read again** on a restart, a reload, a reconfiguration, an options change or an update of the integration, nor after a failed refresh. The finished months are kept in Home Assistant's storage (`.storage/aquarea.lifetime.<entry id>`), kept when the entry is reloaded, and deleted only when you delete the integration. Only three things read the history again: no stored data exists (first install, or the file was deleted), the stored data is found corrupt, or you press the **Rebuild lifetime consumption** button (a configuration entity, disabled by default). The one other history request is a single extra request per device about 24 hours after each month end (and after Home Assistant was off over a month end), which looks the finished month up once more for hours Panasonic published late.
+* **An interrupted read resumes** where it stopped. If anything fails, the read is aborted and tried again hours later, doubling up to 12 hours. Only a refusal that looks like a block of your address (an HTTP 403, 429 or 5xx answer) waits 6 hours first and pauses the history reads of **all** devices at once, so the block is not made longer. Every other failure (an expired login, an account problem such as terms not yet accepted, a network error, no data, not logged in) waits 1 hour first and only concerns the device it hit. It never retries in a loop.
+* **If Panasonic ever stops answering with data** for the first window of a history that was partly read, an old aioaquarea-ng library (1.5.0 or older) cannot tell "no data" from a failure. The integration requires aioaquarea-ng 1.6.0 or newer, which raises on failures (`raise_on_error`) and so tells the two apart; the rule below only applies if an older library is still installed: five empty answers for the same window over at least 72 hours, after at least one window was read, are taken as the start of the history, so a multi-day Panasonic outage in the middle of the very first read could end it early, with a lower figure than the real one. The **Rebuild lifetime consumption** button reads it again (the value stays at its old level until the rebuilt figure exceeds it).
+* **It grows with every refresh.** The value is the finished months plus the current month as the cloud reports it at the latest consumption refresh, so new energy is added as soon as Panasonic publishes it, and a day that Panasonic revises later is replaced, not added twice.
+* **The value never decreases.** If Panasonic later corrects figures downwards (or a rebuild finds less than was shown), the sensor stays flat until the real consumption has caught up; a temporary over-count is therefore kept.
+* **Use the Lifetime *or* the Accumulated sensors in the Energy dashboard, not both**, or the energy is counted twice.
+
+If a rebuild finds more history than before (for example Panasonic added older data), the lifetime figure rises once by the difference, and the Energy dashboard shows it as consumption in that hour. You can correct that in Developer Tools > Statistics ("Fix issue" or adjust the sum).
+
+## Daily and other period totals
+The *Consumption today* sensors are built from the hourly records the integration already fetches, so they cost no extra requests. They count the hours of the **local calendar day** of your Home Assistant time zone (23 or 25 hours on the days the clocks change), use `state_class: total` with a `last_reset` at local midnight, and replace the value of an hour when Panasonic revises it. Panasonic publishes the last hour of a day about an hour after it ends, so the sensors keep showing the finished day, complete and with its own `last_reset`, until about 03:00 local time (later when the consumption interval is long: the interval plus two hours), and only then start the new day, so the last hour of a day is normally part of that day's value. If Panasonic publishes it later than that, the hour is still counted in its own day, but the recorder may have already stored the new day's first state. An hour is counted entirely in the day it starts in (in time zones with a half-hour offset, such as India, the hour that straddles midnight counts in the earlier day). The cloud labels its own days in UTC, which is why the Accumulated sensors reset a few hours after the cloud's midnight. Only the total is enabled by default. A value above 150 kWh in one hour, 2,500 in one day or 50,000 in one month is not plausible for a heat pump and is counted as 0 (a glitch in the cloud data must not poison the totals for good); the limits are generous even for cascade systems with several outdoor units, and `LIFETIME_MAX_HOUR_KWH` and the other limits in `const.py` can be raised if yours really exceeds them.
+
+For other periods (weekly, monthly, yearly, or a daily total that follows tariff hours) the integration does not create helpers. Build a **Utility Meter** helper on top of a lifetime sensor:
+1. Settings > Devices & services > Helpers > Create helper > Utility Meter.
+2. Name it (for example "Heat pump energy weekly"), choose **Weekly** (or Daily, Monthly, ...) as the meter reset cycle, and pick the *Lifetime consumption* sensor of your heat pump as the input sensor. Leave *Periodically resetting* off: the lifetime sensor never resets. Add tariffs if you want peak and off-peak totals.
+3. Submit. The new sensor can be used in the Energy dashboard or on a dashboard card.
 
 ## Features in the works
 * Improve translations
@@ -86,7 +110,7 @@ The minimum supported version of Home Assistant is **2026.3**. Older versions ca
 This integration follows standard integration removal; no extra steps are required in Home Assistant.
 
 1. Go to **Settings** > **Devices & services** and select **Aquarea Smart Cloud**.
-2. Next to the entry, select the three dots **⋮** menu, then **Delete**.
+2. Next to the entry, select the three dots **⋮** menu, then **Delete**. This also deletes the stored consumption history of the lifetime sensors (`.storage/aquarea.lifetime.<entry id>`); removing only the files does not.
 
 To also remove the files:
 - **HACS:** open HACS, find **Aquarea Smart Cloud**, select the three dots **⋮** menu, then **Remove**, and restart Home Assistant.

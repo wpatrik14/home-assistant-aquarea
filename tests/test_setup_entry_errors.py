@@ -155,6 +155,7 @@ def _load_setup_entry(namespace_extra=None):
         "PLATFORMS": ["sensor"],
         "_LOGGER": _NullLogger(),
         "AquareaDataUpdateCoordinator": _Coordinator,
+        "LifetimeStore": _LifetimeStore,
     }
     namespace.update(namespace_extra or {})
     # __init__.py has `from __future__ import annotations`; compile with the
@@ -184,10 +185,22 @@ class _NullLogger:
         pass
 
 
+class _LifetimeStore:
+    """Stands in for LifetimeStore (covered by tests/ha/test_lifetime.py)."""
+
+    def __init__(self, hass=None, entry_id=None):
+        pass
+
+    async def async_load(self):
+        return None
+
+
 class _Coordinator:
     """Stands in for AquareaDataUpdateCoordinator."""
 
-    def __init__(self, hass=None, entry=None, client=None, device_info=None):
+    def __init__(
+        self, hass=None, entry=None, client=None, device_info=None, lifetime_store=None
+    ):
         self.device_info = device_info
 
     async def async_config_entry_first_refresh(self):

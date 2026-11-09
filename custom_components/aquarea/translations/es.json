@@ -94,11 +94,38 @@
         }
       },
       "button": {
+        "rebuild_lifetime_consumption": {
+          "name": "Reconstruir el consumo total"
+        },
         "request_defrost": {
           "name": "Solicitar descongelación"
         }
       },
       "sensor": {
+        "heating_lifetime_energy_consumption": {
+          "name": "Consumo total calefacción (histórico)"
+        },
+        "cooling_lifetime_energy_consumption": {
+          "name": "Consumo total refrigeración (histórico)"
+        },
+        "tank_lifetime_energy_consumption": {
+          "name": "Consumo total calentador de agua (histórico)"
+        },
+        "lifetime_energy_consumption": {
+          "name": "Consumo total (histórico)"
+        },
+        "heating_today_energy_consumption": {
+          "name": "Consumo de hoy calefacción"
+        },
+        "cooling_today_energy_consumption": {
+          "name": "Consumo de hoy refrigeración"
+        },
+        "tank_today_energy_consumption": {
+          "name": "Consumo de hoy calentador de agua"
+        },
+        "today_energy_consumption": {
+          "name": "Consumo de hoy"
+        },
         "heating_accumulated_energy_consumption": {
           "name": "Consumo acumulado calefacción"
         },
@@ -185,5 +212,10 @@
           "name": "Temporizador vacaciones"
         }
       }
+    },
+    "exceptions": {
+        "lifetime_sync_running": {
+            "message": "El historial de consumo se está leyendo ahora. Inténtelo de nuevo cuando termine."
+        }
     }
 }

@@ -21,6 +21,7 @@ from .issues import (
     async_clear_app_version_issue,
     async_create_app_version_issue,
 )
+from .lifetime import LifetimeStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,6 +67,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
 
     client = _create_client(hass, entry)
     coordinators: dict[str, AquareaDataUpdateCoordinator] = {}
+    # The persisted lifetime totals: read once per setup, and kept when the
+    # entry is reloaded (removed only with the entry, see async_remove_entry).
+    lifetime_store = LifetimeStore(hass, entry.entry_id)
+    await lifetime_store.async_load()
 
     try:
         await client.login()
@@ -77,7 +82,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
         # entry's runtime_data.
         for device in devices:
             coordinator = AquareaDataUpdateCoordinator(
-                hass=hass, entry=entry, client=client, device_info=device
+                hass=hass,
+                entry=entry,
+                client=client,
+                device_info=device,
+                lifetime_store=lifetime_store,
             )
             coordinators[device.device_id] = coordinator
             _LOGGER.debug("Performing first refresh for device %s", device.device_id)
@@ -132,10 +141,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> None:
-    """Drop the repair issue of a removed entry."""
+    """Drop the repair issue and the stored lifetime totals of a removed entry."""
     async_clear_app_version_issue(hass, entry)
+    await LifetimeStore(hass, entry.entry_id).async_remove()
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    # Stop reading the history first (Home Assistant cancels an entry's
+    # background tasks only after this returns), then write the state, so the
+    # next setup reads everything and resumes where this stopped.
+    coordinators = entry.runtime_data.values()
+    for coordinator in coordinators:
+        await coordinator.async_stop_lifetime_sync()
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unloaded:
+        for store in {c.lifetime_store for c in coordinators}:
+            await store.async_flush()
+    else:
+        # The entry stays loaded: its coordinators have to carry on.
+        for coordinator in coordinators:
+            coordinator.resume_lifetime_sync()
+    return unloaded

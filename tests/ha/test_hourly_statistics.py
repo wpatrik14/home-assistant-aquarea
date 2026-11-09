@@ -964,11 +964,15 @@ async def test_each_hourly_fetch_corrects_every_energy_sensor(
     assert _day_calls(mock_aquarea_client) == ["20261003", "20261004", "20261005"]
 
     corrected = {call.args[1]: call.args[2:] for call in redistribute.await_args_list}
-    # The enabled-by-default energy sensors: heat, tank and total month to date.
+    # The enabled-by-default energy sensors: heat, tank and total, month to
+    # date and lifetime.
     assert set(corrected) == {
         "sensor.heat_pump_heating_accumulated_consumption",
         "sensor.heat_pump_tank_accumulated_consumption",
         "sensor.heat_pump_accumulated_consumption",
+        "sensor.heat_pump_heating_lifetime_consumption",
+        "sensor.heat_pump_tank_lifetime_consumption",
+        "sensor.heat_pump_lifetime_consumption",
     }
     # The day before yesterday is the first cached day, so it is context:
     # rows from the start of yesterday (UTC) on. Matching reaches back 3 h at

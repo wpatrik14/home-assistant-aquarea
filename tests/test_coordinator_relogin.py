@@ -146,6 +146,10 @@ def _load():
     weekly_stub = ast.parse(
         "async def _async_fetch_weekly_timer(self, now): pass"
     ).body[0]
+    # The lifetime totals are covered by tests/ha/test_lifetime.py.
+    lifetime_stub = ast.parse("async def _async_update_lifetime(self, now): pass").body[
+        0
+    ]
     login = next(
         n
         for n in cls.body
@@ -155,7 +159,7 @@ def _load():
         name="Extracted",
         bases=[],
         keywords=[],
-        body=[node, due, login, hourly_stub, weekly_stub],
+        body=[node, due, login, hourly_stub, weekly_stub, lifetime_stub],
         decorator_list=[],
         type_params=[],
     )

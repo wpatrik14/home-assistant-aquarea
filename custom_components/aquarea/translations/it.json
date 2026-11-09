@@ -94,11 +94,38 @@
       }
     },
     "button": {
+      "rebuild_lifetime_consumption": {
+        "name": "Ricostruisci il consumo totale"
+      },
       "request_defrost": {
         "name": "Richiesta sbrinamento"
       }
     },
     "sensor": {
+      "heating_lifetime_energy_consumption": {
+        "name": "Consumo totale riscaldamento (storico)"
+      },
+      "cooling_lifetime_energy_consumption": {
+        "name": "Consumo totale raffrescamento (storico)"
+      },
+      "tank_lifetime_energy_consumption": {
+        "name": "Consumo totale serbatoio ACS (storico)"
+      },
+      "lifetime_energy_consumption": {
+        "name": "Consumo totale (storico)"
+      },
+      "heating_today_energy_consumption": {
+        "name": "Consumo di oggi riscaldamento"
+      },
+      "cooling_today_energy_consumption": {
+        "name": "Consumo di oggi raffrescamento"
+      },
+      "tank_today_energy_consumption": {
+        "name": "Consumo di oggi serbatoio ACS"
+      },
+      "today_energy_consumption": {
+        "name": "Consumo di oggi"
+      },
       "heating_accumulated_energy_consumption": {
         "name": "Consumo accumulato riscaldamento"
       },
@@ -184,6 +211,11 @@
       "holiday_timer": {
         "name": "Timer vacanza"
       }
+    }
+  },
+  "exceptions": {
+    "lifetime_sync_running": {
+      "message": "Lo storico dei consumi è in lettura. Riprova al termine."
     }
   }
 }

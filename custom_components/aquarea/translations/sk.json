@@ -94,11 +94,38 @@
         }
       },
       "button": {
+        "rebuild_lifetime_consumption": {
+          "name": "Znovu zostaviť celkovú spotrebu"
+        },
         "request_defrost": {
           "name": "Vyžiadať odmrazenie"
         }
       },
       "sensor": {
+        "heating_lifetime_energy_consumption": {
+          "name": "Celková spotreba vykurovania za celý čas"
+        },
+        "cooling_lifetime_energy_consumption": {
+          "name": "Celková spotreba chladenia za celý čas"
+        },
+        "tank_lifetime_energy_consumption": {
+          "name": "Celková spotreba ohrevu vody za celý čas"
+        },
+        "lifetime_energy_consumption": {
+          "name": "Celková spotreba za celý čas"
+        },
+        "heating_today_energy_consumption": {
+          "name": "Dnešná spotreba vykurovania"
+        },
+        "cooling_today_energy_consumption": {
+          "name": "Dnešná spotreba chladenia"
+        },
+        "tank_today_energy_consumption": {
+          "name": "Dnešná spotreba ohrevu vody"
+        },
+        "today_energy_consumption": {
+          "name": "Dnešná spotreba"
+        },
         "heating_accumulated_energy_consumption": {
           "name": "Kumulovaná spotreba vykurovania"
         },
@@ -185,5 +212,10 @@
           "name": "Časovač dovolenky"
         }
       }
+    },
+    "exceptions": {
+        "lifetime_sync_running": {
+            "message": "História spotreby sa práve načítava. Skúste to znova po dokončení."
+        }
     }
 }

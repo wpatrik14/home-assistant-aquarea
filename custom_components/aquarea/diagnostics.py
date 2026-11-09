@@ -86,6 +86,27 @@ def _device_diagnostics(coordinator: AquareaDataUpdateCoordinator) -> dict[str, 
         ),
     }
 
+    # Counts and dates only, never the energy figures.
+    lifetime = coordinator.lifetime
+    earliest = lifetime.earliest_month
+    retry_at = lifetime.retry_at
+    lifetime_block = {
+        "history_complete": lifetime.complete,
+        "history_ended_by": lifetime.state["ended_by"],
+        "history_register_month": lifetime.state["register_month"],
+        "history_running": lifetime.running,
+        "history_no_data_answers": lifetime.state["none_responses"],
+        "history_windows_read": lifetime.state["windows"],
+        "history_failures": lifetime.state["failures"],
+        "history_retry_at": retry_at.isoformat() if retry_at else None,
+        "months_with_energy": lifetime.months_included,
+        "earliest_month": earliest.strftime("%Y-%m") if earliest else None,
+        "open_month": lifetime.state["open_month"],
+        "months_to_look_up_again": len(lifetime.state["pending"]),
+        "ledger_below_published": lifetime.ledger_below_floor,
+        "hours_stored": len(lifetime.state["hours"]),
+    }
+
     device_info_block = _attrs(
         info,
         (
@@ -187,6 +208,7 @@ def _device_diagnostics(coordinator: AquareaDataUpdateCoordinator) -> dict[str, 
 
     return {
         "coordinator": coordinator_block,
+        "lifetime_consumption": lifetime_block,
         "device_info": device_info_block,
         "status": status,
         "tank": tank_block,

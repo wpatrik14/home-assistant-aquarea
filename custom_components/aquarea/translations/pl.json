@@ -94,11 +94,38 @@
             }
         },
         "button": {
+            "rebuild_lifetime_consumption": {
+                "name": "Odbuduj całkowite zużycie energii"
+            },
             "request_defrost": {
                 "name": "Wymuś odszranianie"
             }
         },
         "sensor": {
+            "heating_lifetime_energy_consumption": {
+                "name": "Ogrzewanie - całkowite zużycie energii od początku"
+            },
+            "cooling_lifetime_energy_consumption": {
+                "name": "Chłodzenie - całkowite zużycie energii od początku"
+            },
+            "tank_lifetime_energy_consumption": {
+                "name": "Podgrzewanie zbiornika wody - całkowite zużycie energii od początku"
+            },
+            "lifetime_energy_consumption": {
+                "name": "Całkowite zużycie energii od początku"
+            },
+            "heating_today_energy_consumption": {
+                "name": "Ogrzewanie - zużycie energii dzisiaj"
+            },
+            "cooling_today_energy_consumption": {
+                "name": "Chłodzenie - zużycie energii dzisiaj"
+            },
+            "tank_today_energy_consumption": {
+                "name": "Podgrzewanie zbiornika wody - zużycie energii dzisiaj"
+            },
+            "today_energy_consumption": {
+                "name": "Zużycie energii dzisiaj"
+            },
             "heating_accumulated_energy_consumption": {
                 "name": "Ogrzewanie - skumulowane zużycie energii"
             },
@@ -184,6 +211,11 @@
             "holiday_timer": {
                 "name": "Harmonogram wakacyjny"
             }
+        }
+    },
+    "exceptions": {
+        "lifetime_sync_running": {
+            "message": "Historia zużycia jest właśnie odczytywana. Spróbuj ponownie po jej zakończeniu."
         }
     }
 }

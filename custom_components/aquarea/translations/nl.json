@@ -94,11 +94,38 @@
             }
         },
         "button": {
+            "rebuild_lifetime_consumption": {
+                "name": "Totaal verbruik opnieuw opbouwen"
+            },
             "request_defrost": {
                 "name": "Ontdooien aanvragen"
             }
         },
         "sensor": {
+            "heating_lifetime_energy_consumption": {
+                "name": "Totaal verbruik verwarming (sinds begin)"
+            },
+            "cooling_lifetime_energy_consumption": {
+                "name": "Totaal verbruik koeling (sinds begin)"
+            },
+            "tank_lifetime_energy_consumption": {
+                "name": "Totaal verbruik tank (sinds begin)"
+            },
+            "lifetime_energy_consumption": {
+                "name": "Totaal verbruik (sinds begin)"
+            },
+            "heating_today_energy_consumption": {
+                "name": "Verbruik verwarming vandaag"
+            },
+            "cooling_today_energy_consumption": {
+                "name": "Verbruik koeling vandaag"
+            },
+            "tank_today_energy_consumption": {
+                "name": "Verbruik tank vandaag"
+            },
+            "today_energy_consumption": {
+                "name": "Verbruik vandaag"
+            },
             "heating_accumulated_energy_consumption": {
                 "name": "Gecumuleerd verbruik verwarming"
             },
@@ -184,6 +211,11 @@
             "holiday_timer": {
                 "name": "Vakantietimer"
             }
+        }
+    },
+    "exceptions": {
+        "lifetime_sync_running": {
+            "message": "De verbruiksgeschiedenis wordt nu gelezen. Probeer het opnieuw als dit klaar is."
         }
     }
 }
