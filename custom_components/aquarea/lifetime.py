@@ -165,14 +165,15 @@ def zero_totals() -> Totals:
     return dict.fromkeys(KINDS, 0.0)
 
 
-_implausible_logged: set[str] = set()
+# When an implausible value was last logged, per limit: at most once an hour.
+_implausible_logged: dict[float, datetime] = {}
 
 
 def _number(value: Any, limit: float) -> float:
     """Return a bucket value as a finite, non-negative number up to ``limit``.
 
     Anything else (text, infinity, negative, a cloud glitch above the
-    plausibility limit) is 0; a glitch is logged once per limit.
+    plausibility limit) is 0; a glitch is logged at most once an hour per limit.
     """
     try:
         number = float(value or 0.0)
@@ -181,8 +182,10 @@ def _number(value: Any, limit: float) -> float:
     if not math.isfinite(number) or number <= 0:
         return 0.0
     if number > limit:
-        if str(limit) not in _implausible_logged:
-            _implausible_logged.add(str(limit))
+        now = dt_util.utcnow()
+        last = _implausible_logged.get(limit)
+        if last is None or now - last >= timedelta(hours=1):
+            _implausible_logged[limit] = now
             _LOGGER.warning(
                 "Ignoring an implausible consumption of %s kWh from the cloud "
                 "(limit %s kWh)",
@@ -252,6 +255,12 @@ def hourly_totals(
 
 
 # --- stored state ----------------------------------------------------------
+
+
+# Keys of the stored state that were added after the first release: a state
+# written before has none of them and takes the defaults of fresh_state(). Empty
+# today; add the key here (and to fresh_state()) when a later version needs one.
+LATER_KEYS: tuple[str, ...] = ()
 
 
 def fresh_state() -> dict[str, Any]:
@@ -327,10 +336,14 @@ def validate_state(raw: Any) -> dict[str, Any] | None:
     """
     if not isinstance(raw, dict):
         return None
-    # A key this version does not know yet (state written by an older
-    # version) takes its default; only wrong types and values are invalid, so
-    # adding a field never makes everyone read the history again.
     state = fresh_state()
+    # Every key of the first version is required: a missing one is damage that
+    # must not be filled in with a default (a completed backfill without its
+    # months). Only the keys listed in LATER_KEYS, added by later versions,
+    # take their default, so adding a field never makes everyone read the
+    # history again. Unknown extra keys are dropped.
+    if not set(state) - set(LATER_KEYS) <= set(raw):
+        return None
     raw = {**state, **raw}
     for name in ("windows", "empty_windows", "none_responses", "failures"):
         if (
@@ -451,19 +464,6 @@ class LifetimeStore:
         await self._store.async_remove()
 
 
-def _is_blank(report: aioaquarea.ConsumptionReport) -> bool:
-    """Return whether a report holds nothing at all: no buckets, no registration.
-
-    A real window with no energy still names the registration month; a body
-    without both is a glitch and is taken like a missing answer.
-    """
-    return (
-        not report.history
-        and not report.last_year_history
-        and _register_month(report.device_register_time) is None
-    )
-
-
 def _buckets_by_month(
     report: aioaquarea.ConsumptionReport,
 ) -> dict[str, Totals]:
@@ -475,6 +475,17 @@ def _buckets_by_month(
             totals = bucket_totals(bucket)
             months[key] = _max_totals(months.get(key, zero_totals()), totals)
     return months
+
+
+def _is_blank(months: dict[str, Totals]) -> bool:
+    """Return whether a YEAR response held no monthly bucket at all.
+
+    Real windows always carry 12 + 12 buckets (zeros before the registration
+    month), whatever the registration month says. A body without buckets, even
+    one that names the registration month, is a glitch, and is taken like a
+    missing answer: accepting it would skip 24 months of history.
+    """
+    return not months
 
 
 class LifetimeTracker:
@@ -814,12 +825,12 @@ class LifetimeTracker:
             end = parse_month(state["cursor"])
             report = await request(end)
             now = dt_util.utcnow()
-            if report is None or _is_blank(report):
+            months = _buckets_by_month(report) if report is not None else {}
+            if report is None or _is_blank(months):
                 await self._no_data(now, end)
                 return
             state["none_responses"] = 0
             state["none_since"] = None
-            months = _buckets_by_month(report)
             registered = _register_month(report.device_register_time)
             if registered is not None:
                 state["register_month"] = month_key(registered)
@@ -827,7 +838,7 @@ class LifetimeTracker:
                 raise LifetimeSyncError(
                     f"Malformed consumption window for {month_key(end)}"
                 )
-            first = parse_month(min(months)) if months else add_months(end, -23)
+            first = parse_month(min(months))
             self._apply_window(months, None, now)
             energy = sum(sum(totals.values()) for totals in months.values())
             state["windows"] += 1
@@ -908,9 +919,9 @@ class LifetimeTracker:
                 return
             end = parse_month(max(due))
             report = await request(end)
-            if report is None or _is_blank(report):
+            months = _buckets_by_month(report) if report is not None else {}
+            if report is None or _is_blank(months):
                 raise LifetimeSyncError(f"No consumption data for {month_key(end)}")
-            months = _buckets_by_month(report)
             window = {
                 month_key(add_months(end, -offset)) for offset in range(WINDOW_MONTHS)
             }

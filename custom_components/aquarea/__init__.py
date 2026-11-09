@@ -158,4 +158,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> 
     if unloaded:
         for store in {c.lifetime_store for c in coordinators}:
             await store.async_flush()
+    else:
+        # The entry stays loaded: its coordinators have to carry on.
+        for coordinator in coordinators:
+            coordinator.resume_lifetime_sync()
     return unloaded

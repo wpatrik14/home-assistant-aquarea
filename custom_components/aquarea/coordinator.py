@@ -79,6 +79,25 @@ LOGIN_BACKOFF_INITIAL = timedelta(minutes=5)
 LOGIN_BACKOFF_MAX = timedelta(minutes=30)
 
 
+def _is_block(err: BaseException) -> bool:
+    """Return whether an error looks like Panasonic refusing us, not a plain failure.
+
+    An HTTP 403 (the library words it "Request rejected with status 403", which
+    is what a blocked address gets), 429 and 5xx answers are refusals that
+    more requests only prolong, and they are Panasonic-wide: every device and
+    account behind this address waits. An ordinary expired token (HTTP 401, or
+    the gateway's "Token expires"), an account-specific error such as terms not
+    accepted, or a network error concerns this device only and is retried
+    after an hour.
+    """
+    if isinstance(err, aioaquarea.AuthenticationError):
+        return "status 403" in str(getattr(err, "error_message", ""))
+    if isinstance(err, aioaquarea.ApiError):
+        code = str(err.error_code)
+        return code == "HTTP_429" or code.startswith("HTTP_5")
+    return False
+
+
 def _weekly_timer_due(
     now: datetime, requested_at: datetime | None, interval: timedelta
 ) -> bool:
@@ -463,9 +482,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
     async def _async_lifetime_sync(self) -> None:
         """Read the history (backfill, finished months); abort on any failure.
 
-        A failure of any kind, an HTTP 403 block or a refused login included,
-        ends the run and sets the time of the next attempt (hours later,
-        doubling). The progress made is kept.
+        A failure of any kind ends the run and sets the time of the next
+        attempt (hours later, doubling); the progress made is kept. A refusal
+        that looks like a block of the address (see ``_is_block``) also makes
+        every device wait; any other error waits per device only.
         """
 
         data = self.hass.data.setdefault(DOMAIN, {})
@@ -502,18 +522,17 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         try:
             await self.lifetime.async_sync(fetch, lock, gate)
         except Exception as err:  # noqa: BLE001 - deliberate: any failure aborts and retries later
-            access = isinstance(err, aioaquarea.ApiError) or getattr(
-                err, "access", False
+            block = _is_block(err)
+            self.lifetime.note_failure(
+                dt_util.utcnow(),
+                access=block or getattr(err, "access", False),
             )
-            self.lifetime.note_failure(dt_util.utcnow(), access=access)
             retry_at = self.lifetime.retry_at
-            if (
-                isinstance(err, aioaquarea.ApiError)
-                and retry_at is not None
-                and (data.get(LIFETIME_BLOCKED_UNTIL) or retry_at) <= retry_at
-            ):
+            if block and retry_at is not None:
                 # Every device waits for the same time, not just this one.
-                data[LIFETIME_BLOCKED_UNTIL] = retry_at
+                data[LIFETIME_BLOCKED_UNTIL] = max(
+                    retry_at, data.get(LIFETIME_BLOCKED_UNTIL) or retry_at
+                )
             _LOGGER.warning(
                 "Reading the consumption history failed (%s); trying again at %s",
                 err,
@@ -560,6 +579,10 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
+
+    def resume_lifetime_sync(self) -> None:
+        """Allow the history read again after an unload that did not happen."""
+        self._lifetime_stopped = False
 
     async def async_rebuild_lifetime(self) -> None:
         """Forget the stored history and read it again (the rebuild button)."""

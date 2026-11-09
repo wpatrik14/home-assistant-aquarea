@@ -64,8 +64,10 @@ LIFETIME_NO_DATA_MIN_SPAN = timedelta(hours=72)
 # Plausibility limits per kind. A bucket above them is a cloud glitch: it is
 # counted as 0 when read, so the stored data never holds such a value (a stored
 # value above the month limit is what makes the state look corrupt).
-LIFETIME_MAX_HOUR_KWH = 50
-LIFETIME_MAX_DAY_KWH = 1_200
+# (150 kWh an hour is nine 16 kW units flat out, for cascades with several
+# outdoor units; a cloud placeholder such as 65,535 is far above.)
+LIFETIME_MAX_HOUR_KWH = 150
+LIFETIME_MAX_DAY_KWH = 2_500
 LIFETIME_MAX_MONTH_KWH = 50_000
 # The today sensors keep showing the previous local day until this long after
 # its end: the cloud publishes the last hour of a day about an hour after it.

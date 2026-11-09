@@ -264,27 +264,51 @@ async def test_without_a_registration_month_two_empty_windows_end_it() -> None:
     assert tracker.months_included == 18
 
 
-async def test_a_report_without_buckets_is_an_empty_window() -> None:
-    """With raise_on_error the library answers "no data" with an empty report."""
-    cloud = Cloud({}, empty=True)
-    tracker = started(heat=1.0)
-    await sync(tracker, cloud)
-    # Windows of 24 months from 2026-09 down to the one reaching 2024-08.
-    assert cloud.calls == ["202609", "202409"]
-    assert tracker.state["ended_by"] == "register"
-    assert tracker.months_included == 0
-    assert tracker.lifetime_value(HEAT) == 1.0
-
-
-async def test_a_report_with_neither_buckets_nor_registration_is_a_glitch() -> None:
-    """Two such answers cannot end the history as "empty": they are failures."""
-    tracker = started()
-    for _ in range(2):
+async def test_a_report_without_buckets_is_not_an_empty_window() -> None:
+    """No monthly bucket is no answer, whatever month the unit was registered."""
+    for register in ("20240801", None, "20260101"):
+        cloud = Cloud({}, register=register, empty=True)
+        tracker = started(heat=1.0)
         with pytest.raises(LifetimeSyncError, match="No consumption data"):
-            await sync(tracker, Cloud({}, register=None, empty=True))
+            await sync(tracker, cloud)
+        # Nothing was learnt: no window counted, the cursor did not move.
+        assert cloud.calls == ["202609"]
+        assert not tracker.complete
+        assert tracker.state["windows"] == 0
+        assert tracker.state["cursor"] == "202609"
+        assert tracker.state["none_responses"] == 1
+        assert tracker.months_included == 0
+
+
+async def test_a_blank_report_with_a_registration_never_truncates_the_history(
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """The body {"deviceRegisterTime": ..., "historyDataList": []} ends nothing."""
+    freezer.move_to(datetime(2026, 10, 20, 12, tzinfo=UTC))
+    report = ConsumptionReport.from_dict(
+        {"deviceRegisterTime": "20240801", "historyDataList": []}
+    )
+    assert report.history == []
+    assert report.device_register_time == "20240801"
+    tracker = started(heat=1.0)
+
+    async def blank(end: date) -> ConsumptionReport:
+        """Answer the blank report every time."""
+        return report
+
+    for _ in range(8):
+        with pytest.raises(LifetimeSyncError, match="No consumption data"):
+            await tracker.async_sync(blank, asyncio.Lock())
+        freezer.tick(timedelta(hours=24))
+    # Eight days of blank answers for the very first window: still a failure
+    # to retry (the "no data" rule needs a window read before), never a
+    # history that ended at the registration month.
     assert not tracker.complete
+    assert tracker.state["ended_by"] is None
     assert tracker.state["windows"] == 0
-    assert tracker.state["none_responses"] == 2
+    assert tracker.state["cursor"] == "202609"
+    assert tracker.state["register_month"] is None
+    assert tracker.lifetime_value(HEAT) is None
 
 
 async def test_the_backfill_is_capped_at_fifteen_years() -> None:
@@ -998,7 +1022,7 @@ async def test_today_is_rounded_to_three_decimals(hass: HomeAssistant) -> None:
 def test_a_state_from_an_older_version_loads_in_a_newer_one(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A key added later takes its default: nobody reads the history again."""
+    """A key listed in LATER_KEYS takes its default: nobody reads the history again."""
     tracker = started(heat=3.0)
     tracker.state["complete"] = True
     tracker.state["floor"] = totals(heat=1234.5)
@@ -1007,6 +1031,9 @@ def test_a_state_from_an_older_version_loads_in_a_newer_one(
 
     original = lifetime.fresh_state
     monkeypatch.setattr(lifetime, "fresh_state", lambda: {**original(), "added": 7})
+    # Not declared as a later key: a missing key is damage.
+    assert validate_state(stored) is None
+    monkeypatch.setattr(lifetime, "LATER_KEYS", ("added",))
     loaded = validate_state(stored)
     assert loaded is not None
     assert loaded["added"] == 7
@@ -1015,3 +1042,50 @@ def test_a_state_from_an_older_version_loads_in_a_newer_one(
     assert loaded["months"] == {"202609": totals(heat=100.0)}
     # And a wrong type in a key the old version did not write is still invalid.
     assert validate_state({**stored, "complete": "yes"}) is None
+
+
+@pytest.mark.parametrize("key", sorted(lifetime.fresh_state()))
+def test_a_missing_core_key_is_damage(key: str) -> None:
+    """Every key of the first version is required, none is filled in."""
+    tracker = started(heat=3.0)
+    tracker.state["complete"] = True
+    tracker.state["months"] = {"202609": totals(heat=100.0)}
+    stored = json.loads(json.dumps(tracker.state))
+    del stored[key]
+    assert validate_state(stored) is None
+
+
+def test_unknown_extra_keys_are_tolerated_and_dropped() -> None:
+    """A state written by a newer version still loads, without the key."""
+    tracker = started(heat=3.0)
+    stored = json.loads(json.dumps(tracker.state))
+    loaded = validate_state({**stored, "from_the_future": [1, 2]})
+    assert loaded == tracker.state
+    assert loaded is not None
+    assert "from_the_future" not in loaded
+
+
+def test_an_implausible_value_is_logged_once_an_hour(
+    monkeypatch: pytest.MonkeyPatch,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A glitch repeated at every refresh does not flood the log."""
+    monkeypatch.setattr(lifetime, "_implausible_logged", {})
+    freezer.move_to(datetime(2026, 10, 20, 12, tzinfo=UTC))
+    bucket = Consumption({"dataTime": "20261020 03", "heatConsumption": 9_999.0})
+    for minutes in (0, 1, 15, 59):
+        freezer.move_to(
+            datetime(2026, 10, 20, 12, tzinfo=UTC) + timedelta(minutes=minutes)
+        )
+        assert (
+            lifetime.bucket_totals(bucket, lifetime.LIFETIME_MAX_HOUR_KWH)["heat"]
+            == 0.0
+        )
+    assert caplog.text.count("implausible consumption") == 1
+    freezer.move_to(datetime(2026, 10, 20, 13, 1, tzinfo=UTC))
+    lifetime.bucket_totals(bucket, lifetime.LIFETIME_MAX_HOUR_KWH)
+    assert caplog.text.count("implausible consumption") == 2
+    # Another limit (a day, a month) is rate-limited on its own.
+    lifetime.bucket_totals(bucket, lifetime.LIFETIME_MAX_DAY_KWH)
+    assert caplog.text.count("implausible consumption") == 3

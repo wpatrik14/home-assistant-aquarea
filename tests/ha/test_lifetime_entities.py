@@ -408,6 +408,91 @@ async def test_other_failures_retry_after_an_hour(
     assert tracker.complete
 
 
+@pytest.mark.parametrize(
+    ("error", "blocks"),
+    [
+        (
+            aioaquarea.AuthenticationError(
+                aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED,
+                "Request rejected with status 403",
+            ),
+            True,
+        ),
+        (aioaquarea.ApiError("HTTP_429", "Unexpected HTTP status 429"), True),
+        (aioaquarea.ApiError("HTTP_503", "Unexpected HTTP status 503"), True),
+        (
+            aioaquarea.AuthenticationError(
+                aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED, "Token expires"
+            ),
+            False,
+        ),
+        (
+            aioaquarea.AuthenticationError(
+                aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED,
+                "Request rejected with status 401",
+            ),
+            False,
+        ),
+        (aioaquarea.AgreementNotAcceptedError(), False),
+        (aioaquarea.ApiError("HTTP_404", "Unexpected HTTP status 404"), False),
+        (aioaquarea.ApiError("some_code", "something else"), False),
+        (ConnectionError("down"), False),
+    ],
+    ids=[
+        "403",
+        "429",
+        "503",
+        "token-expires",
+        "401",
+        "agreement-not-accepted",
+        "404",
+        "other-api-error",
+        "network",
+    ],
+)
+async def test_only_a_refusal_blocks_every_device(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_aquarea_client: AsyncMock,
+    mock_device_info: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    error: BaseException,
+    blocks: bool,
+) -> None:
+    """403, 429 and 5xx make every device wait; the rest only the device it hit."""
+    second = MagicMock(spec=aioaquarea.DeviceInfo)
+    second.device_id = "second-device-id"
+    second.long_id = "second-long-id"
+    second.name = "Second pump"
+    second.model = "WH-TEST"
+    second.firmware_version = "1.0.0"
+    second.has_tank = True
+    mock_aquarea_client.get_devices.return_value = [mock_device_info, second]
+    world.year.script = [error]
+    await setup_entry(hass, mock_config_entry, freezer, NOW)
+
+    trackers = [coord.lifetime for coord in mock_config_entry.runtime_data.values()]
+    failed = [t for t in trackers if t.state["failures"]]
+    assert len(failed) >= 1
+    blocked_until = hass.data[DOMAIN].get(coordinator_module.LIFETIME_BLOCKED_UNTIL)
+    if blocks:
+        assert blocked_until == NOW + timedelta(hours=6)
+        # Nothing else was sent: the other device waited out the block.
+        assert world.year.calls == ["202609"]
+        assert all(not t.complete for t in trackers)
+        assert all(t.retry_at == NOW + timedelta(hours=6) for t in trackers)
+    else:
+        assert blocked_until is None
+        # Only the device that was refused waits, for an hour; the other one
+        # read its whole history.
+        assert len(failed) == 1
+        assert failed[0].retry_at == NOW + timedelta(hours=1)
+        assert [t for t in trackers if t.complete]
+    # The poll keeps working either way: no reauth flow, no repair.
+    assert not hass.config_entries.flow.async_progress()
+
+
 async def test_the_devices_never_read_the_history_at_the_same_time(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
@@ -705,7 +790,8 @@ async def test_rebuild_during_a_back_off_sends_nothing(
     """Rebuild during a back off sends nothing."""
     world.year.script = [
         aioaquarea.AuthenticationError(
-            aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED, "403"
+            aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED,
+            "Request rejected with status 403",
         )
     ]
     await setup_entry(
@@ -1000,19 +1086,30 @@ async def test_an_unreadable_storage_file_does_not_stop_the_setup(
     assert world.year.calls == ["202609", "202409"]
 
 
-async def test_the_recorder_gets_every_hour_of_the_day(
+def last_reset(hass: HomeAssistant, entity_id: str) -> str:
+    """Return the last_reset attribute of an entity."""
+    state = hass.states.get(entity_id)
+    assert state is not None
+    return state.attributes["last_reset"]
+
+
+async def test_the_last_hour_published_after_midnight_stays_in_the_finished_day(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
     world: World,
     mock_config_entry: MockConfigEntry,
 ) -> None:
-    """The hour published after midnight is in the finished day's last state."""
+    """The hour published after midnight is in the finished day's last state.
+
+    This pins the states the sensor writes (value and last_reset); what the
+    recorder does with a total sensor's last_reset is Home Assistant's own.
+    """
     world.hours["20261108"] = {21: 1.0}
     await setup_entry(
         hass, mock_config_entry, freezer, datetime(2026, 11, 8, 22, 40, tzinfo=UTC)
     )
-    states = [value(hass, TODAY)]
-    assert states[-1] == 1.0
+    states = [(value(hass, TODAY), last_reset(hass, TODAY))]
+    assert states[-1][0] == 1.0
     # 22:00-23:00 UTC is the day's last hour; it is published at 23:05 UTC.
     world.hours["20261108"][22] = 0.5
     for when in (
@@ -1021,8 +1118,84 @@ async def test_the_recorder_gets_every_hour_of_the_day(
         datetime(2026, 11, 9, 1, 50, tzinfo=UTC),
     ):
         await at(hass, freezer, when)
-        states.append(value(hass, TODAY))
-    assert states == [1.0, 1.5, 1.5, 1.5]
+        states.append((value(hass, TODAY), last_reset(hass, TODAY)))
+    assert [state[0] for state in states] == [1.0, 1.5, 1.5, 1.5]
+    # One last_reset for all of them: the recorder never sees the new day
+    # start before the finished one is complete.
+    assert {state[1][:10] for state in states} == {"2026-11-08"}
+
+
+async def test_a_long_consumption_interval_keeps_the_finished_day_longer(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """Interval 6 h: the settle time is 8 h, not 3 h."""
+    world.hours["20261108"] = {21: 1.0}
+    await setup_entry(
+        hass, mock_config_entry, freezer, datetime(2026, 11, 8, 22, 40, tzinfo=UTC)
+    )
+    hass.config_entries.async_update_entry(
+        mock_config_entry, options={CONF_CONSUMPTION_INTERVAL: 360}
+    )
+    assert await hass.config_entries.async_reload(mock_config_entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert coordinator(mock_config_entry).consumption_interval == 360
+
+    # 03:35 local: past the 3 h of the default interval, inside the 8 h.
+    await at(hass, freezer, datetime(2026, 11, 9, 2, 35, tzinfo=UTC))
+    assert last_reset(hass, TODAY).startswith("2026-11-08T00:00:00+01:00")
+    # 08:05 local: the new day.
+    await at(hass, freezer, datetime(2026, 11, 9, 7, 5, tzinfo=UTC))
+    assert last_reset(hass, TODAY).startswith("2026-11-09T00:00:00+01:00")
+
+
+@pytest.mark.parametrize(
+    ("start", "before", "after", "reset_before", "reset_after"),
+    [
+        # Clocks go back 03:00 CEST -> 02:00 CET at 01:00 UTC; the day of 25
+        # hours starts at 22:00 UTC and changes at 03:00 on the wall clock,
+        # which is 02:00 UTC.
+        (
+            datetime(2026, 10, 24, 12, 0, tzinfo=UTC),
+            datetime(2026, 10, 25, 1, 50, tzinfo=UTC),
+            datetime(2026, 10, 25, 2, 10, tzinfo=UTC),
+            "2026-10-24T00:00:00+02:00",
+            "2026-10-25T00:00:00+02:00",
+        ),
+        # Clocks go forward 02:00 CET -> 03:00 CEST at 01:00 UTC; the day of
+        # 23 hours starts at 23:00 UTC and changes at 03:00 on the wall clock,
+        # which is 01:00 UTC (there is no 02:xx that day).
+        (
+            datetime(2026, 3, 28, 12, 0, tzinfo=UTC),
+            datetime(2026, 3, 29, 0, 50, tzinfo=UTC),
+            datetime(2026, 3, 29, 1, 10, tzinfo=UTC),
+            "2026-03-28T00:00:00+01:00",
+            "2026-03-29T00:00:00+01:00",
+        ),
+    ],
+    ids=["fall-back", "spring-forward"],
+)
+async def test_the_day_switches_at_three_on_the_wall_clock_on_clock_change_days(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_config_entry: MockConfigEntry,
+    start: datetime,
+    before: datetime,
+    after: datetime,
+    reset_before: str,
+    reset_after: str,
+) -> None:
+    """The switch is at 03:00 on the wall clock, whatever the length of the day."""
+    await setup_entry(hass, mock_config_entry, freezer, start)
+    for day in (start.date(), start.date() + timedelta(days=1)):
+        world.hours[day.strftime("%Y%m%d")] = {1: 1.0, 5: 0.5, 12: 2.0}
+    await at(hass, freezer, before)
+    assert last_reset(hass, TODAY).startswith(reset_before)
+    await at(hass, freezer, after)
+    assert last_reset(hass, TODAY).startswith(reset_after)
 
 
 # --- implausible data, locks, stopping ------------------------------------------------
@@ -1094,7 +1267,8 @@ class _RefusingClient:
     async def login(self) -> None:
         self.logins += 1
         raise aioaquarea.AuthenticationError(
-            aioaquarea.AuthenticationErrorCodes.API_ERROR, "blocked"
+            aioaquarea.AuthenticationErrorCodes.TOKEN_EXPIRED,
+            "Request rejected with status 403",
         )
 
     @auth_required
@@ -1198,3 +1372,80 @@ async def test_a_refresh_during_the_unload_cannot_start_or_save_anything(
     async_fire_time_changed(hass, NOW + timedelta(minutes=5))
     await hass.async_block_till_done()
     assert store_key(mock_config_entry) not in hass_storage
+
+
+async def test_a_failed_unload_lets_the_lifetime_sync_carry_on(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """If the platforms do not unload the entry stays loaded and keeps syncing."""
+    world.year.script = [ConnectionError("down")]
+    await setup_entry(hass, mock_config_entry, freezer, NOW)
+    coord = coordinator(mock_config_entry)
+    assert not coord.lifetime.complete
+
+    with patch.object(
+        hass.config_entries, "async_unload_platforms", AsyncMock(return_value=False)
+    ):
+        assert not await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    assert mock_config_entry.state is ConfigEntryState.FAILED_UNLOAD
+    assert not coord._lifetime_stopped  # noqa: SLF001
+
+    # The history is read after the back-off, as if nothing had happened.
+    await at(hass, freezer, NOW + timedelta(hours=1, minutes=1))
+    assert coord.lifetime.complete
+    await coord.async_shutdown()
+
+
+async def test_the_start_gate_waits_for_the_login_back_off(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """No history read is started while the poll's login is backing off."""
+    world.year.script = [ConnectionError("down")]
+    await setup_entry(hass, mock_config_entry, freezer, NOW)
+    coord = coordinator(mock_config_entry)
+    tracker = coord.lifetime
+    assert world.year.calls == ["202609"]
+
+    later = NOW + timedelta(hours=2)
+    freezer.move_to(later)
+    coord._login_retry_at = later + timedelta(hours=1)  # noqa: SLF001
+    coord._maybe_start_lifetime_sync(later)  # noqa: SLF001
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert not coord.lifetime_sync_running
+    assert world.year.calls == ["202609"]
+
+    coord._login_retry_at = None  # noqa: SLF001
+    coord._maybe_start_lifetime_sync(later)  # noqa: SLF001
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert tracker.complete
+
+
+async def test_the_fetch_gate_stops_a_run_when_the_login_starts_backing_off(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    world: World,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """A run that was started refuses its request when the login backs off."""
+    world.year.script = [ConnectionError("down")]
+    await setup_entry(hass, mock_config_entry, freezer, NOW)
+    coord = coordinator(mock_config_entry)
+    tracker = coord.lifetime
+    assert tracker.state["failures"] == 1
+
+    later = NOW + timedelta(hours=2)
+    freezer.move_to(later)
+    coord._login_retry_at = later + timedelta(hours=1)  # noqa: SLF001
+    await coord._async_lifetime_sync()  # noqa: SLF001
+    # Not a request in sight, and a failure of the milder kind: one hour,
+    # then two, not a block of all devices.
+    assert world.year.calls == ["202609"]
+    assert tracker.state["failures"] == 2
+    assert tracker.retry_at == later + timedelta(hours=2)
+    assert hass.data[DOMAIN].get(coordinator_module.LIFETIME_BLOCKED_UNTIL) is None

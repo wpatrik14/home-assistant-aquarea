@@ -901,10 +901,20 @@ class EnergyLifetimeSensor(AquareaEnergySensor, SensorEntity, RestoreEntity):
         return {"history_complete": self.coordinator.lifetime.complete}
 
 
+def today_settle(consumption_interval: int) -> timedelta:
+    """Return how long after local midnight the today sensors keep the old day.
+
+    The last hour of a day is published about an hour after it ends and read
+    at the next consumption refresh, so the settle time is the interval plus a
+    margin of two hours, but never below LIFETIME_TODAY_SETTLE.
+    """
+    return max(LIFETIME_TODAY_SETTLE, timedelta(minutes=consumption_interval + 120))
+
+
 class EnergyTodaySensor(AquareaBaseEntity, SensorEntity):
     """The energy consumed in the local calendar day, up to the last cloud hour.
 
-    The day changes 3 hours after local midnight (see ``_presented_time``).
+    The day changes some hours after local midnight (see ``today_settle``).
     Built from the cloud's hourly records (the same fetches as the hourly
     statistics, no extra requests) that fall between the local midnights.
     An hour the cloud revises replaces its old value, and an hour published
@@ -924,16 +934,17 @@ class EnergyTodaySensor(AquareaBaseEntity, SensorEntity):
         self.entity_description = description
         self._now = self._presented_time()
 
-    @staticmethod
-    def _presented_time() -> datetime:
+    def _presented_time(self) -> datetime:
         """Return a moment inside the day to present.
 
         The cloud publishes the last hour of a day about an hour after it
-        ends, so the day only changes LIFETIME_TODAY_SETTLE after local
-        midnight; until then the finished day keeps being shown, complete, with
-        its own last_reset, and the recorder gets every hour of it.
+        ends, and the integration reads it at the next consumption refresh, so
+        the day only changes after the settle time (at least
+        LIFETIME_TODAY_SETTLE, longer for a long consumption interval) past
+        local midnight; until then the finished day keeps being shown,
+        complete, with its own last_reset.
         """
-        return dt_util.now() - LIFETIME_TODAY_SETTLE
+        return dt_util.now() - today_settle(self.coordinator.consumption_interval)
 
     async def async_added_to_hass(self) -> None:
         """Take the time of the first state write."""
