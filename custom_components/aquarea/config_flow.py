@@ -88,24 +88,23 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
-            await self.async_set_unique_id(str.lower(user_input[CONF_USERNAME]))
+            # A pasted ID often carries a space or a newline: it would be a
+            # different unique id (and a failed login) for the same account.
+            username = user_input[CONF_USERNAME].strip()
+            await self.async_set_unique_id(username.lower())
             self._abort_if_unique_id_configured()
 
-            errors = await self._validate_input(
-                user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
-            )
+            errors = await self._validate_input(username, user_input[CONF_PASSWORD])
 
             if self._challenge is not None:
-                self._username = user_input[CONF_USERNAME]
+                self._username = username
                 self._password = user_input[CONF_PASSWORD]
                 return self._show_mfa_form()
 
             if not errors:
                 return self.async_create_entry(
-                    title=user_input[CONF_USERNAME],
-                    data=self._entry_data(
-                        user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
-                    ),
+                    title=username,
+                    data=self._entry_data(username, user_input[CONF_PASSWORD]),
                 )
 
         return self.async_show_form(
@@ -167,9 +166,9 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
         if user_input is not None:
-            username = user_input[CONF_USERNAME]
+            username = user_input[CONF_USERNAME].strip()
             existing = await self.async_set_unique_id(
-                str.lower(username), raise_on_progress=False
+                username.lower(), raise_on_progress=False
             )
             if existing is not None and existing.entry_id != entry.entry_id:
                 return self.async_abort(reason="already_configured")

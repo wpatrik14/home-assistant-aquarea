@@ -180,6 +180,44 @@ async def test_user_step_duplicate_account(
     mock_aquarea_client.login.assert_not_awaited()
 
 
+async def test_user_step_strips_whitespace(
+    hass: HomeAssistant, mock_aquarea_client: AsyncMock, mock_setup_entry: AsyncMock
+) -> None:
+    """A pasted ID with spaces or a newline is stored and checked without them."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, CONF_USERNAME: f"  {USERNAME}\n"}
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == USERNAME
+    assert result["data"] == USER_INPUT
+    assert result["result"].unique_id == USERNAME.lower()
+
+
+async def test_user_step_duplicate_with_whitespace(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """Trailing whitespace does not make the same account a new one."""
+    mock_config_entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, CONF_USERNAME: f"{USERNAME} "}
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+    mock_aquarea_client.login.assert_not_awaited()
+
+
 async def test_reauth_updates_password(
     hass: HomeAssistant,
     mock_aquarea_client: AsyncMock,
@@ -407,6 +445,26 @@ async def test_reconfigure_same_account_other_spelling(
     }
     assert mock_config_entry.unique_id == USERNAME.lower()
     assert mock_config_entry.title == USERNAME.upper()
+
+
+async def test_reconfigure_strips_whitespace(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_setup_entry: AsyncMock,
+) -> None:
+    """A padded ID is still the entry's account, and is stored without padding."""
+    mock_config_entry.add_to_hass(hass)
+
+    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_USERNAME: f" {USERNAME} ", CONF_PASSWORD: NEW_PASSWORD},
+    )
+    await hass.async_block_till_done()
+
+    assert result["reason"] == "reconfigure_successful"
+    assert mock_config_entry.data[CONF_USERNAME] == USERNAME
 
 
 @pytest.mark.parametrize(("error", "expected"), LOGIN_ERRORS)
