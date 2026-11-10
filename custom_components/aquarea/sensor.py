@@ -291,7 +291,6 @@ async def async_setup_entry(
                 coordinator,
                 unique_suffix="dhw_cycles_today",
                 translation_key="dhw_cycles_today",
-                icon="mdi:water-boiler",
                 detector=_is_heating_water,
             )
         )
@@ -300,7 +299,6 @@ async def async_setup_entry(
                 coordinator,
                 unique_suffix="zone_cycles_today",
                 translation_key="zone_cycles_today",
-                icon="mdi:radiator",
                 detector=_is_zone_active,
             )
         )
@@ -309,7 +307,6 @@ async def async_setup_entry(
                 coordinator,
                 unique_suffix="defrost_cycles_today",
                 translation_key="defrost_cycles_today",
-                icon="mdi:snowflake-melt",
                 detector=_is_defrosting,
             )
         )
@@ -514,7 +511,6 @@ class PumpDirectionSensor(AquareaStateSensor):
         super().__init__(coordinator)
         self._attr_translation_key = "direction"
         self._attr_unique_id = f"{super().unique_id}_direction"
-        self._attr_icon = "mdi:compass"
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -532,7 +528,6 @@ class PumpStatusSensor(AquareaStateSensor):
         super().__init__(coordinator)
         self._attr_translation_key = "pump_status"
         self._attr_unique_id = f"{super().unique_id}_pump_status"
-        self._attr_icon = "mdi:pump"
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -553,7 +548,6 @@ class ErrorCodeSensor(AquareaStateSensor):
     """
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_icon = "mdi:alert-circle-outline"
 
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
@@ -1013,14 +1007,12 @@ class DailyEdgeCounterSensor(AquareaBaseEntity, SensorEntity, RestoreEntity):
         *,
         unique_suffix: str,
         translation_key: str,
-        icon: str,
         detector: Callable[[aioaquarea.Device], bool],
     ) -> None:
         """Initialize the counter with the detector whose transitions it counts."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{super().unique_id}_{unique_suffix}"
         self._attr_translation_key = translation_key
-        self._attr_icon = icon
         self._detector = detector
         self._last_state: bool = False
         self._attr_last_reset: datetime | None = None
