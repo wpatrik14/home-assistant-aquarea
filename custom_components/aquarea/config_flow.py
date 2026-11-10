@@ -157,22 +157,28 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Change the password (or the spelling of the Panasonic ID) of an entry.
 
-        The unique ID is the lower-cased Panasonic ID (see `async_step_user`)
-        and every device and entity is keyed by it, so the entry stays on its
-        account: another Panasonic ID aborts with `already_configured` when
-        another entry uses it, and with `wrong_account` otherwise. Using a
-        different account means adding the integration again.
+        The unique ID is the lower-cased Panasonic ID (see `async_step_user`).
+        The entities are keyed by the device ids of the account, which another
+        account does not have, so the entry stays on its account: another
+        Panasonic ID aborts with `already_configured` when another entry uses
+        it, and with `wrong_account` otherwise. Using a different account
+        means adding the integration again. An entry without a unique ID, or
+        with one that is not normalised, is compared by its stored username
+        and gets the normalised unique ID.
         """
         entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
         if user_input is not None:
             username = user_input[CONF_USERNAME].strip()
+            unique_id = username.lower()
             existing = await self.async_set_unique_id(
-                username.lower(), raise_on_progress=False
+                unique_id, raise_on_progress=False
             )
             if existing is not None and existing.entry_id != entry.entry_id:
                 return self.async_abort(reason="already_configured")
-            self._abort_if_unique_id_mismatch(reason="wrong_account")
+            current = entry.unique_id or entry.data.get(CONF_USERNAME) or ""
+            if unique_id != current.strip().lower():
+                return self.async_abort(reason="wrong_account")
 
             errors = await self._validate_input(username, user_input[CONF_PASSWORD])
 
@@ -205,6 +211,7 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             title = username
         return self.async_update_reload_and_abort(
             entry,
+            unique_id=username.strip().lower(),
             title=title,
             data=self._login_data(entry, username, password),
             reason="reconfigure_successful",

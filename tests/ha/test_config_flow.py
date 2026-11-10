@@ -467,6 +467,57 @@ async def test_reconfigure_strips_whitespace(
     assert mock_config_entry.data[CONF_USERNAME] == USERNAME
 
 
+@pytest.mark.parametrize(
+    "stored_unique_id",
+    [None, USERNAME, f" {USERNAME.upper()} "],
+    ids=["none", "mixed-case", "padded"],
+)
+async def test_reconfigure_entry_with_unnormalised_unique_id(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_setup_entry: AsyncMock,
+    stored_unique_id: str | None,
+) -> None:
+    """A missing or unnormalised unique ID is compared by the account and fixed."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title=USERNAME,
+        unique_id=stored_unique_id,
+        data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
+    )
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_USERNAME: USERNAME, CONF_PASSWORD: NEW_PASSWORD}
+    )
+    await hass.async_block_till_done()
+
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data[CONF_PASSWORD] == NEW_PASSWORD
+    assert entry.unique_id == USERNAME.lower()
+
+
+async def test_reconfigure_other_account_aborts_without_unique_id(
+    hass: HomeAssistant, mock_aquarea_client: AsyncMock
+) -> None:
+    """Without a unique ID the stored username still pins the account."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=None,
+        data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
+    )
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_USERNAME: NEW_USERNAME, CONF_PASSWORD: NEW_PASSWORD}
+    )
+
+    assert result["reason"] == "wrong_account"
+    mock_aquarea_client.login.assert_not_awaited()
+
+
 @pytest.mark.parametrize(("error", "expected"), LOGIN_ERRORS)
 async def test_reconfigure_error_then_recovery(
     hass: HomeAssistant,
