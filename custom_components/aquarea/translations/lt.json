@@ -3,6 +3,7 @@
         "abort": {
             "already_configured": "Įrenginys jau nustatytas",
             "reauth_successful": "Pakartotinis autentifikavimas pavyko",
+            "reconfigure_successful": "Perkonfigūravimas sėkmingas",
             "reauth_no_username": "Nepavyko iš naujo autentifikuoti: šiame konfigūracijos įraše nėra išsaugoto vartotojo vardo. Pašalinkite integraciją ir pridėkite ją iš naujo."
         },
         "error": {
@@ -33,6 +34,18 @@
                 },
                 "data_description": {
                     "password": "Dabartinis šio Panasonic ID slaptažodis."
+                }
+            },
+            "reconfigure": {
+                "title": "Perkonfigūruoti Panasonic paskyrą",
+                "description": "Pakeiskite Panasonic ID arba slaptažodį, kurį naudoja šis įrašas. Prisijungimas patikrinamas prieš ką nors išsaugant.",
+                "data": {
+                    "password": "Slaptažodis",
+                    "username": "Prisijungimo vardas"
+                },
+                "data_description": {
+                    "username": "Jūsų Panasonic ID, tie patys prisijungimo duomenys kaip ir Panasonic Comfort Cloud programėlėje.",
+                    "password": "Šio Panasonic ID slaptažodis."
                 }
             },
             "mfa_sms": {

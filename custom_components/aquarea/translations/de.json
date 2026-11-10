@@ -3,6 +3,7 @@
         "abort": {
             "already_configured": "Gerät ist bereits konfiguriert",
             "reauth_successful": "Die erneute Authentifizierung war erfolgreich",
+            "reconfigure_successful": "Die Neukonfiguration war erfolgreich",
             "reauth_no_username": "Erneute Authentifizierung nicht möglich: Für diesen Konfigurationseintrag ist kein Benutzername gespeichert. Entferne die Integration und füge sie erneut hinzu."
         },
         "error": {
@@ -33,6 +34,18 @@
                 },
                 "data_description": {
                     "password": "Das aktuelle Passwort dieser Panasonic ID."
+                }
+            },
+            "reconfigure": {
+                "title": "Panasonic-Konto neu konfigurieren",
+                "description": "Ändere die Panasonic ID oder das Passwort, die dieser Eintrag verwendet. Die Anmeldung wird geprüft, bevor etwas gespeichert wird.",
+                "data": {
+                    "password": "Passwort",
+                    "username": "Benutzername"
+                },
+                "data_description": {
+                    "username": "Deine Panasonic ID, dieselben Zugangsdaten wie in der Panasonic Comfort Cloud App.",
+                    "password": "Das Passwort dieser Panasonic ID."
                 }
             },
             "mfa_sms": {

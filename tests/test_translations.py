@@ -48,6 +48,7 @@ INTENTIONALLY_ENGLISH = {
     ("lt.json", "entity.select.powerful_time.name"),
     ("it.json", "config.step.user.data.password"),
     ("it.json", "config.step.reauth_confirm.data.password"),
+    ("it.json", "config.step.reconfigure.data.password"),
 }
 
 

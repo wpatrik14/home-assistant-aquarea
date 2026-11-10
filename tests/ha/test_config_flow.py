@@ -316,6 +316,244 @@ async def test_reauth_without_username_aborts(
     mock_aquarea_client.login.assert_not_awaited()
 
 
+# --- reconfigure -------------------------------------------------------------
+
+NEW_USERNAME = "Other@Example.com"
+
+
+async def test_reconfigure_updates_password(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_setup_entry: AsyncMock,
+) -> None:
+    """The form is pre-filled with the username only; saving stores the login."""
+    mock_config_entry.add_to_hass(hass)
+
+    result = await mock_config_entry.start_reconfigure_flow(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+    suggested = {
+        str(key): key.description["suggested_value"]
+        for key in result["data_schema"].schema
+        if key.description
+    }
+    assert suggested == {CONF_USERNAME: USERNAME}
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_USERNAME: USERNAME, CONF_PASSWORD: NEW_PASSWORD}
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert mock_config_entry.data == {
+        CONF_USERNAME: USERNAME,
+        CONF_PASSWORD: NEW_PASSWORD,
+    }
+    assert mock_config_entry.unique_id == USERNAME.lower()
+    mock_aquarea_client.login.assert_awaited_once()
+    assert len(mock_setup_entry.mock_calls) == 1
+
+
+async def test_reconfigure_new_account_rekeys_entry(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_setup_entry: AsyncMock,
+) -> None:
+    """A different Panasonic ID replaces the old one, unique ID and title too."""
+    mock_config_entry.add_to_hass(hass)
+    mock_aquarea_client.refresh_token = "token-placeholder"
+
+    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_USERNAME: NEW_USERNAME, CONF_PASSWORD: NEW_PASSWORD}
+    )
+    await hass.async_block_till_done()
+
+    assert result["reason"] == "reconfigure_successful"
+    assert mock_config_entry.data == {
+        CONF_USERNAME: NEW_USERNAME,
+        CONF_PASSWORD: NEW_PASSWORD,
+        "refresh_token": "token-placeholder",
+    }
+    assert mock_config_entry.unique_id == NEW_USERNAME.lower()
+    assert mock_config_entry.title == NEW_USERNAME
+
+
+@pytest.mark.parametrize(("error", "expected"), LOGIN_ERRORS)
+async def test_reconfigure_error_then_recovery(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_setup_entry: AsyncMock,
+    error: Exception,
+    expected: str,
+) -> None:
+    """A failed login (invalid_auth, cannot_connect, ...) changes nothing."""
+    mock_config_entry.add_to_hass(hass)
+    mock_aquarea_client.login.side_effect = error
+    user_input = {CONF_USERNAME: USERNAME, CONF_PASSWORD: NEW_PASSWORD}
+
+    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+    assert result["errors"] == {"base": expected}
+    assert mock_config_entry.data[CONF_PASSWORD] == PASSWORD
+    if expected == "api_error":
+        assert result["description_placeholders"] == {"api_error_msg": str(error)}
+
+    mock_aquarea_client.login.side_effect = None
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input
+    )
+    await hass.async_block_till_done()
+
+    assert result["reason"] == "reconfigure_successful"
+    assert mock_config_entry.data[CONF_PASSWORD] == NEW_PASSWORD
+
+
+@pytest.mark.parametrize(
+    ("challenge", "step_id"),
+    [
+        (aioaquarea.MfaChallenge("sms", "***62", ("sms",), True), "mfa_sms"),
+        (aioaquarea.MfaChallenge("otp", None, ("otp",), False), "mfa_otp"),
+    ],
+)
+async def test_reconfigure_with_mfa(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_setup_entry: AsyncMock,
+    challenge: aioaquarea.MfaChallenge,
+    step_id: str,
+) -> None:
+    """An account with MFA gets the code form; the token is stored on success."""
+    mock_config_entry.add_to_hass(hass)
+    mock_aquarea_client.login.side_effect = aioaquarea.MfaRequiredError(challenge)
+
+    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_USERNAME: NEW_USERNAME, CONF_PASSWORD: NEW_PASSWORD}
+    )
+    assert result["step_id"] == step_id
+
+    async def accept(code: str) -> None:
+        mock_aquarea_client.refresh_token = "mfa-token-placeholder"
+
+    mock_aquarea_client.complete_mfa.side_effect = accept
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"code": "123456"}
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert mock_config_entry.data == {
+        CONF_USERNAME: NEW_USERNAME,
+        CONF_PASSWORD: NEW_PASSWORD,
+        "refresh_token": "mfa-token-placeholder",
+    }
+    assert mock_config_entry.unique_id == NEW_USERNAME.lower()
+
+
+async def test_reconfigure_mfa_expired_returns_to_reconfigure_form(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """An expired MFA transaction goes back to the reconfigure form."""
+    mock_config_entry.add_to_hass(hass)
+    mock_aquarea_client.login.side_effect = aioaquarea.MfaRequiredError(
+        aioaquarea.MfaChallenge("otp", None, ("otp",), False)
+    )
+    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_USERNAME: NEW_USERNAME, CONF_PASSWORD: NEW_PASSWORD}
+    )
+    mock_aquarea_client.complete_mfa.side_effect = aioaquarea.AuthenticationError(
+        "MFA_EXPIRED", "message from the cloud"
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"code": "123456"}
+    )
+
+    assert result["step_id"] == "reconfigure"
+    assert result["errors"] == {"base": "mfa_expired"}
+    suggested = {
+        str(key): key.description["suggested_value"]
+        for key in result["data_schema"].schema
+        if key.description
+    }
+    assert suggested == {CONF_USERNAME: NEW_USERNAME}
+
+
+async def test_reconfigure_to_configured_account_aborts(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """Another entry already uses that Panasonic ID: no login, nothing changes."""
+    mock_config_entry.add_to_hass(hass)
+    other = MockConfigEntry(
+        domain=DOMAIN,
+        title=NEW_USERNAME,
+        unique_id=NEW_USERNAME.lower(),
+        data={CONF_USERNAME: NEW_USERNAME, CONF_PASSWORD: PASSWORD},
+    )
+    other.add_to_hass(hass)
+
+    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_USERNAME: NEW_USERNAME.upper(), CONF_PASSWORD: NEW_PASSWORD},
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+    mock_aquarea_client.login.assert_not_awaited()
+    assert mock_config_entry.data[CONF_USERNAME] == USERNAME
+    assert mock_config_entry.unique_id == USERNAME.lower()
+
+
+async def test_reconfigure_changes_only_its_own_entry(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_setup_entry: AsyncMock,
+) -> None:
+    """With several accounts, the one the flow was started for is updated."""
+    mock_config_entry.add_to_hass(hass)
+    other = MockConfigEntry(
+        domain=DOMAIN,
+        title=NEW_USERNAME,
+        unique_id=NEW_USERNAME.lower(),
+        data={CONF_USERNAME: NEW_USERNAME, CONF_PASSWORD: PASSWORD},
+    )
+    other.add_to_hass(hass)
+
+    result = await other.start_reconfigure_flow(hass)
+    suggested = [
+        key.description["suggested_value"]
+        for key in result["data_schema"].schema
+        if key.description
+    ]
+    assert suggested == [NEW_USERNAME]
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_USERNAME: NEW_USERNAME, CONF_PASSWORD: NEW_PASSWORD}
+    )
+    await hass.async_block_till_done()
+
+    assert result["reason"] == "reconfigure_successful"
+    assert other.data[CONF_PASSWORD] == NEW_PASSWORD
+    assert mock_config_entry.data[CONF_PASSWORD] == PASSWORD
+
+
 async def test_options_flow(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:

@@ -3,6 +3,7 @@
         "abort": {
             "already_configured": "Het apparaat is al geconfigureerd",
             "reauth_successful": "Herauthenticatie was geslaagd",
+            "reconfigure_successful": "Herconfiguratie was geslaagd",
             "reauth_no_username": "Kan niet opnieuw verifiëren: deze configuratie heeft geen opgeslagen gebruikersnaam. Verwijder de integratie en voeg deze opnieuw toe."
         },
         "error": {
@@ -33,6 +34,18 @@
                 },
                 "data_description": {
                     "password": "Het huidige wachtwoord van dit Panasonic ID."
+                }
+            },
+            "reconfigure": {
+                "title": "Panasonic-account opnieuw configureren",
+                "description": "Wijzig de Panasonic ID of het wachtwoord dat deze invoer gebruikt. De aanmelding wordt gecontroleerd voordat er iets wordt opgeslagen.",
+                "data": {
+                    "password": "Wachtwoord",
+                    "username": "Gebruikersnaam"
+                },
+                "data_description": {
+                    "username": "Uw Panasonic ID, dezelfde login als in de Panasonic Comfort Cloud-app.",
+                    "password": "Het wachtwoord van dit Panasonic ID."
                 }
             },
             "mfa_sms": {

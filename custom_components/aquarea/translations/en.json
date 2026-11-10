@@ -3,6 +3,7 @@
         "abort": {
             "already_configured": "Device is already configured",
             "reauth_successful": "Re-authentication was successful",
+            "reconfigure_successful": "Reconfiguration was successful",
             "reauth_no_username": "Could not reauthenticate: this configuration entry has no stored username. Remove the integration and add it again."
         },
         "error": {
@@ -33,6 +34,18 @@
                 },
                 "data_description": {
                     "password": "The current password for this Panasonic ID."
+                }
+            },
+            "reconfigure": {
+                "title": "Reconfigure Panasonic account",
+                "description": "Change the Panasonic ID or password this entry uses. The login is checked before anything is saved.",
+                "data": {
+                    "password": "Password",
+                    "username": "Username"
+                },
+                "data_description": {
+                    "username": "Your Panasonic ID, the same login as the Panasonic Comfort Cloud app.",
+                    "password": "The password for that Panasonic ID."
                 }
             },
             "mfa_sms": {

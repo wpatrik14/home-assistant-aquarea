@@ -3,6 +3,7 @@
     "abort": {
       "already_configured": "Il dispositivo è già configurato",
       "reauth_successful": "La riautenticazione è stata eseguita correttamente",
+      "reconfigure_successful": "La riconfigurazione è stata eseguita correttamente",
       "reauth_no_username": "Impossibile ri-autenticare: questa voce di configurazione non ha un nome utente salvato. Rimuovi l'integrazione e aggiungila di nuovo."
     },
     "error": {
@@ -33,6 +34,18 @@
         },
         "data_description": {
           "password": "La password attuale di questo Panasonic ID."
+        }
+      },
+      "reconfigure": {
+        "title": "Riconfigura l'account Panasonic",
+        "description": "Modifica l'ID Panasonic o la password usati da questa voce. L'accesso viene verificato prima di salvare qualsiasi modifica.",
+        "data": {
+          "password": "Password",
+          "username": "Nome utente"
+        },
+        "data_description": {
+          "username": "Il tuo Panasonic ID, lo stesso accesso dell'app Panasonic Comfort Cloud.",
+          "password": "La password di questo Panasonic ID."
         }
       },
       "mfa_sms": {
