@@ -95,7 +95,7 @@
     },
     "pump_entities_not_moved": {
       "title": "Pump status sensor could not be moved",
-      "description": "The pump status sensor of {entry_title} is now a binary sensor, but it could not be moved because the new entity ID is already used by another entity:\n\n{entities}\n\nRename or remove the other entity, then reload the Aquarea Smart Cloud integration (or restart Home Assistant): the move is tried again on every setup, and this issue disappears once it has worked. Until then the new binary sensor gets a different entity ID.\n\nThe states of the pump direction sensor changed too: they are now lowercase (`idle`, `pump`, `water` instead of `IDLE`, `PUMP`, `WATER`). Update any condition or template that compares them."
+      "description": "The pump status sensor of {entry_title} is now a binary sensor, but it could not be moved because the new entity ID is already used by another entity:\n\n{entities}\n\nRename or remove the other entity, then reload the Aquarea Smart Cloud integration (or restart Home Assistant): the move is tried again on every setup, and this issue disappears once it has worked. Until then the new binary sensor has a different entity ID (ending in _2). Once the ID is free it is renamed to the preferred one and the name, area and labels of the old sensor are carried over; if you delete the old sensor instead, the new binary sensor keeps its current ID.\n\nThe states of the pump direction sensor changed too: they are now lowercase (`idle`, `pump`, `water` instead of `IDLE`, `PUMP`, `WATER`). Update any condition or template that compares them."
     },
     "direction_case_changed": {
       "title": "Pump direction states are lowercase now",

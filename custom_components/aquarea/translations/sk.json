@@ -95,7 +95,7 @@
         },
         "pump_entities_not_moved": {
             "title": "Senzor stavu čerpadla sa nepodarilo presunúť",
-            "description": "Senzor stavu čerpadla {entry_title} je teraz binárny senzor, ale nepodarilo sa ho presunúť, pretože nové ID entity už používa iná entita:\n\n{entities}\n\nPremenujte alebo odstráňte druhú entitu a potom znova načítajte integráciu Aquarea Smart Cloud (alebo reštartujte Home Assistant): presun sa skúša pri každom spustení a tento problém zmizne, keď sa podarí. Dovtedy dostane nový binárny senzor iné ID entity.\n\nZmenili sa aj stavy senzora smeru čerpadla: teraz sú malými písmenami (`idle`, `pump`, `water` namiesto `IDLE`, `PUMP`, `WATER`). Upravte podmienky a šablóny, ktoré ich porovnávajú."
+            "description": "Senzor stavu čerpadla {entry_title} je teraz binárny senzor, ale nepodarilo sa ho presunúť, pretože nové ID entity už používa iná entita:\n\n{entities}\n\nPremenujte alebo odstráňte druhú entitu a potom znova načítajte integráciu Aquarea Smart Cloud (alebo reštartujte Home Assistant): presun sa skúša pri každom spustení a tento problém zmizne, keď sa podarí. Dovtedy má nový binárny senzor iné ID entity (končiace na _2). Keď sa ID uvoľní, premenuje sa na požadované a názov, oblasť a štítky starého senzora sa prevezmú; ak namiesto toho starý senzor odstránite, nový binárny senzor si ponechá súčasné ID.\n\nZmenili sa aj stavy senzora smeru čerpadla: teraz sú malými písmenami (`idle`, `pump`, `water` namiesto `IDLE`, `PUMP`, `WATER`). Upravte podmienky a šablóny, ktoré ich porovnávajú."
         },
         "direction_case_changed": {
             "title": "Stavy smeru čerpadla sú teraz malými písmenami",

@@ -2,6 +2,7 @@
 
 from functools import partial
 import logging
+import re
 from typing import Any
 
 import aioaquarea
@@ -83,17 +84,35 @@ def _create_client(hass: HomeAssistant, entry: AquareaConfigEntry) -> aioaquarea
 def _copy_customisations(
     registry: er.EntityRegistry, new_id: str, old: er.RegistryEntry
 ) -> None:
-    """Copy what the user set by hand on the sensor; the platform fills in the rest."""
-    customised: dict[str, Any] = {
-        "name": old.name,
-        "icon": old.icon,
-        "device_class": old.device_class,
-        "area_id": old.area_id,
-        "aliases": old.aliases,
-        "labels": old.labels,
-        "categories": old.categories,
-    }
-    registry.async_update_entity(new_id, **customised)
+    """Copy what the user set by hand on the sensor; the platform fills in the rest.
+
+    Only values the sensor really has are copied, and a value already set on
+    the new entry (the user may have changed it there) is kept: sets are
+    merged.
+    """
+    new = registry.async_get(new_id)
+    assert new is not None
+    changes: dict[str, Any] = {}
+    for field in ("name", "icon", "device_class", "area_id"):
+        if getattr(old, field) and not getattr(new, field):
+            changes[field] = getattr(old, field)
+    # New entries may carry a computed-name marker in their aliases: only the
+    # strings are the user's.
+    if old.aliases and not any(isinstance(alias, str) for alias in new.aliases):
+        changes["aliases"] = old.aliases
+    if old.labels:
+        changes["labels"] = set(new.labels) | set(old.labels)
+    if old.categories:
+        changes["categories"] = {**old.categories, **new.categories}
+    if old.disabled_by and not new.disabled_by:
+        changes["disabled_by"] = old.disabled_by
+    if old.hidden_by and not new.hidden_by:
+        changes["hidden_by"] = old.hidden_by
+    if changes:
+        registry.async_update_entity(new_id, **changes)
+    for domain, value in old.options.items():
+        if value and not new.options.get(domain):
+            registry.async_update_entity_options(new_id, domain, dict(value))
 
 
 def _move_pump_status_sensors(
@@ -119,10 +138,18 @@ def _move_pump_status_sensors(
         object_id = old.entity_id.split(".", 1)[1]
         preferred = f"binary_sensor.{object_id}"
         existing = registry.async_get_entity_id("binary_sensor", DOMAIN, old.unique_id)
+        taken = registry.async_is_registered(
+            preferred
+        ) or not hass.states.async_available(preferred)
         if existing == preferred:
             # An interrupted earlier run already created the new entry; keep it.
             new_id = existing
-        elif registry.async_is_registered(preferred) or hass.states.get(preferred):
+        elif existing is not None and not re.fullmatch(
+            rf"{re.escape(preferred)}_\d+", existing
+        ):
+            # The user gave the new entity an id of their own: keep it.
+            new_id = existing
+        elif taken:
             _LOGGER.warning(
                 "Not moving %s: %s is already in use", old.entity_id, preferred
             )
@@ -151,16 +178,22 @@ def _move_pump_status_sensors(
         else:
             # An earlier run was blocked and the binary sensor platform has
             # registered the entity meanwhile, under a suffixed id (_2). The
-            # preferred id is free now: take it, and carry over what the user
-            # set on the sensor, which that entry does not have.
-            new_id = registry.async_update_entity(
-                existing, new_entity_id=preferred
-            ).entity_id
-            for domain, value in old.options.items():
-                registry.async_update_entity_options(new_id, domain, dict(value))
-            registry.async_update_entity(
-                new_id, disabled_by=old.disabled_by, hidden_by=old.hidden_by
-            )
+            # preferred id is free now: take it and carry over what the user
+            # set on the sensor.
+            try:
+                new_id = registry.async_update_entity(
+                    existing, new_entity_id=preferred
+                ).entity_id
+            except ValueError as err:
+                # The registry also counts reserved ids that have no state.
+                _LOGGER.warning(
+                    "Not moving %s: %s cannot be used (%s)",
+                    old.entity_id,
+                    preferred,
+                    err,
+                )
+                blocked[old.entity_id] = preferred
+                continue
             _copy_customisations(registry, new_id, old)
         registry.async_remove(old.entity_id)
         moved[old.entity_id] = new_id

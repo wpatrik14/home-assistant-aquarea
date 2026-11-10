@@ -10,7 +10,7 @@ newer major version is checked by calling the hook directly.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -341,6 +341,8 @@ async def test_blocked_move_is_completed_after_the_platform_registered_a_suffixe
         area_id=area.id,
         labels={"heating"},
         aliases={"pump"},
+        hidden_by=er.RegistryEntryHider.USER,
+        disabled_by=er.RegistryEntryDisabler.USER,
     )
     registry.async_update_entity_options(
         old.entity_id, "conversation", {"should_expose": True}
@@ -390,6 +392,8 @@ async def test_blocked_move_is_completed_after_the_platform_registered_a_suffixe
     assert new.labels == {"heating"}
     assert new.aliases == {"pump"}
     assert new.options["conversation"] == {"should_expose": True}
+    assert new.hidden_by is er.RegistryEntryHider.USER
+    assert new.disabled_by is er.RegistryEntryDisabler.USER
     assert [issue.translation_key for issue in _issues(hass)] == [
         "pump_entities_changed"
     ]
@@ -595,6 +599,108 @@ async def test_blocked_move_has_no_direction_issue(
 
     assert await async_migrate_entry(hass, old_entry)
 
+    assert [issue.translation_key for issue in _issues(hass)] == [
+        "pump_entities_not_moved"
+    ]
+
+
+async def _blocked_setup(hass: HomeAssistant, entry: MockConfigEntry, **old_kwargs):
+    """Set the entry up with the pump sensor's move blocked; return (old, other)."""
+    registry = er.async_get(hass)
+    old = _old_pump_sensor(hass, entry)
+    if old_kwargs:
+        registry.async_update_entity(old.entity_id, **old_kwargs)
+    other = registry.async_get_or_create(
+        "binary_sensor",
+        "other_integration",
+        "unrelated",
+        suggested_object_id="heat_pump_pump_status",
+    )
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert (
+        registry.async_get_entity_id(
+            "binary_sensor", DOMAIN, f"{DEVICE_ID}_pump_status"
+        )
+        == "binary_sensor.heat_pump_pump_status_2"
+    )
+    return old, other
+
+
+async def test_user_chosen_entity_id_is_left_alone(
+    hass: HomeAssistant, mock_aquarea_client: AsyncMock, old_entry: MockConfigEntry
+) -> None:
+    """A new entity the user gave an id of their own is kept; only the old sensor goes."""
+    registry = er.async_get(hass)
+    uid = f"{DEVICE_ID}_pump_status"
+    old, _other = await _blocked_setup(hass, old_entry, name="Old name")
+    registry.async_update_entity(
+        "binary_sensor.heat_pump_pump_status_2", new_entity_id="binary_sensor.my_pump"
+    )
+
+    await hass.config_entries.async_reload(old_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert registry.async_get_entity_id("binary_sensor", DOMAIN, uid) == (
+        "binary_sensor.my_pump"
+    )
+    assert registry.async_get(old.entity_id) is None
+    assert registry.async_get("binary_sensor.my_pump").name is None
+    assert old_entry.minor_version == AquareaConfigFlow.MINOR_VERSION
+    assert [issue.translation_key for issue in _issues(hass)] == [
+        "pump_entities_changed"
+    ]
+
+
+async def test_empty_old_values_do_not_wipe_the_new_entity(
+    hass: HomeAssistant, mock_aquarea_client: AsyncMock, old_entry: MockConfigEntry
+) -> None:
+    """Values the user set on the new entity survive the rename."""
+    registry = er.async_get(hass)
+    area = ar.async_get(hass).async_create("Utility room")
+    _old, other = await _blocked_setup(hass, old_entry, labels={"old"})
+    registry.async_update_entity(
+        "binary_sensor.heat_pump_pump_status_2",
+        name="Mine",
+        icon="mdi:pump",
+        area_id=area.id,
+        labels={"new"},
+    )
+    registry.async_remove(other.entity_id)
+
+    await hass.config_entries.async_reload(old_entry.entry_id)
+    await hass.async_block_till_done()
+
+    new = registry.async_get("binary_sensor.heat_pump_pump_status")
+    assert new.name == "Mine"
+    assert new.icon == "mdi:pump"
+    assert new.area_id == area.id
+    assert new.labels == {"old", "new"}
+
+
+async def test_rename_refused_by_the_registry_is_blocked(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    old_entry: MockConfigEntry,
+) -> None:
+    """A ValueError from the registry (reserved id) keeps the issue, not a migration error."""
+    registry = er.async_get(hass)
+    old, other = await _blocked_setup(hass, old_entry)
+    registry.async_remove(other.entity_id)
+    real = er.EntityRegistry.async_update_entity
+
+    def refuse(self, entity_id, **kwargs):
+        if "new_entity_id" in kwargs:
+            raise ValueError("Entity with this ID is already registered")
+        return real(self, entity_id, **kwargs)
+
+    with patch.object(er.EntityRegistry, "async_update_entity", refuse):
+        await hass.config_entries.async_reload(old_entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert old_entry.state is ConfigEntryState.LOADED
+    assert old_entry.minor_version == 1
+    assert registry.async_get(old.entity_id) is not None
     assert [issue.translation_key for issue in _issues(hass)] == [
         "pump_entities_not_moved"
     ]
