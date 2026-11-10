@@ -49,11 +49,6 @@ class AquareaForceDHWSwitch(AquareaBaseEntity, SwitchEntity):
         self._optimistic_is_on: bool | None = None
 
     @property
-    def icon(self) -> str:
-        """Return the icon."""
-        return "mdi:water-boiler" if self.is_on else "mdi:water-boiler-off"
-
-    @property
     def is_on(self) -> bool:
         """If force DHW mode is enabled."""
         if self._optimistic_is_on is not None:
@@ -103,11 +98,6 @@ class AquareaForceHeaterSwitch(AquareaBaseEntity, SwitchEntity):
         self._optimistic_is_on: bool | None = None
 
     @property
-    def icon(self) -> str:
-        """Return the icon."""
-        return "mdi:hvac" if self.is_on else "mdi:hvac-off"
-
-    @property
     def is_on(self) -> bool:
         """If force heater mode is enabled."""
         if self._optimistic_is_on is not None:
@@ -155,11 +145,6 @@ class AquareaHolidayTimerSwitch(AquareaBaseEntity, SwitchEntity):
         self._attr_translation_key = "holiday_timer"
         self._attr_unique_id = f"{super().unique_id}_holiday_timer"
         self._optimistic_is_on: bool | None = None
-
-    @property
-    def icon(self) -> str:
-        """Return the icon."""
-        return "mdi:timer-check" if self.is_on else "mdi:timer-off"
 
     @property
     def is_on(self) -> bool:

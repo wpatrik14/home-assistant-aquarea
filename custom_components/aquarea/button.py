@@ -44,7 +44,6 @@ class AquareaDefrostButton(AquareaBaseEntity, ButtonEntity):
 
         self._attr_unique_id = f"{super().unique_id}_request_defrost"
         self._attr_translation_key = "request_defrost"
-        self._attr_icon = "mdi:snowflake-melt"
 
     async def async_press(self) -> None:
         """Request to start the defrost process."""
@@ -69,7 +68,6 @@ class AquareaRebuildLifetimeButton(AquareaBaseEntity, ButtonEntity):
 
     _attr_entity_category = EntityCategory.CONFIG
     _attr_entity_registry_enabled_default = False
-    _attr_icon = "mdi:database-refresh"
 
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
         """Initialize the button."""

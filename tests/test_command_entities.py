@@ -309,14 +309,6 @@ def main():
         )
 
     obj = selects["AquareaPowerfulTimeSelect"](_Device(powerful_time=PowerfulTime.OFF))
-    icon_off = obj.icon
-    obj._optimistic_option = "on-30m"
-    check(
-        "powerful time icon follows the optimistic value",
-        icon_off == "mdi:fire-off" and obj.icon == "mdi:fire",
-        f"off={icon_off} optimistic={obj.icon}",
-    )
-
     # --- button ------------------------------------------------------------
     button = _load("button.py", ["AquareaDefrostButton"])["AquareaDefrostButton"]
     device = _Device(device_mode_status=DeviceModeStatus.NORMAL)
@@ -352,12 +344,9 @@ def main():
     on = defrost(_Device(device_mode_status=DeviceModeStatus.DEFROST))
     off = defrost(_Device(device_mode_status=DeviceModeStatus.NORMAL))
     check(
-        "defrost sensor and icon follow the device mode",
-        on.is_on is True
-        and on.icon == "mdi:snowflake-melt"
-        and off.is_on is False
-        and off.icon == "mdi:snowflake-off",
-        f"on={on.is_on}/{on.icon} off={off.is_on}/{off.icon}",
+        "defrost sensor follows the device mode",
+        on.is_on is True and off.is_on is False,
+        f"on={on.is_on} off={off.is_on}",
     )
 
     print()
