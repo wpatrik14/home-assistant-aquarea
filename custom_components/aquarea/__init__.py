@@ -9,8 +9,8 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-from .const import APP_VERSION_REJECTED, CONF_REFRESH_TOKEN, MFA_REQUIRED
 from .config_flow import AquareaConfigFlow
+from .const import APP_VERSION_REJECTED, CONF_REFRESH_TOKEN, MFA_REQUIRED
 from .coordinator import (
     AGREEMENT_NOT_ACCEPTED_CODE,
     AGREEMENT_NOT_ACCEPTED_MESSAGE,
