@@ -100,6 +100,10 @@
         "direction_case_changed": {
             "title": "Stany kierunku pompy są teraz pisane małymi literami",
             "description": "Stany czujnika kierunku pompy {entry_title} są teraz pisane małymi literami (`idle`, `pump`, `water` zamiast `IDLE`, `PUMP`, `WATER`). Zaktualizuj automatyzacje, skrypty, szablony i warunki na pulpicie, które je porównują. Po zakończeniu możesz zignorować ten problem."
+        },
+        "agreement_not_accepted": {
+            "title": "Trzeba zaakceptować warunki Panasonic",
+            "description": "Panasonic zaktualizował regulamin lub politykę prywatności i dopóki ich nie zaakceptujesz, wszystkie żądania {entry_title} kończą się niepowodzeniem. Nazwa użytkownika i hasło są w porządku. Otwórz aplikację Panasonic Comfort Cloud, zaloguj się i zaakceptuj nowe warunki. Integracja nadal próbuje, a ten problem zniknie sam, gdy wszystko zadziała. Jeśli nie, zgłoś to w [issue trackerze]({issues_url})."
         }
     },
     "entity": {
@@ -271,6 +275,30 @@
         },
         "unsupported_value": {
             "message": "Wartość „{value}” nie jest obsługiwana przez to urządzenie."
+        },
+        "invalid_credentials": {
+            "message": "Nieprawidłowe dane logowania do Aquarea Smart Cloud."
+        },
+        "mfa_required": {
+            "message": "Panasonic ID wymaga uwierzytelniania wieloskładnikowego."
+        },
+        "app_version_rejected": {
+            "message": "Panasonic odrzucił wersję aplikacji, którą zgłasza ta integracja (to nie problem z logowaniem): zaktualizuj integrację, zobacz problem do naprawy."
+        },
+        "agreement_not_accepted": {
+            "message": "Panasonic zaktualizował regulamin lub politykę prywatności: otwórz aplikację Panasonic Comfort Cloud i zaakceptuj je, a Aquarea sama wróci do działania."
+        },
+        "authentication_failed": {
+            "message": "Uwierzytelnianie w Aquarea Smart Cloud nie powiodło się: {error}"
+        },
+        "cloud_error": {
+            "message": "Błąd komunikacji z Aquarea Smart Cloud: {error}"
+        },
+        "cannot_connect": {
+            "message": "Nie można połączyć się z Aquarea Smart Cloud: {error}"
+        },
+        "login_backoff": {
+            "message": "Panasonic odrzucił logowanie; następna próba nastąpi o {retry_time}. Jeśli to się powtarza, sprawdź, czy Twój publiczny adres IP nie jest zablokowany (spróbuj innej sieci lub VPN)."
         }
     }
 }

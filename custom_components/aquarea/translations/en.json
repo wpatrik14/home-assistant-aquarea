@@ -100,6 +100,10 @@
         "direction_case_changed": {
             "title": "Pump direction states are lowercase now",
             "description": "The states of the pump direction sensor of {entry_title} are now lowercase (`idle`, `pump`, `water` instead of `IDLE`, `PUMP`, `WATER`). Update any automation, script, template or dashboard condition that compares them. You can ignore this issue once you are done."
+        },
+        "agreement_not_accepted": {
+            "title": "Panasonic terms need to be accepted",
+            "description": "Panasonic updated its terms or privacy policy, and until you accept them every request of {entry_title} fails. Your username and password are fine. Open the Panasonic Comfort Cloud app, sign in and accept the new terms. The integration keeps retrying, and this issue disappears by itself once it works. If it does not, report it in the [issue tracker]({issues_url})."
         }
     },
     "entity": {
@@ -271,6 +275,30 @@
         },
         "unsupported_value": {
             "message": "\"{value}\" is not supported by this device."
+        },
+        "invalid_credentials": {
+            "message": "Invalid Aquarea Smart Cloud credentials."
+        },
+        "mfa_required": {
+            "message": "The Panasonic ID requires multi-factor authentication."
+        },
+        "app_version_rejected": {
+            "message": "Panasonic rejected the app version this integration announces (not your login): update the integration, see the repair issue."
+        },
+        "agreement_not_accepted": {
+            "message": "Panasonic updated its terms or privacy policy: open the Panasonic Comfort Cloud app and accept them, then Aquarea will recover on its own."
+        },
+        "authentication_failed": {
+            "message": "Aquarea Smart Cloud authentication failed: {error}"
+        },
+        "cloud_error": {
+            "message": "Error communicating with Aquarea Smart Cloud: {error}"
+        },
+        "cannot_connect": {
+            "message": "Unable to reach Aquarea Smart Cloud: {error}"
+        },
+        "login_backoff": {
+            "message": "Panasonic refused the login; the next attempt is at {retry_time}. If this keeps happening, check whether your public IP address is blocked (try another network or a VPN)."
         }
     }
 }

@@ -100,6 +100,10 @@
         "direction_case_changed": {
             "title": "Siurblio krypties būsenos dabar rašomos mažosiomis raidėmis",
             "description": "{entry_title} siurblio krypties jutiklio būsenos dabar rašomos mažosiomis raidėmis (`idle`, `pump`, `water` vietoj `IDLE`, `PUMP`, `WATER`). Atnaujinkite automatizacijas, scenarijus, šablonus ir prietaisų skydelio sąlygas, kurie jas lygina. Baigę galite ignoruoti šią problemą."
+        },
+        "agreement_not_accepted": {
+            "title": "Reikia priimti „Panasonic“ sąlygas",
+            "description": "„Panasonic“ atnaujino savo sąlygas arba privatumo politiką, ir kol jų nepriimsite, visos {entry_title} užklausos nepavyksta. Jūsų vartotojo vardas ir slaptažodis tinka. Atidarykite programą „Panasonic Comfort Cloud“, prisijunkite ir priimkite naujas sąlygas. Integracija toliau bando, o ši problema išnyks pati, kai viskas veiks. Jei ne, praneškite [problemų sekiklyje]({issues_url})."
         }
     },
     "entity": {
@@ -271,6 +275,30 @@
         },
         "unsupported_value": {
             "message": "Šis įrenginys nepalaiko reikšmės „{value}“."
+        },
+        "invalid_credentials": {
+            "message": "Neteisingi Aquarea Smart Cloud prisijungimo duomenys."
+        },
+        "mfa_required": {
+            "message": "Panasonic ID reikalinga daugiafaktorė autentifikacija."
+        },
+        "app_version_rejected": {
+            "message": "„Panasonic“ atmetė programos versiją, kurią praneša ši integracija (ne jūsų prisijungimas): atnaujinkite integraciją, žr. taisymo problemą."
+        },
+        "agreement_not_accepted": {
+            "message": "„Panasonic“ atnaujino savo sąlygas arba privatumo politiką: atidarykite programą „Panasonic Comfort Cloud“ ir jas priimkite, tada „Aquarea“ atsigaus pati."
+        },
+        "authentication_failed": {
+            "message": "„Aquarea Smart Cloud“ autentifikavimas nepavyko: {error}"
+        },
+        "cloud_error": {
+            "message": "Ryšio su „Aquarea Smart Cloud“ klaida: {error}"
+        },
+        "cannot_connect": {
+            "message": "Nepavyko pasiekti „Aquarea Smart Cloud“: {error}"
+        },
+        "login_backoff": {
+            "message": "„Panasonic“ atmetė prisijungimą; kitas bandymas bus {retry_time}. Jei tai kartojasi, patikrinkite, ar neužblokuotas jūsų viešasis IP adresas (išbandykite kitą tinklą arba VPN)."
         }
     }
 }

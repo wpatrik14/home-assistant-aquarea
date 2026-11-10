@@ -124,7 +124,7 @@ def main():
     )
     check(
         "name and update interval unchanged",
-        obj.base_kwargs.get("name") == "aquarea-user@example.com-dev1"
+        obj.base_kwargs.get("name") == "aquarea-dev1"
         and obj.base_kwargs.get("update_interval") == timedelta(seconds=60),
         f"kwargs={obj.base_kwargs}",
     )

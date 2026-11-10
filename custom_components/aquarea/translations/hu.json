@@ -100,6 +100,10 @@
         "direction_case_changed": {
             "title": "A szivattyú irány állapotai kisbetűsek lettek",
             "description": "A(z) {entry_title} szivattyú irány érzékelőjének állapotai mostantól kisbetűsek (`idle`, `pump`, `water` a `IDLE`, `PUMP`, `WATER` helyett). Frissítsd azokat az automatizmusokat, szkripteket, sablonokat és irányítópult-feltételeket, amelyek összehasonlítják őket. Ha végeztél, figyelmen kívül hagyhatod ezt a problémát."
+        },
+        "agreement_not_accepted": {
+            "title": "El kell fogadni a Panasonic feltételeit",
+            "description": "A Panasonic frissítette a felhasználási feltételeit vagy adatvédelmi szabályzatát, és amíg nem fogadod el őket, a(z) {entry_title} minden kérése sikertelen. A felhasználóneved és a jelszavad rendben van. Nyisd meg a Panasonic Comfort Cloud alkalmazást, jelentkezz be, és fogadd el az új feltételeket. Az integráció tovább próbálkozik, és ez a probléma magától megszűnik, ha működik. Ha nem, jelezd a [hibakövetőben]({issues_url})."
         }
     },
     "entity": {
@@ -271,6 +275,30 @@
         },
         "unsupported_value": {
             "message": "A(z) „{value}” érték nem támogatott ennél az eszköznél."
+        },
+        "invalid_credentials": {
+            "message": "Érvénytelen Aquarea Smart Cloud hitelesítő adatok."
+        },
+        "mfa_required": {
+            "message": "A Panasonic ID többfaktoros hitelesítést igényel."
+        },
+        "app_version_rejected": {
+            "message": "A Panasonic elutasította az integráció által küldött alkalmazásverziót (nem a bejelentkezésed a hiba): frissítsd az integrációt, lásd a javítási problémát."
+        },
+        "agreement_not_accepted": {
+            "message": "A Panasonic frissítette a felhasználási feltételeit vagy adatvédelmi szabályzatát: nyisd meg a Panasonic Comfort Cloud alkalmazást és fogadd el őket, utána az Aquarea magától helyreáll."
+        },
+        "authentication_failed": {
+            "message": "Az Aquarea Smart Cloud hitelesítése sikertelen: {error}"
+        },
+        "cloud_error": {
+            "message": "Hiba az Aquarea Smart Clouddal való kommunikáció során: {error}"
+        },
+        "cannot_connect": {
+            "message": "Az Aquarea Smart Cloud nem érhető el: {error}"
+        },
+        "login_backoff": {
+            "message": "A Panasonic elutasította a bejelentkezést; a következő próbálkozás ekkor lesz: {retry_time}. Ha ez tartósan fennáll, ellenőrizd, hogy a nyilvános IP-címed nincs-e letiltva (próbálj másik hálózatot vagy VPN-t)."
         }
     }
 }

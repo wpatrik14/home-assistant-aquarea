@@ -75,11 +75,15 @@ aioaquarea = types.SimpleNamespace(
 
 
 class UpdateFailed(Exception):
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.kwargs = kwargs
 
 
 class ConfigEntryAuthFailed(Exception):
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.kwargs = kwargs
 
 
 class _Client:
@@ -154,12 +158,13 @@ def _load():
     namespace = {
         "aioaquarea": aioaquarea,
         "APP_VERSION_REJECTED": "APP_VERSION_REJECTED",
-        "APP_VERSION_REJECTED_MESSAGE": "app version rejected",
+        "DOMAIN": "aquarea",
+        "async_clear_agreement_issue": lambda *_: None,
+        "async_create_agreement_issue": lambda *_: None,
         "async_clear_app_version_issue": lambda *_: None,
         "async_create_app_version_issue": lambda *_: None,
         "MFA_REQUIRED": "MFA_REQUIRED",
         "AGREEMENT_NOT_ACCEPTED_CODE": "4103",
-        "AGREEMENT_NOT_ACCEPTED_MESSAGE": "accept the terms",
         "UpdateFailed": UpdateFailed,
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "dt_util": anything,

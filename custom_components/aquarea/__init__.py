@@ -16,15 +16,15 @@ from .config_flow import AquareaConfigFlow
 from .const import APP_VERSION_REJECTED, CONF_REFRESH_TOKEN, DOMAIN, MFA_REQUIRED
 from .coordinator import (
     AGREEMENT_NOT_ACCEPTED_CODE,
-    AGREEMENT_NOT_ACCEPTED_MESSAGE,
     AquareaConfigEntry,
     AquareaDataUpdateCoordinator,
 )
 from .issues import (
-    APP_VERSION_REJECTED_MESSAGE,
+    async_clear_agreement_issue,
     async_clear_app_version_issue,
     async_clear_migration_issues,
     async_clear_pump_not_moved_issue,
+    async_create_agreement_issue,
     async_create_app_version_issue,
     async_create_direction_case_issue,
     async_create_pump_entities_issue,
@@ -225,6 +225,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
         async_clear_app_version_issue(hass, entry)
         # Get all the devices, we will filter the disabled ones later
         devices = await client.get_devices()
+        async_clear_agreement_issue(hass, entry)
 
         # One coordinator per device; the platforms read them from the
         # entry's runtime_data.
@@ -249,7 +250,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
             aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
         ):
             raise ConfigEntryAuthFailed(
-                "Invalid Aquarea Smart Cloud credentials"
+                translation_domain=DOMAIN, translation_key="invalid_credentials"
             ) from err
         if err.error_code == APP_VERSION_REJECTED:
             # Panasonic stopped accepting the app version: the credentials are
@@ -257,32 +258,47 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
             # problem). Show a repair issue, and retry: an update of the
             # library or Panasonic accepting the version again fixes it.
             async_create_app_version_issue(hass, entry)
-            raise ConfigEntryNotReady(APP_VERSION_REJECTED_MESSAGE) from err
+            raise ConfigEntryNotReady(
+                translation_domain=DOMAIN, translation_key="app_version_rejected"
+            ) from err
         if err.error_code == MFA_REQUIRED:
             # Retrying cannot pass the challenge, and every attempt sends the
             # user a Panasonic login email. Reauth asks for the code.
             raise ConfigEntryAuthFailed(
-                "The Panasonic ID requires multi-factor authentication"
+                translation_domain=DOMAIN, translation_key="mfa_required"
             ) from err
         # Any other authentication failure (SESSION_CLOSED, API_ERROR,
         # TOKEN_EXPIRED, ...) is transient. Never fall through to `return True`
         # here: that would report a successful setup while no devices,
         # coordinators or platforms had been set up.
         raise ConfigEntryNotReady(
-            f"Aquarea Smart Cloud authentication failed: {err}"
+            translation_domain=DOMAIN,
+            translation_key="authentication_failed",
+            translation_placeholders={"error": str(err)},
         ) from err
     except aioaquarea.ClientError as err:
         if getattr(err, "error_code", None) == AGREEMENT_NOT_ACCEPTED_CODE:
-            raise ConfigEntryNotReady(AGREEMENT_NOT_ACCEPTED_MESSAGE) from err
+            # The user can fix it (accept the terms in the Panasonic app): say
+            # so in a repair issue, which the next working setup clears.
+            async_create_agreement_issue(hass, entry)
+            raise ConfigEntryNotReady(
+                translation_domain=DOMAIN, translation_key="agreement_not_accepted"
+            ) from err
         # ApiError, RequestFailedError, InvalidData - the cloud is reachable
         # but unhappy. Worth retrying.
-        raise ConfigEntryNotReady(f"Aquarea Smart Cloud error: {err}") from err
+        raise ConfigEntryNotReady(
+            translation_domain=DOMAIN,
+            translation_key="cloud_error",
+            translation_placeholders={"error": str(err)},
+        ) from err
     except (aiohttp.ClientError, TimeoutError) as err:
         # DNS failures, connection resets, timeouts. Without this, a transient
         # network blip leaves the entry in `setup_error` forever, because Home
         # Assistant only retries setup when ConfigEntryNotReady is raised.
         raise ConfigEntryNotReady(
-            f"Unable to reach Aquarea Smart Cloud: {err}"
+            translation_domain=DOMAIN,
+            translation_key="cannot_connect",
+            translation_placeholders={"error": str(err)},
         ) from err
 
     return True
@@ -291,6 +307,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
 async def async_remove_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> None:
     """Drop the repair issues and the stored lifetime totals of a removed entry."""
     async_clear_app_version_issue(hass, entry)
+    async_clear_agreement_issue(hass, entry)
     async_clear_migration_issues(hass, entry)
     await LifetimeStore(hass, entry.entry_id).async_remove()
 

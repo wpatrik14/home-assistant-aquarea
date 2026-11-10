@@ -115,7 +115,9 @@ sys.modules["aiohttp"] = aiohttp
 
 # --- stub Home Assistant exceptions -----------------------------------------
 class HomeAssistantError(Exception):
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.kwargs = kwargs
 
 
 class ConfigEntryError(HomeAssistantError):
@@ -142,12 +144,12 @@ def _load_setup_entry(namespace_extra=None):
     namespace = {
         "aioaquarea": aioaquarea,
         "APP_VERSION_REJECTED": "APP_VERSION_REJECTED",
-        "APP_VERSION_REJECTED_MESSAGE": "app version rejected",
         "async_clear_app_version_issue": lambda *_: None,
+        "async_clear_agreement_issue": lambda *_: None,
+        "async_create_agreement_issue": lambda *_: None,
         "async_create_app_version_issue": lambda *_: None,
         "MFA_REQUIRED": "MFA_REQUIRED",
         "AGREEMENT_NOT_ACCEPTED_CODE": "4103",
-        "AGREEMENT_NOT_ACCEPTED_MESSAGE": "accept the terms",
         "aiohttp": aiohttp,
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "ConfigEntryNotReady": ConfigEntryNotReady,

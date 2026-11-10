@@ -7,10 +7,6 @@ from homeassistant.helpers import issue_registry as ir
 from .const import DOMAIN
 
 ISSUES_URL = "https://github.com/wpatrik14/home-assistant-aquarea/issues"
-APP_VERSION_REJECTED_MESSAGE = (
-    "Panasonic rejected the app version this integration announces (not your "
-    "login): update the integration, see the repair issue"
-)
 
 
 def _app_version_issue_id(entry: ConfigEntry) -> str:
@@ -158,3 +154,34 @@ def async_clear_migration_issues(hass: HomeAssistant, entry: ConfigEntry) -> Non
     ir.async_delete_issue(hass, DOMAIN, _pump_entities_issue_id(entry))
     ir.async_delete_issue(hass, DOMAIN, _pump_not_moved_issue_id(entry))
     ir.async_delete_issue(hass, DOMAIN, _direction_case_issue_id(entry))
+
+
+def _agreement_issue_id(entry: ConfigEntry) -> str:
+    return f"agreement_not_accepted_{entry.entry_id}"
+
+
+@callback
+def async_create_agreement_issue(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Tell the user that Panasonic wants its new terms or privacy policy accepted.
+
+    Every request fails until they are accepted in the Panasonic Comfort Cloud
+    app, which only the user can do. The login is fine, so no reauth. Home
+    Assistant has nothing to confirm, so the issue is not fixable from here;
+    it disappears by itself once a setup or update works again.
+    """
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        _agreement_issue_id(entry),
+        is_fixable=False,
+        severity=ir.IssueSeverity.ERROR,
+        learn_more_url=ISSUES_URL,
+        translation_key="agreement_not_accepted",
+        translation_placeholders={"entry_title": entry.title, "issues_url": ISSUES_URL},
+    )
+
+
+@callback
+def async_clear_agreement_issue(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove the terms issue, if there is one (after a working request)."""
+    ir.async_delete_issue(hass, DOMAIN, _agreement_issue_id(entry))

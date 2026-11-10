@@ -132,7 +132,9 @@ def _load():
     namespace = {
         "aioaquarea": aioaquarea,
         "APP_VERSION_REJECTED": "APP_VERSION_REJECTED",
-        "APP_VERSION_REJECTED_MESSAGE": "app version rejected",
+        "DOMAIN": "aquarea",
+        "async_clear_agreement_issue": lambda *_: None,
+        "async_create_agreement_issue": lambda *_: None,
         "async_clear_app_version_issue": lambda *_: None,
         "async_create_app_version_issue": lambda *_: None,
         "UpdateFailed": type("UpdateFailed", (Exception,), {}),

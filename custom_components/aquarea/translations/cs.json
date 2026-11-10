@@ -100,6 +100,10 @@
         "direction_case_changed": {
             "title": "Stavy směru čerpadla jsou nyní malými písmeny",
             "description": "Stavy senzoru směru čerpadla {entry_title} jsou nyní malými písmeny (`idle`, `pump`, `water` místo `IDLE`, `PUMP`, `WATER`). Upravte automatizace, skripty, šablony a podmínky na dashboardu, které je porovnávají. Až budete hotovi, můžete tento problém ignorovat."
+        },
+        "agreement_not_accepted": {
+            "title": "Je třeba přijmout podmínky Panasonic",
+            "description": "Panasonic aktualizoval své podmínky nebo zásady ochrany osobních údajů a dokud je nepřijmete, všechny požadavky {entry_title} selhávají. Vaše uživatelské jméno a heslo jsou v pořádku. Otevřete aplikaci Panasonic Comfort Cloud, přihlaste se a přijměte nové podmínky. Integrace se dál pokouší a tento problém sám zmizí, jakmile bude vše fungovat. Pokud ne, nahlaste to v [issue trackeru]({issues_url})."
         }
     },
     "entity": {
@@ -271,6 +275,30 @@
         },
         "unsupported_value": {
             "message": "Hodnota „{value}“ není tímto zařízením podporována."
+        },
+        "invalid_credentials": {
+            "message": "Neplatné přihlašovací údaje k Aquarea Smart Cloud."
+        },
+        "mfa_required": {
+            "message": "Panasonic ID vyžaduje vícefázové ověření."
+        },
+        "app_version_rejected": {
+            "message": "Panasonic odmítl verzi aplikace, kterou tato integrace hlásí (nejde o vaše přihlášení): aktualizujte integraci, viz problém k opravě."
+        },
+        "agreement_not_accepted": {
+            "message": "Panasonic aktualizoval své podmínky nebo zásady ochrany osobních údajů: otevřete aplikaci Panasonic Comfort Cloud a přijměte je, poté se Aquarea sama obnoví."
+        },
+        "authentication_failed": {
+            "message": "Ověření v Aquarea Smart Cloud selhalo: {error}"
+        },
+        "cloud_error": {
+            "message": "Chyba komunikace s Aquarea Smart Cloud: {error}"
+        },
+        "cannot_connect": {
+            "message": "Aquarea Smart Cloud není dostupná: {error}"
+        },
+        "login_backoff": {
+            "message": "Panasonic odmítl přihlášení; další pokus proběhne v {retry_time}. Pokud to přetrvává, zkontrolujte, zda není zablokována vaše veřejná IP adresa (zkuste jinou síť nebo VPN)."
         }
     }
 }
