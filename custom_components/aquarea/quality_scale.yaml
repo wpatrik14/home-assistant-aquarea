@@ -156,7 +156,7 @@ rules:
     comment: "async_step_reconfigure in config_flow.py (username/password, MFA, unique_id re-key)."
   repair-issues:
     status: done
-    comment: "issues.py creates a repair issue when Panasonic rejects the app version (translated in strings.json 'issues'); tests/ha/test_app_version_rejected.py."
+    comment: "issues.py creates a repair issue when Panasonic rejects the app version, and one (not fixable) when the migration moves the pump status entity (translated in strings.json 'issues'); tests/ha/test_app_version_rejected.py, tests/ha/test_migrate.py."
   stale-devices:
     status: todo
     comment: "No async_remove_config_entry_device or removal of devices that vanish from the account."

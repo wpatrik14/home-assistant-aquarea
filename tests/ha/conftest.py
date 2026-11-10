@@ -21,6 +21,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aquarea import lifetime
+from custom_components.aquarea.config_flow import AquareaConfigFlow
 from custom_components.aquarea.const import DOMAIN
 
 USERNAME = "User@Example.com"
@@ -152,5 +153,6 @@ def mock_config_entry() -> MockConfigEntry:
         domain=DOMAIN,
         title=USERNAME,
         unique_id=USERNAME.lower(),
+        minor_version=AquareaConfigFlow.MINOR_VERSION,
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )

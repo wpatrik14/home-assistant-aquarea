@@ -87,6 +87,10 @@
         "app_version_rejected": {
             "title": "„Panasonic“ atmetė programėlės versiją",
             "description": "„Panasonic“ serveriai nebepriima programėlės versijos, kurią praneša „Aquarea Smart Cloud“ integracija, todėl prisijungti nepavyksta. Problema ne vartotojo vardas ar slaptažodis, pakartotinis autentifikavimas nereikalingas. Tai pakeitimas „Panasonic“ pusėje, kuris paprastai išsprendžiamas atnaujinus integraciją (ir jos biblioteką aioaquarea-ng): patikrinkite naujinius HACS ir iš naujo paleiskite „Home Assistant“. Jei jau turite naujausią versiją, pranešite [problemų sekimo sistemoje]({issues_url}). Integracija ir toliau bando prisijungti; ši problema išnyks pati po sėkmingo prisijungimo."
+        },
+        "pump_entities_changed": {
+            "title": "Pasikeitė siurblio būsenos ir krypties objektai",
+            "description": "{entry_title} siurblio būsenos jutiklis dabar yra dvejetainis jutiklis, todėl jo objekto ID perkeltas į binary_sensor sritį:\n\n{entities}\n\nAtnaujinkite automatizavimus, scenarijus, šablonus ir skydelius, kuriuose naudojami seni objektų ID. Seno objekto istorija neperkeliama; rekorderis ją saugo prie seno objekto ID.\n\nPasikeitė ir siurblio krypties jutiklio būsenos: dabar jos rašomos mažosiomis raidėmis (`idle`, `pump`, `water` vietoj `IDLE`, `PUMP`, `WATER`). Atnaujinkite sąlygas ar šablonus, kurie jas lygina. Baigę galite šią problemą ignoruoti."
         }
     },
     "entity": {
@@ -114,6 +118,9 @@
         },
         "weekly_timer": {
           "name": "Savaitės tvarkaraštis"
+        },
+        "pump_status": {
+          "name": "Siurblio būsena"
         }
       },
       "button": {
@@ -185,11 +192,13 @@
         "water_pressure": {
           "name": "Vandens slėgis"
         },
-        "pump_status": {
-          "name": "Siurblio būsena"
-        },
         "direction": {
-          "name": "Kryptis"
+          "name": "Kryptis",
+          "state": {
+            "idle": "Neveikia",
+            "pump": "Patalpų šildymas/vėsinimas",
+            "water": "Karštas vanduo"
+          }
         },
         "error_code": {
           "name": "Klaidos kodas"

@@ -87,6 +87,10 @@
         "app_version_rejected": {
             "title": "Panasonic ha rechazado la versión de la app",
             "description": "Los servidores de Panasonic ya no aceptan la versión de la aplicación que anuncia la integración Aquarea Smart Cloud, por lo que el inicio de sesión falla. El problema no es tu usuario ni tu contraseña y no hace falta volver a autenticarse. Es un cambio por parte de Panasonic que normalmente se soluciona actualizando la integración (y su biblioteca aioaquarea-ng): busca actualizaciones en HACS y reinicia Home Assistant. Si ya estás al día, infórmalo en el [seguimiento de incidencias]({issues_url}). La integración sigue reintentando; este aviso desaparece solo tras un inicio de sesión correcto."
+        },
+        "pump_entities_changed": {
+            "title": "Cambiaron las entidades de estado y dirección de la bomba",
+            "description": "El sensor de estado de la bomba de {entry_title} ahora es un sensor binario, por lo que su ID de entidad pasó al dominio binary_sensor:\n\n{entities}\n\nActualiza las automatizaciones, scripts, plantillas y paneles que usen los ID de entidad antiguos. El historial de la entidad antigua no se traspasa; el registrador lo conserva con el ID de entidad antiguo.\n\nTambién cambiaron los estados del sensor de dirección de la bomba: ahora están en minúsculas (`idle`, `pump`, `water` en lugar de `IDLE`, `PUMP`, `WATER`). Actualiza las condiciones o plantillas que los comparen. Puedes ignorar este problema cuando termines."
         }
     },
     "entity": {
@@ -114,6 +118,9 @@
         },
         "weekly_timer": {
           "name": "Programación semanal"
+        },
+        "pump_status": {
+          "name": "Estado de la bomba"
         }
       },
       "button": {
@@ -185,11 +192,13 @@
         "water_pressure": {
           "name": "Presión del agua"
         },
-        "pump_status": {
-          "name": "Estado de la bomba"
-        },
         "direction": {
-          "name": "Dirección"
+          "name": "Dirección",
+          "state": {
+            "idle": "Inactivo",
+            "pump": "Calefacción/refrigeración de ambiente",
+            "water": "Agua caliente"
+          }
         },
         "error_code": {
           "name": "Código de error"

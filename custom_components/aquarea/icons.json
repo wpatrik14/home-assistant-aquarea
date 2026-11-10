@@ -9,6 +9,9 @@
       },
       "weekly_timer": {
         "default": "mdi:calendar-clock"
+      },
+      "pump_status": {
+        "default": "mdi:pump"
       }
     },
     "button": {
@@ -33,9 +36,6 @@
     "sensor": {
       "direction": {
         "default": "mdi:compass"
-      },
-      "pump_status": {
-        "default": "mdi:pump"
       },
       "error_code": {
         "default": "mdi:alert-circle-outline"

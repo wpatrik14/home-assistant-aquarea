@@ -2,8 +2,8 @@
 
 Background
 ----------
-The outdoor temperature, tank temperature, direction, pump status and error
-code sensors set their value only in `_handle_coordinator_update`.
+The outdoor temperature, tank temperature, direction and error code
+sensors set their value only in `_handle_coordinator_update`.
 `CoordinatorEntity.async_added_to_hass` only subscribes to *future*
 coordinator updates, so after every restart or reload these sensors were
 "unknown" until the next poll (up to a minute), although the first refresh
@@ -35,7 +35,6 @@ SENSORS = [
     "OutdoorTemperatureSensor",
     "TankTemperatureSensor",
     "PumpDirectionSensor",
-    "PumpStatusSensor",
     "ErrorCodeSensor",
 ]
 

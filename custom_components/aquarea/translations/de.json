@@ -87,6 +87,10 @@
         "app_version_rejected": {
             "title": "Panasonic hat die App-Version abgelehnt",
             "description": "Die Panasonic-Server akzeptieren die App-Version, die die Aquarea-Smart-Cloud-Integration meldet, nicht mehr, daher schlägt die Anmeldung fehl. Benutzername und Passwort sind nicht das Problem, eine erneute Authentifizierung ist nicht nötig. Es handelt sich um eine Änderung auf Seiten von Panasonic, die meist durch ein Update der Integration (und ihrer Bibliothek aioaquarea-ng) behoben wird: Suche in HACS nach Updates und starte Home Assistant neu. Falls du bereits aktuell bist, melde es im [Issue-Tracker]({issues_url}). Die Integration versucht es weiter; dieses Problem verschwindet nach einer erfolgreichen Anmeldung von selbst."
+        },
+        "pump_entities_changed": {
+            "title": "Entitäten für Pumpenstatus und -richtung geändert",
+            "description": "Der Pumpenstatus-Sensor von {entry_title} ist jetzt ein Binärsensor, daher wurde seine Entitäts-ID in die Domain binary_sensor verschoben:\n\n{entities}\n\nPasse die Automatisierungen, Skripte, Vorlagen und Dashboards an, die die alten Entitäts-IDs verwenden. Der Verlauf der alten Entität wird nicht übernommen; der Recorder behält ihn unter der alten Entitäts-ID.\n\nAuch die Zustände des Pumpenrichtungs-Sensors haben sich geändert: Sie sind jetzt kleingeschrieben (`idle`, `pump`, `water` statt `IDLE`, `PUMP`, `WATER`). Passe alle Bedingungen oder Vorlagen an, die sie vergleichen. Du kannst dieses Problem ignorieren, sobald du fertig bist."
         }
     },
     "entity": {
@@ -114,6 +118,9 @@
         },
         "weekly_timer": {
           "name": "Wochenplan"
+        },
+        "pump_status": {
+          "name": "Pumpenstatus"
         }
       },
       "button": {
@@ -185,11 +192,13 @@
         "water_pressure": {
           "name": "Wasserdruck"
         },
-        "pump_status": {
-          "name": "Pumpenstatus"
-        },
         "direction": {
-          "name": "Richtung"
+          "name": "Richtung",
+          "state": {
+            "idle": "Leerlauf",
+            "pump": "Raumheizung/-kühlung",
+            "water": "Warmwasser"
+          }
         },
         "error_code": {
           "name": "Fehlercode"

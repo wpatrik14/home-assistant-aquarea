@@ -87,6 +87,10 @@
         "app_version_rejected": {
             "title": "Panasonic heeft de app-versie geweigerd",
             "description": "De servers van Panasonic accepteren de app-versie die de Aquarea Smart Cloud-integratie opgeeft niet meer, daarom mislukt het inloggen. Je gebruikersnaam en wachtwoord zijn niet het probleem en opnieuw authenticeren is niet nodig. Het is een wijziging aan de kant van Panasonic die meestal wordt opgelost door de integratie (en de bibliotheek aioaquarea-ng) bij te werken: zoek naar updates in HACS en herstart Home Assistant. Ben je al up-to-date, meld het dan in de [issuetracker]({issues_url}). De integratie blijft het proberen; dit probleem verdwijnt vanzelf na een geslaagde login."
+        },
+        "pump_entities_changed": {
+            "title": "Entiteiten voor pompstatus en -richting gewijzigd",
+            "description": "De pompstatussensor van {entry_title} is nu een binaire sensor, daarom is de entiteits-ID verplaatst naar het domein binary_sensor:\n\n{entities}\n\nPas de automatiseringen, scripts, sjablonen en dashboards aan die de oude entiteits-ID's gebruiken. De geschiedenis van de oude entiteit wordt niet overgenomen; de recorder bewaart die onder de oude entiteits-ID.\n\nOok de statussen van de pomprichtingssensor zijn gewijzigd: ze zijn nu in kleine letters (`idle`, `pump`, `water` in plaats van `IDLE`, `PUMP`, `WATER`). Pas voorwaarden of sjablonen aan die ze vergelijken. Je kunt dit probleem negeren zodra je klaar bent."
         }
     },
     "entity": {
@@ -114,6 +118,9 @@
             },
             "weekly_timer": {
                 "name": "Weekschema"
+            },
+            "pump_status": {
+                "name": "Pompstatus"
             }
         },
         "button": {
@@ -185,11 +192,13 @@
             "water_pressure": {
                 "name": "Waterdruk"
             },
-            "pump_status": {
-                "name": "Pompstatus"
-            },
             "direction": {
-                "name": "Richting"
+                "name": "Richting",
+                "state": {
+                    "idle": "Inactief",
+                    "pump": "Ruimteverwarming/-koeling",
+                    "water": "Warm water"
+                }
             },
             "error_code": {
                 "name": "Foutcode"

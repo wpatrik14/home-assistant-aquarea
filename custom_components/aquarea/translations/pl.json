@@ -87,6 +87,10 @@
         "app_version_rejected": {
             "title": "Panasonic odrzucił wersję aplikacji",
             "description": "Serwery Panasonic nie akceptują już wersji aplikacji, którą podaje integracja Aquarea Smart Cloud, dlatego logowanie się nie udaje. Problemem nie jest nazwa użytkownika ani hasło, ponowne uwierzytelnianie nie jest potrzebne. To zmiana po stronie Panasonic, którą zwykle rozwiązuje aktualizacja integracji (i biblioteki aioaquarea-ng): sprawdź aktualizacje w HACS i uruchom ponownie Home Assistanta. Jeśli masz już najnowszą wersję, zgłoś to w [systemie zgłoszeń]({issues_url}). Integracja nadal ponawia próby; ten problem zniknie sam po udanym logowaniu."
+        },
+        "pump_entities_changed": {
+            "title": "Zmieniły się encje stanu i kierunku pompy",
+            "description": "Czujnik stanu pompy urządzenia {entry_title} jest teraz czujnikiem binarnym, dlatego jego identyfikator encji został przeniesiony do domeny binary_sensor:\n\n{entities}\n\nZaktualizuj automatyzacje, skrypty, szablony i pulpity, które używają starych identyfikatorów encji. Historia starej encji nie jest przenoszona; recorder przechowuje ją pod starym identyfikatorem encji.\n\nZmieniły się także stany czujnika kierunku pompy: są teraz pisane małymi literami (`idle`, `pump`, `water` zamiast `IDLE`, `PUMP`, `WATER`). Zaktualizuj warunki lub szablony, które je porównują. Po zakończeniu możesz zignorować ten problem."
         }
     },
     "entity": {
@@ -114,6 +118,9 @@
             },
             "weekly_timer": {
                 "name": "Harmonogram tygodniowy"
+            },
+            "pump_status": {
+                "name": "Status pompy"
             }
         },
         "button": {
@@ -185,11 +192,13 @@
             "water_pressure": {
                 "name": "Ciśnienie wody"
             },
-            "pump_status": {
-                "name": "Status pompy"
-            },
             "direction": {
-                "name": "Kierunek"
+                "name": "Kierunek",
+                "state": {
+                    "idle": "Bezczynna",
+                    "pump": "Ogrzewanie/chłodzenie pomieszczeń",
+                    "water": "Ciepła woda"
+                }
             },
             "error_code": {
                 "name": "Kod błędu"

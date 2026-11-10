@@ -121,6 +121,7 @@ async def async_setup_entry(
         entities.append(AquareaStatusBinarySensor(coordinator))
         entities.append(AquareaDefrostBinarySensor(coordinator))
         entities.append(AquareaWeeklyTimerBinarySensor(coordinator))
+        entities.append(AquareaPumpBinarySensor(coordinator))
         entities.extend(
             AquareaFlagBinarySensor(coordinator, description)
             for description in FLAG_BINARY_SENSORS
@@ -166,6 +167,29 @@ class AquareaDefrostBinarySensor(AquareaBaseEntity, BinarySensorEntity):
             self.coordinator.device.device_mode_status
             is aioaquarea.DeviceModeStatus.DEFROST
         )
+
+
+class AquareaPumpBinarySensor(AquareaBaseEntity, BinarySensorEntity):
+    """Whether the pump is running: on when its duty is 1, otherwise off."""
+
+    _attr_translation_key = "pump_status"
+    _attr_device_class = BinarySensorDeviceClass.RUNNING
+
+    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+
+        # The unique id of the sensor this entity replaced (see
+        # async_migrate_entry): the registry entry moves over with it.
+        self._attr_unique_id = f"{super().unique_id}_pump_status"
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true while the pump runs, None while the duty is unknown."""
+        device = self.coordinator.device
+        if device is None or device.pump_duty is None:
+            return None
+        return device.pump_duty == 1
 
 
 class AquareaFlagBinarySensor(AquareaBaseEntity, BinarySensorEntity):

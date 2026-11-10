@@ -278,7 +278,6 @@ async def async_setup_entry(
     for coordinator in data.values():
         entities.append(OutdoorTemperatureSensor(coordinator))
         entities.append(PumpDirectionSensor(coordinator))
-        entities.append(PumpStatusSensor(coordinator))
         entities.append(ErrorCodeSensor(coordinator))
         if coordinator.device.has_tank:
             entities.append(TankTemperatureSensor(coordinator))
@@ -507,7 +506,10 @@ class WaterPressureSensor(AquareaStateSensor):
 
 
 class PumpDirectionSensor(AquareaStateSensor):
-    """Direction the pump is currently directed at, e.g. space or water."""
+    """Direction the pump is currently directed at: idle, pump (space) or water."""
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = [direction.name.lower() for direction in aioaquarea.DeviceDirection]
 
     def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
@@ -519,26 +521,7 @@ class PumpDirectionSensor(AquareaStateSensor):
     def _handle_coordinator_update(self) -> None:
         if self.coordinator.device is None:
             return
-        self._attr_native_value = self.coordinator.device.current_direction.name
-        super()._handle_coordinator_update()
-
-
-class PumpStatusSensor(AquareaStateSensor):
-    """Whether the pump is running: On when its duty is 1, otherwise Off."""
-
-    def __init__(self, coordinator: AquareaDataUpdateCoordinator) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._attr_translation_key = "pump_status"
-        self._attr_unique_id = f"{super().unique_id}_pump_status"
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        if self.coordinator.device is None:
-            return
-        self._attr_native_value = (
-            "On" if self.coordinator.device.pump_duty == 1 else "Off"
-        )
+        self._attr_native_value = self.coordinator.device.current_direction.name.lower()
         super()._handle_coordinator_update()
 
 

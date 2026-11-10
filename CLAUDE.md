@@ -108,8 +108,8 @@ All entities extend HA base classes and `CoordinatorEntity`. After sending a com
 |----------|----------------|
 | `climate.py` | Heating/cooling zones (HVAC modes, temperature, ECO/COMFORT presets) |
 | `water_heater.py` | DHW tank control |
-| `sensor.py` | Temperature, energy consumption, direction, status |
-| `binary_sensor.py` | Error flags, defrost status |
+| `sensor.py` | Temperature, energy consumption, direction (enum) |
+| `binary_sensor.py` | Error flags, defrost status, pump status |
 | `switch.py` | ECO/COMFORT, powerful mode toggles |
 | `select.py` | Quiet mode, powerful time selection |
 | `button.py` | One-shot actions (refresh, force DHW, defrost) |
