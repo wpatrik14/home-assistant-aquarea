@@ -180,6 +180,9 @@ class _FakeWaterHeater:
         # _start_delayed_refresh(), which discards it without awaiting.
         pass
 
+    async def _async_send_command(self, command):
+        return await command
+
     def _start_delayed_refresh(self, coro):
         coro.close()
 

@@ -23,9 +23,11 @@ from homeassistant.components.climate import (
 )
 from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .const import DOMAIN
 from .coordinator import AquareaConfigEntry, AquareaDataUpdateCoordinator
 from .entity import AquareaBaseEntity
 
@@ -278,7 +280,11 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         coordinator fetches the updated state a short time after the change.
         """
         if hvac_mode not in self.hvac_modes:
-            raise ValueError(f"Unsupported HVAC mode: {hvac_mode}")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="unsupported_value",
+                translation_placeholders={"value": str(hvac_mode)},
+            )
         _LOGGER.debug(
             "Setting operation mode of %s to %s",
             self.coordinator.device.device_id,
@@ -290,8 +296,10 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         self.async_write_ha_state()
 
         try:
-            await self.coordinator.device.set_mode(
-                get_update_operation_mode_from_hvac_mode(hvac_mode), self._zone_id
+            await self._async_send_command(
+                self.coordinator.device.set_mode(
+                    get_update_operation_mode_from_hvac_mode(hvac_mode), self._zone_id
+                )
             )
         except Exception:
             _LOGGER.error("Failed to set HVAC mode to %s, rolling back", hvac_mode)
@@ -331,8 +339,10 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
             self.async_write_ha_state()
 
             try:
-                await self.coordinator.device.set_temperature(
-                    int(temperature), zone.zone_id
+                await self._async_send_command(
+                    self.coordinator.device.set_temperature(
+                        int(temperature), zone.zone_id
+                    )
                 )
             except Exception:
                 _LOGGER.error(
@@ -353,7 +363,11 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         """
         preset_modes = self.preset_modes
         if preset_modes is None or preset_mode not in preset_modes:
-            raise ValueError(f"Unsupported preset mode: {preset_mode}")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="unsupported_value",
+                translation_placeholders={"value": preset_mode},
+            )
         _LOGGER.debug(
             "Setting preset mode of device %s to %s",
             self.coordinator.device.device_id,
@@ -365,8 +379,10 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         self.async_write_ha_state()
 
         try:
-            await self.coordinator.device.set_special_status(
-                SPECIAL_STATUS_LOOKUP[preset_mode]
+            await self._async_send_command(
+                self.coordinator.device.set_special_status(
+                    SPECIAL_STATUS_LOOKUP[preset_mode]
+                )
             )
         except Exception:
             _LOGGER.error("Failed to set preset mode to %s, rolling back", preset_mode)
@@ -389,7 +405,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         self.async_write_ha_state()
 
         try:
-            await self.coordinator.device.turn_on()
+            await self._async_send_command(self.coordinator.device.turn_on())
         except Exception:
             _LOGGER.error("Failed to turn on device, rolling back")
             self._attr_hvac_mode = old_hvac_mode
@@ -411,7 +427,7 @@ class HeatPumpClimate(AquareaBaseEntity, ClimateEntity):
         self.async_write_ha_state()
 
         try:
-            await self.coordinator.device.turn_off()
+            await self._async_send_command(self.coordinator.device.turn_off())
         except Exception:
             _LOGGER.error("Failed to turn off device, rolling back")
             self._attr_hvac_mode = old_hvac_mode

@@ -142,10 +142,20 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
                 self.coordinator.device.device_id,
                 str(temperature),
             )
+            old_temperature = self._attr_target_temperature
             self._attr_target_temperature = temperature
             self.async_write_ha_state()
 
-            await self.coordinator.device.tank.set_target_temperature(int(temperature))
+            try:
+                await self._async_send_command(
+                    self.coordinator.device.tank.set_target_temperature(
+                        int(temperature)
+                    )
+                )
+            except Exception:
+                self._attr_target_temperature = old_temperature
+                self.async_write_ha_state()
+                raise
 
             self._start_delayed_refresh(self._schedule_refresh(WATER_HEATER_DELAY))
 
@@ -156,12 +166,18 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
             self.coordinator.device.device_id,
             operation_mode,
         )
-        if operation_mode == HEATING:
-            self._attr_current_operation = IDLE
-            await self.coordinator.device.tank.turn_on()
-        elif operation_mode == STATE_OFF:
-            self._attr_current_operation = STATE_OFF
-            await self.coordinator.device.tank.turn_off()
+        old_operation = self._attr_current_operation
+        try:
+            if operation_mode == HEATING:
+                self._attr_current_operation = IDLE
+                await self._async_send_command(self.coordinator.device.tank.turn_on())
+            elif operation_mode == STATE_OFF:
+                self._attr_current_operation = STATE_OFF
+                await self._async_send_command(self.coordinator.device.tank.turn_off())
+        except Exception:
+            self._attr_current_operation = old_operation
+            self.async_write_ha_state()
+            raise
 
         self.async_write_ha_state()
 

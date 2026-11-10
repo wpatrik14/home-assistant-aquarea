@@ -118,6 +118,9 @@ class _Entity:
             async_create_task=lambda coro: outer.scheduled.append(coro)
         )
 
+    async def _async_send_command(self, command):
+        return await command
+
     def _start_delayed_refresh(self, coro):
         self.scheduled.append(coro)
 

@@ -69,7 +69,9 @@ class AquareaForceDHWSwitch(AquareaBaseEntity, SwitchEntity):
         self._optimistic_is_on = True
         self.async_write_ha_state()
         try:
-            await self.coordinator.device.set_force_dhw(aioaquarea.ForceDHW.ON)
+            await self._async_send_command(
+                self.coordinator.device.set_force_dhw(aioaquarea.ForceDHW.ON)
+            )
         except Exception:
             self._optimistic_is_on = None
             self.async_write_ha_state()
@@ -81,7 +83,9 @@ class AquareaForceDHWSwitch(AquareaBaseEntity, SwitchEntity):
         self._optimistic_is_on = False
         self.async_write_ha_state()
         try:
-            await self.coordinator.device.set_force_dhw(aioaquarea.ForceDHW.OFF)
+            await self._async_send_command(
+                self.coordinator.device.set_force_dhw(aioaquarea.ForceDHW.OFF)
+            )
         except Exception:
             self._optimistic_is_on = None
             self.async_write_ha_state()
@@ -118,7 +122,9 @@ class AquareaForceHeaterSwitch(AquareaBaseEntity, SwitchEntity):
         self._optimistic_is_on = True
         self.async_write_ha_state()
         try:
-            await self.coordinator.device.set_force_heater(aioaquarea.ForceHeater.ON)
+            await self._async_send_command(
+                self.coordinator.device.set_force_heater(aioaquarea.ForceHeater.ON)
+            )
         except Exception:
             self._optimistic_is_on = None
             self.async_write_ha_state()
@@ -130,7 +136,9 @@ class AquareaForceHeaterSwitch(AquareaBaseEntity, SwitchEntity):
         self._optimistic_is_on = False
         self.async_write_ha_state()
         try:
-            await self.coordinator.device.set_force_heater(aioaquarea.ForceHeater.OFF)
+            await self._async_send_command(
+                self.coordinator.device.set_force_heater(aioaquarea.ForceHeater.OFF)
+            )
         except Exception:
             self._optimistic_is_on = None
             self.async_write_ha_state()
@@ -167,7 +175,9 @@ class AquareaHolidayTimerSwitch(AquareaBaseEntity, SwitchEntity):
         self._optimistic_is_on = True
         self.async_write_ha_state()
         try:
-            await self.coordinator.device.set_holiday_timer(aioaquarea.HolidayTimer.ON)
+            await self._async_send_command(
+                self.coordinator.device.set_holiday_timer(aioaquarea.HolidayTimer.ON)
+            )
         except Exception:
             self._optimistic_is_on = None
             self.async_write_ha_state()
@@ -179,7 +189,9 @@ class AquareaHolidayTimerSwitch(AquareaBaseEntity, SwitchEntity):
         self._optimistic_is_on = False
         self.async_write_ha_state()
         try:
-            await self.coordinator.device.set_holiday_timer(aioaquarea.HolidayTimer.OFF)
+            await self._async_send_command(
+                self.coordinator.device.set_holiday_timer(aioaquarea.HolidayTimer.OFF)
+            )
         except Exception:
             self._optimistic_is_on = None
             self.async_write_ha_state()

@@ -231,6 +231,15 @@
     "exceptions": {
         "lifetime_sync_running": {
             "message": "The consumption history is being read right now. Try again when it has finished."
+        },
+        "command_failed": {
+            "message": "The command could not be sent to the Panasonic cloud: {error}"
+        },
+        "not_authenticated": {
+            "message": "The Panasonic cloud rejected the login: {error}. Reauthenticate the integration and try again."
+        },
+        "unsupported_value": {
+            "message": "\"{value}\" is not supported by this device."
         }
     }
 }

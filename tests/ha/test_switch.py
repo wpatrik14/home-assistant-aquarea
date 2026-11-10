@@ -23,6 +23,7 @@ from homeassistant.const import (
     STATE_ON,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -206,7 +207,7 @@ async def test_command_failure_rolls_back(
     await _setup(hass, mock_config_entry)
     before = hass.states.get(entity_id).state
 
-    with pytest.raises(aioaquarea.ApiError):
+    with pytest.raises(HomeAssistantError):
         await _call(hass, service, entity_id)
 
     assert hass.states.get(entity_id).state == before

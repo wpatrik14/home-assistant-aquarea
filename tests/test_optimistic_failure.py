@@ -145,6 +145,11 @@ def _make(cls):
         coro.close()
 
     obj._start_delayed_refresh = _start_delayed_refresh
+
+    async def _async_send_command(command):
+        return await command
+
+    obj._async_send_command = _async_send_command
     for attr in OPTIMISTIC:
         setattr(obj, attr, None)
     return obj

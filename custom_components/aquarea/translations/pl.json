@@ -231,6 +231,15 @@
     "exceptions": {
         "lifetime_sync_running": {
             "message": "Historia zużycia jest właśnie odczytywana. Spróbuj ponownie po jej zakończeniu."
+        },
+        "command_failed": {
+            "message": "Nie udało się wysłać polecenia do chmury Panasonic: {error}"
+        },
+        "not_authenticated": {
+            "message": "Chmura Panasonic odrzuciła logowanie: {error}. Uwierzytelnij integrację ponownie i spróbuj jeszcze raz."
+        },
+        "unsupported_value": {
+            "message": "Wartość „{value}” nie jest obsługiwana przez to urządzenie."
         }
     }
 }

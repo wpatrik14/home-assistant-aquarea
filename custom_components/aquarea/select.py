@@ -105,7 +105,9 @@ class AquareaQuietModeSelect(AquareaBaseEntity, SelectEntity):
         self._optimistic_option = option
         self.async_write_ha_state()
         try:
-            await self.coordinator.device.set_quiet_mode(quiet_mode)
+            await self._async_send_command(
+                self.coordinator.device.set_quiet_mode(quiet_mode)
+            )
         except Exception:
             self._optimistic_option = None
             self.async_write_ha_state()
@@ -160,7 +162,9 @@ class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
         self._optimistic_option = option
         self.async_write_ha_state()
         try:
-            await self.coordinator.device.set_powerful_time(powerful_time)
+            await self._async_send_command(
+                self.coordinator.device.set_powerful_time(powerful_time)
+            )
         except Exception:
             self._optimistic_option = None
             self.async_write_ha_state()
