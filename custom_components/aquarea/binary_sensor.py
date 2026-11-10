@@ -157,11 +157,6 @@ class AquareaDefrostBinarySensor(AquareaBaseEntity, BinarySensorEntity):
         self._attr_device_class = BinarySensorDeviceClass.RUNNING
 
     @property
-    def icon(self) -> str:
-        """Return the icon."""
-        return "mdi:snowflake-melt" if self.is_on else "mdi:snowflake-off"
-
-    @property
     def is_on(self) -> bool:
         """Return true if the binary sensor is on."""
         return (
@@ -227,7 +222,6 @@ class AquareaWeeklyTimerBinarySensor(AquareaBaseEntity, BinarySensorEntity):
     """Whether the device's weekly schedule is switched on (read only)."""
 
     _attr_translation_key = "weekly_timer"
-    _attr_icon = "mdi:calendar-clock"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
 

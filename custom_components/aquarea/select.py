@@ -65,7 +65,6 @@ class AquareaQuietModeSelect(AquareaBaseEntity, SelectEntity):
         self._attr_unique_id = f"{super().unique_id}_quiet_mode"
         self._attr_translation_key = "quiet_mode"
         self._attr_options = list(QUIET_MODE_LOOKUP.keys())
-        self._attr_icon = "mdi:volume-off"
         self._optimistic_option: str | None = None
 
     @property
@@ -122,17 +121,6 @@ class AquareaPowerfulTimeSelect(AquareaBaseEntity, SelectEntity):
         self._attr_translation_key = "powerful_time"
         self._attr_options = list(POWERFUL_TIME_LOOKUP.keys())
         self._optimistic_option: str | None = None
-
-    @property
-    def icon(self) -> str:
-        """Return the icon."""
-        if self._optimistic_option is not None:
-            return "mdi:fire-off" if self._optimistic_option == "off" else "mdi:fire"
-        return (
-            "mdi:fire-off"
-            if self.coordinator.device.powerful_time is PowerfulTime.OFF
-            else "mdi:fire"
-        )
 
     @property
     def current_option(self) -> str | None:
