@@ -17,5 +17,5 @@
   "requirements": [
     "aioaquarea-ng>=1.6.0"
   ],
-  "version": "1.11.0"
+  "version": "2.0.0"
 }
