@@ -3,6 +3,7 @@
         "abort": {
             "already_configured": "Az eszköz már konfigurálva van",
             "reauth_successful": "Az újrahitelesítés sikeres volt",
+            "reconfigure_successful": "Az újrakonfigurálás sikeres volt",
             "reauth_no_username": "Nem sikerült újra hitelesíteni: ehhez a konfigurációs bejegyzéshez nincs tárolt felhasználónév. Távolítsd el az integrációt, és add hozzá újra."
         },
         "error": {
@@ -33,6 +34,18 @@
                 },
                 "data_description": {
                     "password": "A Panasonic ID jelenlegi jelszava."
+                }
+            },
+            "reconfigure": {
+                "title": "Panasonic-fiók újrakonfigurálása",
+                "description": "Módosítsd a bejegyzés által használt Panasonic ID-t vagy jelszót. A bejelentkezést mentés előtt ellenőrizzük.",
+                "data": {
+                    "password": "Jelszó",
+                    "username": "Felhasználónév"
+                },
+                "data_description": {
+                    "username": "A Panasonic ID-d, ugyanaz a bejelentkezés, mint a Panasonic Comfort Cloud alkalmazásban.",
+                    "password": "A Panasonic ID jelszava."
                 }
             },
             "mfa_sms": {

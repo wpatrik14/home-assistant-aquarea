@@ -3,6 +3,7 @@
         "abort": {
             "already_configured": "Устройство уже настроено",
             "reauth_successful": "Повторная аутентификация выполнена успешно",
+            "reconfigure_successful": "Перенастройка выполнена успешно",
             "reauth_no_username": "Не удалось выполнить повторную аутентификацию: в этой записи конфигурации не сохранено имя пользователя. Удалите интеграцию и добавьте её заново."
         },
         "error": {
@@ -33,6 +34,18 @@
                 },
                 "data_description": {
                     "password": "Текущий пароль этого Panasonic ID."
+                }
+            },
+            "reconfigure": {
+                "title": "Перенастройка аккаунта Panasonic",
+                "description": "Измените Panasonic ID или пароль, которые использует эта запись. Вход проверяется до сохранения каких-либо изменений.",
+                "data": {
+                    "password": "Пароль",
+                    "username": "Имя пользователя"
+                },
+                "data_description": {
+                    "username": "Ваш Panasonic ID, те же данные для входа, что и в приложении Panasonic Comfort Cloud.",
+                    "password": "Пароль этого Panasonic ID."
                 }
             },
             "mfa_sms": {

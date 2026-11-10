@@ -3,6 +3,7 @@
         "abort": {
             "already_configured": "Urządzenie jest już skonfigurowane",
             "reauth_successful": "Ponowne uwierzytelnienie przebiegło pomyślnie",
+            "reconfigure_successful": "Rekonfiguracja przebiegła pomyślnie",
             "reauth_no_username": "Nie można ponownie uwierzytelnić: ten wpis konfiguracji nie ma zapisanej nazwy użytkownika. Usuń integrację i dodaj ją ponownie."
         },
         "error": {
@@ -33,6 +34,18 @@
                 },
                 "data_description": {
                     "password": "Aktualne hasło do tego Panasonic ID."
+                }
+            },
+            "reconfigure": {
+                "title": "Zmień konfigurację konta Panasonic",
+                "description": "Zmień identyfikator Panasonic ID lub hasło używane przez ten wpis. Logowanie jest sprawdzane przed zapisaniem jakichkolwiek zmian.",
+                "data": {
+                    "password": "Hasło",
+                    "username": "Nazwa użytkownika"
+                },
+                "data_description": {
+                    "username": "Twój Panasonic ID, te same dane logowania co w aplikacji Panasonic Comfort Cloud.",
+                    "password": "Hasło do tego Panasonic ID."
                 }
             },
             "mfa_sms": {

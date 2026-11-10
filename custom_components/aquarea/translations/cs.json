@@ -3,6 +3,7 @@
         "abort": {
             "already_configured": "Zařízení je již nakonfigurováno",
             "reauth_successful": "Opětovné ověření bylo úspěšné",
+            "reconfigure_successful": "Překonfigurování proběhlo úspěšně",
             "reauth_no_username": "Nelze se znovu ověřit: tento záznam konfigurace nemá uloženo uživatelské jméno. Odeberte integraci a přidejte ji znovu."
         },
         "error": {
@@ -33,6 +34,18 @@
                 },
                 "data_description": {
                     "password": "Aktuální heslo k tomuto Panasonic ID."
+                }
+            },
+            "reconfigure": {
+                "title": "Překonfigurovat účet Panasonic",
+                "description": "Změňte Panasonic ID nebo heslo, které tento záznam používá. Přihlášení se ověří dříve, než se cokoli uloží.",
+                "data": {
+                    "password": "Heslo",
+                    "username": "Uživatelské jméno"
+                },
+                "data_description": {
+                    "username": "Vaše Panasonic ID, stejné přihlášení jako v aplikaci Panasonic Comfort Cloud.",
+                    "password": "Heslo k tomuto Panasonic ID."
                 }
             },
             "mfa_sms": {

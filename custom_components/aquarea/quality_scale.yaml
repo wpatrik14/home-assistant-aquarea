@@ -152,8 +152,8 @@ rules:
     status: done
     comment: "icons.json; tests/test_icons.py."
   reconfiguration-flow:
-    status: todo
-    comment: "No async_step_reconfigure in config_flow.py yet; planned (P8)."
+    status: done
+    comment: "async_step_reconfigure in config_flow.py (username/password, MFA, unique_id re-key)."
   repair-issues:
     status: done
     comment: "issues.py creates a repair issue when Panasonic rejects the app version (translated in strings.json 'issues'); tests/ha/test_app_version_rejected.py."

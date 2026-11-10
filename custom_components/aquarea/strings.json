@@ -20,6 +20,18 @@
           "password": "The current password for this Panasonic ID."
         }
       },
+      "reconfigure": {
+        "title": "Reconfigure Panasonic account",
+        "description": "Change the Panasonic ID or password this entry uses. The login is checked before anything is saved.",
+        "data": {
+          "username": "[%key:common::config_flow::data::username%]",
+          "password": "[%key:common::config_flow::data::password%]"
+        },
+        "data_description": {
+          "username": "Your Panasonic ID, the same login as the Panasonic Comfort Cloud app.",
+          "password": "The password for that Panasonic ID."
+        }
+      },
       "mfa_sms": {
         "description": "Panasonic sent a verification code by SMS to {destination}. Enter it below. To get a new code, tick \"Send a new code\" and submit.",
         "data": {
@@ -54,6 +66,7 @@
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
       "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
+      "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]",
       "reauth_no_username": "Could not reauthenticate: this configuration entry has no stored username. Remove the integration and add it again."
     }
   },

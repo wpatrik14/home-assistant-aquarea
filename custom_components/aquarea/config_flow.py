@@ -7,10 +7,16 @@ from typing import Any
 import aioaquarea
 import aiohttp
 from homeassistant import config_entries
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from homeassistant.config_entries import (
+    SOURCE_REAUTH,
+    SOURCE_RECONFIGURE,
+    ConfigEntry,
+    ConfigFlowResult,
+)
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.typing import UNDEFINED
 import voluptuous as vol
 
 from .const import (
@@ -145,16 +151,74 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self.async_show_reauth_form(username, errors)
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change the Panasonic ID and/or password of an existing entry.
+
+        The unique ID is the lower-cased Panasonic ID (see `async_step_user`),
+        so it follows the username: a different ID that another entry already
+        uses aborts with `already_configured`; otherwise a successful
+        reconfigure re-keys the entry to the new ID. Reauth keeps the ID fixed
+        and never needs this.
+        """
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            username = user_input[CONF_USERNAME]
+            existing = await self.async_set_unique_id(
+                str.lower(username), raise_on_progress=False
+            )
+            if existing is not None and existing.entry_id != entry.entry_id:
+                return self.async_abort(reason="already_configured")
+
+            errors = await self._validate_input(username, user_input[CONF_PASSWORD])
+
+            if self._challenge is not None:
+                self._username = username
+                self._password = user_input[CONF_PASSWORD]
+                return self._show_mfa_form()
+
+            if not errors:
+                return self._complete_reconfigure(
+                    entry, username, user_input[CONF_PASSWORD]
+                )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_USER_DATA_SCHEMA,
+                user_input or {CONF_USERNAME: entry.data.get(CONF_USERNAME)},
+            ),
+            errors=errors,
+        )
+
+    def _complete_reconfigure(
+        self, entry: ConfigEntry, username: str, password: str
+    ) -> ConfigFlowResult:
+        """Store the verified credentials, re-key the entry and reload it."""
+        title: Any = UNDEFINED
+        if entry.title == entry.data.get(CONF_USERNAME):
+            # The title was derived from the username; keep it that way.
+            title = username
+        return self.async_update_reload_and_abort(
+            entry,
+            unique_id=str.lower(username),
+            title=title,
+            data=self._login_data(entry, username, password),
+            reason="reconfigure_successful",
+        )
+
     async def async_step_mfa_sms(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Ask for the code Panasonic texted (setup and reauth)."""
+        """Ask for the code Panasonic texted (setup, reauth, reconfigure)."""
         return await self._async_handle_mfa(user_input)
 
     async def async_step_mfa_otp(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Ask for the code of the authenticator app (setup and reauth)."""
+        """Ask for the code of the authenticator app (setup, reauth, reconfigure)."""
         return await self._async_handle_mfa(user_input)
 
     def _show_mfa_form(self, errors: dict[str, str] | None = None) -> ConfigFlowResult:
@@ -227,6 +291,14 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def _restart_login(self, error: str) -> ConfigFlowResult:
         """Back to the password form: the MFA transaction is gone."""
         self._challenge = None
+        if self.source == SOURCE_RECONFIGURE:
+            return self.async_show_form(
+                step_id="reconfigure",
+                data_schema=self.add_suggested_values_to_schema(
+                    STEP_USER_DATA_SCHEMA, {CONF_USERNAME: self._username}
+                ),
+                errors={"base": error},
+            )
         if self.source == SOURCE_REAUTH:
             return self.async_show_form(
                 step_id="reauth_confirm",
@@ -250,6 +322,10 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._password = None
         if self.source == SOURCE_REAUTH:
             return await self.async_complete_reauth(username, password)
+        if self.source == SOURCE_RECONFIGURE:
+            return self._complete_reconfigure(
+                self._get_reconfigure_entry(), username, password
+            )
         return self.async_create_entry(
             title=username, data=self._entry_data(username, password)
         )
@@ -261,11 +337,10 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data[CONF_REFRESH_TOKEN] = token
         return data
 
-    async def async_complete_reauth(
-        self, username: str, password: str
-    ) -> ConfigFlowResult:
-        """Complete reauth."""
-        entry = self._get_reauth_entry()
+    def _login_data(
+        self, entry: ConfigEntry, username: str, password: str
+    ) -> dict[str, Any]:
+        """The entry's data with new credentials and the new login's token."""
         data = {
             **entry.data,
             CONF_USERNAME: username,
@@ -280,6 +355,14 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if key == CONF_REFRESH_TOKEN
             }
         )
+        return data
+
+    async def async_complete_reauth(
+        self, username: str, password: str
+    ) -> ConfigFlowResult:
+        """Complete reauth."""
+        entry = self._get_reauth_entry()
+        data = self._login_data(entry, username, password)
         # Also reloads the entry when nothing changed: an entry whose setup
         # failed on the old password must be set up again, and Home Assistant
         # does not reload entries when a reauth flow ends.
