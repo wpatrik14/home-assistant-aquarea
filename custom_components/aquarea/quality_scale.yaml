@@ -29,6 +29,9 @@ rules:
   docs-actions:
     status: exempt
     comment: "No service actions to document."
+  docs-conditions:
+    status: exempt
+    comment: "The integration provides no device conditions."
   docs-high-level-description:
     status: done
     comment: "README.md intro."
@@ -38,6 +41,9 @@ rules:
   docs-removal-instructions:
     status: done
     comment: "README.md 'Removing the integration'."
+  docs-triggers:
+    status: exempt
+    comment: "The integration provides no device triggers."
   entity-event-setup:
     status: done
     comment: "Listeners are registered in async_added_to_hass (entity.py, climate.py, sensor.py, binary_sensor.py) via CoordinatorEntity cleanup."
@@ -61,8 +67,8 @@ rules:
     comment: "The unique id is the lowercased username with _abort_if_unique_id_configured (config_flow.py)."
   # Silver
   action-exceptions:
-    status: todo
-    comment: "Climate/water heater raise a bare ValueError for unsupported modes (climate.py) instead of ServiceValidationError/HomeAssistantError; branch feat/translated-action-exceptions is in progress."
+    status: done
+    comment: "Cloud command failures are raised as translated HomeAssistantError via _async_send_command in custom_components/aquarea/entity.py; unsupported modes raise ServiceValidationError (climate.py); tests in tests/ha/."
   config-entry-unloading:
     status: done
     comment: "async_unload_entry unloads platforms (__init__.py); tests/ha/test_init.py, tests/test_unload_entry.py."
@@ -140,8 +146,8 @@ rules:
     status: done
     comment: "Entity names via translation_key in strings.json; tests/test_translations.py."
   exception-translations:
-    status: todo
-    comment: "Only lifetime_sync_running is translated (strings.json 'exceptions'); other raised errors (climate.py, __init__.py, coordinator.py) use plain messages; see feat/translated-action-exceptions."
+    status: done
+    comment: "strings.json 'exceptions' defines lifetime_sync_running, command_failed, not_authenticated and unsupported_value, used by entity.py, climate.py and coordinator.py."
   icon-translations:
     status: done
     comment: "icons.json; tests/test_icons.py."
