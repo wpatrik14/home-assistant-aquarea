@@ -26,12 +26,12 @@ BASE = os.path.join(os.path.dirname(__file__), "..", "custom_components", "aquar
 MIGRATED = {
     ("binary_sensor", "defrost"),
     ("binary_sensor", "weekly_timer"),
+    ("binary_sensor", "pump_status"),
     ("button", "request_defrost"),
     ("button", "rebuild_lifetime_consumption"),
     ("select", "quiet_mode"),
     ("select", "powerful_time"),
     ("sensor", "direction"),
-    ("sensor", "pump_status"),
     ("sensor", "error_code"),
     ("sensor", "dhw_cycles_today"),
     ("sensor", "zone_cycles_today"),

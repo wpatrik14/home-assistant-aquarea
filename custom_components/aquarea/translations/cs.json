@@ -87,6 +87,10 @@
         "app_version_rejected": {
             "title": "Panasonic odmítl verzi aplikace",
             "description": "Servery Panasonicu už nepřijímají verzi aplikace, kterou hlásí integrace Aquarea Smart Cloud, proto se přihlášení nedaří. Problém není v uživatelském jménu ani hesle a nové ověření není potřeba. Jde o změnu na straně Panasonicu, kterou obvykle vyřeší aktualizace integrace (a její knihovny aioaquarea-ng): zkontrolujte aktualizace v HACS a restartujte Home Assistant. Pokud už máte aktuální verzi, nahlaste to v [issue trackeru]({issues_url}). Integrace to zkouší dál; tento problém po úspěšném přihlášení zmizí sám."
+        },
+        "pump_entities_changed": {
+            "title": "Entity stavu a směru čerpadla se změnily",
+            "description": "Senzor stavu čerpadla zařízení {entry_title} je nyní binární senzor, a proto se jeho ID entity přesunulo do domény binary_sensor:\n\n{entities}\n\nAktualizujte automatizace, skripty, šablony a dashboardy, které používají původní ID entit. Historie původní entity se nepřenáší; recorder ji uchovává pod původním ID entity.\n\nZměnily se také stavy senzoru směru čerpadla: jsou nyní malými písmeny (`idle`, `pump`, `water` místo `IDLE`, `PUMP`, `WATER`). Upravte všechny podmínky nebo šablony, které je porovnávají. Po dokončení můžete toto upozornění ignorovat."
         }
     },
     "entity": {
@@ -114,6 +118,9 @@
         },
         "weekly_timer": {
           "name": "Týdenní plán"
+        },
+        "pump_status": {
+          "name": "Stav čerpadla"
         }
       },
       "button": {
@@ -185,11 +192,13 @@
         "water_pressure": {
           "name": "Tlak vody"
         },
-        "pump_status": {
-          "name": "Stav čerpadla"
-        },
         "direction": {
-          "name": "Směr"
+          "name": "Směr",
+          "state": {
+            "idle": "Nečinný",
+            "pump": "Vytápění/chlazení prostoru",
+            "water": "Teplá voda"
+          }
         },
         "error_code": {
           "name": "Kód chyby"

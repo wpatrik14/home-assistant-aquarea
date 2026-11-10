@@ -50,6 +50,8 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Aquarea Smart Cloud."""
 
     VERSION = 1
+    # 1.2: the pump status sensor became a binary sensor (see async_migrate_entry).
+    MINOR_VERSION = 2
 
     _username: str | None = None
     _session: aiohttp.ClientSession | None = None

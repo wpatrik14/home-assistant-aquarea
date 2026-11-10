@@ -41,3 +41,37 @@ def async_create_app_version_issue(hass: HomeAssistant, entry: ConfigEntry) -> N
 def async_clear_app_version_issue(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Remove the app version issue, if there is one (after a working login)."""
     ir.async_delete_issue(hass, DOMAIN, _app_version_issue_id(entry))
+
+
+def _pump_entities_issue_id(entry: ConfigEntry) -> str:
+    return f"pump_entities_changed_{entry.entry_id}"
+
+
+@callback
+def async_create_pump_entities_issue(
+    hass: HomeAssistant, entry: ConfigEntry, moved: dict[str, str]
+) -> None:
+    """Tell the user that the pump status entity moved and the direction states changed.
+
+    The pump status sensor became a binary sensor, which changes its entity id
+    (the domain is part of it), so automations, templates and dashboards that
+    use the old id need updating. The states of the direction sensor changed
+    to lowercase at the same time. Nothing can be confirmed or fixed from
+    here, so the issue is not fixable; the user ignores it once done.
+    """
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        _pump_entities_issue_id(entry),
+        is_fixable=False,
+        is_persistent=True,
+        severity=ir.IssueSeverity.WARNING,
+        learn_more_url=ISSUES_URL,
+        translation_key="pump_entities_changed",
+        translation_placeholders={
+            "entry_title": entry.title,
+            "entities": "\n".join(
+                f"- `{old}` -> `{new}`" for old, new in moved.items()
+            ),
+        },
+    )

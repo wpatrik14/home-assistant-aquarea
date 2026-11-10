@@ -87,6 +87,10 @@
         "app_version_rejected": {
             "title": "A Panasonic elutasította az alkalmazás verzióját",
             "description": "A Panasonic szerverei már nem fogadják el azt az alkalmazásverziót, amelyet az Aquarea Smart Cloud integráció küld, ezért a bejelentkezés sikertelen. Nem a felhasználónév vagy a jelszó a hiba, újrahitelesítésre nincs szükség. Ez a Panasonic oldalán történt változás, amit általában az integráció (és az aioaquarea-ng könyvtár) frissítése old meg: keress frissítést a HACS-ben, majd indítsd újra a Home Assistantet. Ha már a legfrissebb verziót használod, jelezd a [hibakövetőben]({issues_url}). Az integráció tovább próbálkozik; ez a probléma sikeres bejelentkezés után magától megszűnik."
+        },
+        "pump_entities_changed": {
+            "title": "A szivattyú állapot- és irányentitásai megváltoztak",
+            "description": "A(z) {entry_title} szivattyú állapot érzékelője mostantól bináris érzékelő, ezért az entitásazonosítója átkerült a binary_sensor tartományba:\n\n{entities}\n\nFrissítsd azokat az automatizmusokat, szkripteket, sablonokat és irányítópultokat, amelyek a régi entitásazonosítókat használják. A régi entitás előzménye nem kerül át; a recorder a régi entitásazonosító alatt őrzi meg.\n\nA szivattyú irány érzékelő állapotai is megváltoztak: mostantól kisbetűsek (`idle`, `pump`, `water` a `IDLE`, `PUMP`, `WATER` helyett). Frissítsd azokat a feltételeket és sablonokat, amelyek összehasonlítják őket. Ha végeztél, figyelmen kívül hagyhatod ezt a problémát."
         }
     },
     "entity": {
@@ -114,6 +118,9 @@
         },
         "weekly_timer": {
           "name": "Heti ütemezés"
+        },
+        "pump_status": {
+          "name": "Szivattyú állapota"
         }
       },
       "button": {
@@ -185,11 +192,13 @@
         "water_pressure": {
           "name": "Víznyomás"
         },
-        "pump_status": {
-          "name": "Szivattyú állapota"
-        },
         "direction": {
-          "name": "Irány"
+          "name": "Irány",
+          "state": {
+            "idle": "Tétlen",
+            "pump": "Helyiség fűtése/hűtése",
+            "water": "Melegvíz"
+          }
         },
         "error_code": {
           "name": "Hibakód"

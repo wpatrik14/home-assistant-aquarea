@@ -1,16 +1,19 @@
 """The Aquarea Smart Cloud integration."""
 
+from functools import partial
 import logging
+from typing import Any
 
 import aioaquarea
 import aiohttp
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .config_flow import AquareaConfigFlow
-from .const import APP_VERSION_REJECTED, CONF_REFRESH_TOKEN, MFA_REQUIRED
+from .const import APP_VERSION_REJECTED, CONF_REFRESH_TOKEN, DOMAIN, MFA_REQUIRED
 from .coordinator import (
     AGREEMENT_NOT_ACCEPTED_CODE,
     AGREEMENT_NOT_ACCEPTED_MESSAGE,
@@ -21,10 +24,14 @@ from .issues import (
     APP_VERSION_REJECTED_MESSAGE,
     async_clear_app_version_issue,
     async_create_app_version_issue,
+    async_create_pump_entities_issue,
 )
 from .lifetime import LifetimeStore
 
 _LOGGER = logging.getLogger(__name__)
+
+# Unique id suffix of the pump status entity, a sensor before version 1.2.
+PUMP_STATUS_SUFFIX = "_pump_status"
 
 PLATFORMS: list[Platform] = [
     Platform.BUTTON,
@@ -66,15 +73,87 @@ def _create_client(hass: HomeAssistant, entry: AquareaConfigEntry) -> aioaquarea
     )
 
 
+def _move_pump_status_sensors(
+    hass: HomeAssistant, entry: AquareaConfigEntry
+) -> dict[str, str]:
+    """Re-register the pump status sensors as binary sensors.
+
+    The registry refuses a domain change on an existing entry
+    (`async_update_entity(new_entity_id=...)` raises, and the registry key
+    includes the domain), so the sensor entry is removed and a binary sensor
+    entry with the same unique id and object id is created, carrying over what
+    the user customised. The recorder history stays under the old entity id.
+
+    Returns a mapping of old entity id -> new entity id for everything moved.
+    An entry is left alone when the new entity id belongs to something else.
+    """
+    registry = er.async_get(hass)
+    moved: dict[str, str] = {}
+    for old in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if old.domain != "sensor" or not old.unique_id.endswith(PUMP_STATUS_SUFFIX):
+            continue
+        object_id = old.entity_id.split(".", 1)[1]
+        new_id = registry.async_get_entity_id("binary_sensor", DOMAIN, old.unique_id)
+        if new_id is None:
+            new_id = f"binary_sensor.{object_id}"
+            if registry.async_is_registered(new_id) or hass.states.get(new_id):
+                _LOGGER.warning(
+                    "Not moving %s: %s is already in use", old.entity_id, new_id
+                )
+                continue
+            options = {key: dict(value) for key, value in old.options.items()}
+            created = registry.async_get_or_create(
+                "binary_sensor",
+                DOMAIN,
+                old.unique_id,
+                config_entry=entry,
+                config_subentry_id=old.config_subentry_id,
+                device_id=old.device_id,
+                suggested_object_id=object_id,
+                disabled_by=old.disabled_by,
+                hidden_by=old.hidden_by,
+                get_initial_options=partial(dict, options) if options else None,
+                entity_category=old.entity_category,
+                has_entity_name=old.has_entity_name,
+                original_name=old.original_name,
+                translation_key=old.translation_key,
+            )
+            new_id = created.entity_id
+            # What the user set by hand; the platform fills in the rest.
+            customised: dict[str, Any] = {
+                "name": old.name,
+                "icon": old.icon,
+                "device_class": old.device_class,
+                "area_id": old.area_id,
+                "aliases": old.aliases,
+                "labels": old.labels,
+                "categories": old.categories,
+            }
+            registry.async_update_entity(new_id, **customised)
+        # else: an interrupted earlier run already created the new entry; keep it.
+        registry.async_remove(old.entity_id)
+        moved[old.entity_id] = new_id
+        _LOGGER.info("Moved entity %s -> %s", old.entity_id, new_id)
+    return moved
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
     """Migrate a config entry to the current version.
 
     Home Assistant calls this whenever the stored version differs from the
-    flow's. An entry written by a newer release (restoring a backup, or going
+    flow's. Entries older than 1.2 get the pump status sensor moved to the
+    binary_sensor domain. An entry written by a newer release (restoring a backup, or going
     back to an older release) would otherwise end in `migration_error`. The
     data has not changed shape, so keep it and only set the version back.
     """
     supported = (AquareaConfigFlow.VERSION, AquareaConfigFlow.MINOR_VERSION)
+    if entry.version == 1 and entry.minor_version < 2:
+        # 1.2: the pump status sensor became a binary sensor.
+        moved = _move_pump_status_sensors(hass, entry)
+        if moved:
+            async_create_pump_entities_issue(hass, entry, moved)
+        hass.config_entries.async_update_entry(entry, minor_version=2)
+        return True
     if (entry.version, entry.minor_version) <= supported:
         return True
     if not entry.data.get(CONF_USERNAME):

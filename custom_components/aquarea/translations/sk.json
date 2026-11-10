@@ -87,6 +87,10 @@
         "app_version_rejected": {
             "title": "Panasonic odmietol verziu aplikácie",
             "description": "Servery Panasonicu už neakceptujú verziu aplikácie, ktorú hlási integrácia Aquarea Smart Cloud, preto prihlásenie zlyháva. Problém nie je v používateľskom mene ani hesle a nové overenie nie je potrebné. Ide o zmenu na strane Panasonicu, ktorú zvyčajne vyrieši aktualizácia integrácie (a jej knižnice aioaquarea-ng): skontrolujte aktualizácie v HACS a reštartujte Home Assistant. Ak už máte aktuálnu verziu, nahláste to v [issue trackeri]({issues_url}). Integrácia to skúša ďalej; tento problém po úspešnom prihlásení zmizne sám."
+        },
+        "pump_entities_changed": {
+            "title": "Entity stavu a smeru čerpadla sa zmenili",
+            "description": "Senzor stavu čerpadla zariadenia {entry_title} je teraz binárny senzor, preto sa jeho ID entity presunulo do domény binary_sensor:\n\n{entities}\n\nAktualizujte automatizácie, skripty, šablóny a dashboardy, ktoré používajú pôvodné ID entít. História pôvodnej entity sa neprenáša; recorder ju uchováva pod pôvodným ID entity.\n\nZmenili sa aj stavy senzora smeru čerpadla: sú teraz malými písmenami (`idle`, `pump`, `water` namiesto `IDLE`, `PUMP`, `WATER`). Upravte podmienky alebo šablóny, ktoré ich porovnávajú. Po dokončení môžete toto upozornenie ignorovať."
         }
     },
     "entity": {
@@ -114,6 +118,9 @@
         },
         "weekly_timer": {
           "name": "Týždenný plán"
+        },
+        "pump_status": {
+          "name": "Stav čerpadla"
         }
       },
       "button": {
@@ -185,11 +192,13 @@
         "water_pressure": {
           "name": "Tlak vody"
         },
-        "pump_status": {
-          "name": "Stav čerpadla"
-        },
         "direction": {
-          "name": "Smer"
+          "name": "Smer",
+          "state": {
+            "idle": "Nečinný",
+            "pump": "Vykurovanie/chladenie priestoru",
+            "water": "Teplá voda"
+          }
         },
         "error_code": {
           "name": "Kód chyby"
