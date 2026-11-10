@@ -3,7 +3,10 @@
 from collections.abc import Coroutine
 from typing import Any
 
+import aioaquarea
+import aiohttp
 from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -30,6 +33,30 @@ class AquareaBaseEntity(CoordinatorEntity[AquareaDataUpdateCoordinator]):
             name=self.coordinator.device_info.name,
             sw_version=self.coordinator.device_info.firmware_version,
         )
+
+    async def _async_send_command[T](self, command: Coroutine[Any, Any, T]) -> T:
+        """Await a cloud command, turning its failures into translated errors.
+
+        Authentication failures, API/HTTP errors and timeouts raise a
+        `HomeAssistantError` whose message is translated (`exceptions.*` in
+        strings.json); the original error stays attached as its cause. Any
+        other exception is a bug and propagates unchanged. Re-authentication
+        itself is the coordinator's job, not a command's.
+        """
+        try:
+            return await command
+        except aioaquarea.AuthenticationError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="not_authenticated",
+                translation_placeholders={"error": str(err)},
+            ) from err
+        except (TimeoutError, aioaquarea.ClientError, aiohttp.ClientError) as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_failed",
+                translation_placeholders={"error": str(err) or type(err).__name__},
+            ) from err
 
     def _start_delayed_refresh(self, refresh: Coroutine[Any, Any, None]) -> None:
         """Run a delayed post-command refresh as a background task of the entry.

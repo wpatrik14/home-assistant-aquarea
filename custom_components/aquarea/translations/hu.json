@@ -231,6 +231,15 @@
     "exceptions": {
         "lifetime_sync_running": {
             "message": "A fogyasztási előzmények olvasása éppen folyamatban van. Próbálja újra, amikor végzett."
+        },
+        "command_failed": {
+            "message": "A parancsot nem sikerült elküldeni a Panasonic felhőnek: {error}"
+        },
+        "not_authenticated": {
+            "message": "A Panasonic felhő elutasította a bejelentkezést: {error}. Hitelesítse újra az integrációt, majd próbálja újra."
+        },
+        "unsupported_value": {
+            "message": "A(z) „{value}” érték nem támogatott ennél az eszköznél."
         }
     }
 }

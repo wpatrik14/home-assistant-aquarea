@@ -231,6 +231,15 @@
     "exceptions": {
         "lifetime_sync_running": {
             "message": "El historial de consumo se está leyendo ahora. Inténtelo de nuevo cuando termine."
+        },
+        "command_failed": {
+            "message": "No se pudo enviar el comando a la nube de Panasonic: {error}"
+        },
+        "not_authenticated": {
+            "message": "La nube de Panasonic rechazó el inicio de sesión: {error}. Vuelva a autenticar la integración e inténtelo de nuevo."
+        },
+        "unsupported_value": {
+            "message": "El valor «{value}» no es compatible con este dispositivo."
         }
     }
 }

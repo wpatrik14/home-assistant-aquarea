@@ -231,6 +231,15 @@
     "exceptions": {
         "lifetime_sync_running": {
             "message": "Suvartojimo istorija šiuo metu skaitoma. Bandykite dar kartą, kai ji baigsis."
+        },
+        "command_failed": {
+            "message": "Nepavyko išsiųsti komandos į „Panasonic“ debesį: {error}"
+        },
+        "not_authenticated": {
+            "message": "„Panasonic“ debesis atmetė prisijungimą: {error}. Iš naujo autentifikuokite integraciją ir bandykite dar kartą."
+        },
+        "unsupported_value": {
+            "message": "Šis įrenginys nepalaiko reikšmės „{value}“."
         }
     }
 }

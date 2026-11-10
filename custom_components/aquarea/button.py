@@ -58,7 +58,7 @@ class AquareaDefrostButton(AquareaBaseEntity, ButtonEntity):
             self.coordinator.device.device_mode_status
             is not aioaquarea.DeviceModeStatus.DEFROST
         ):
-            await self.coordinator.device.request_defrost()
+            await self._async_send_command(self.coordinator.device.request_defrost())
 
 
 class AquareaRebuildLifetimeButton(AquareaBaseEntity, ButtonEntity):

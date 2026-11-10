@@ -231,6 +231,15 @@
     "exceptions": {
         "lifetime_sync_running": {
             "message": "Historie spotřeby se právě načítá. Zkuste to znovu po dokončení."
+        },
+        "command_failed": {
+            "message": "Příkaz se nepodařilo odeslat do cloudu Panasonic: {error}"
+        },
+        "not_authenticated": {
+            "message": "Cloud Panasonic odmítl přihlášení: {error}. Znovu ověřte integraci a zkuste to znovu."
+        },
+        "unsupported_value": {
+            "message": "Hodnota „{value}“ není tímto zařízením podporována."
         }
     }
 }

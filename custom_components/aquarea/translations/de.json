@@ -231,6 +231,15 @@
     "exceptions": {
         "lifetime_sync_running": {
             "message": "Der Verbrauchsverlauf wird gerade gelesen. Versuchen Sie es erneut, wenn er fertig ist."
+        },
+        "command_failed": {
+            "message": "Der Befehl konnte nicht an die Panasonic-Cloud gesendet werden: {error}"
+        },
+        "not_authenticated": {
+            "message": "Die Panasonic-Cloud hat die Anmeldung abgelehnt: {error}. Authentifizieren Sie die Integration erneut und versuchen Sie es noch einmal."
+        },
+        "unsupported_value": {
+            "message": "„{value}“ wird von diesem Gerät nicht unterstützt."
         }
     }
 }

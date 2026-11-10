@@ -231,6 +231,15 @@
     "exceptions": {
         "lifetime_sync_running": {
             "message": "История потребления сейчас считывается. Повторите попытку после завершения."
+        },
+        "command_failed": {
+            "message": "Не удалось отправить команду в облако Panasonic: {error}"
+        },
+        "not_authenticated": {
+            "message": "Облако Panasonic отклонило вход: {error}. Повторно авторизуйте интеграцию и попробуйте снова."
+        },
+        "unsupported_value": {
+            "message": "Значение «{value}» не поддерживается этим устройством."
         }
     }
 }

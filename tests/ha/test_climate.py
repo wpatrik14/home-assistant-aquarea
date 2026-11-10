@@ -34,6 +34,7 @@ from homeassistant.components.climate import (
 )
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 import pytest
 from pytest_homeassistant_custom_component.common import (
@@ -304,7 +305,7 @@ async def test_set_hvac_mode_failure_rolls_back(
     await _setup(hass, mock_config_entry)
     mock_device.set_mode.side_effect = aioaquarea.ApiError("500", "rejected")
 
-    with pytest.raises(aioaquarea.ApiError):
+    with pytest.raises(HomeAssistantError):
         await _call(hass, SERVICE_SET_HVAC_MODE, **{ATTR_HVAC_MODE: HVACMode.COOL})
 
     assert hass.states.get(ENTITY_ID).state == HVACMode.HEAT
@@ -383,7 +384,7 @@ async def test_set_temperature_failure_rolls_back(
     await _setup(hass, mock_config_entry)
     mock_device.set_temperature.side_effect = aioaquarea.ApiError("500", "rejected")
 
-    with pytest.raises(aioaquarea.ApiError):
+    with pytest.raises(HomeAssistantError):
         await _call(hass, SERVICE_SET_TEMPERATURE, **{ATTR_TEMPERATURE: 23})
 
     assert hass.states.get(ENTITY_ID).attributes[ATTR_TEMPERATURE] == 22
@@ -424,7 +425,7 @@ async def test_set_preset_mode_failure_rolls_back(
     await _setup(hass, mock_config_entry)
     mock_device.set_special_status.side_effect = aioaquarea.ApiError("500", "x")
 
-    with pytest.raises(aioaquarea.ApiError):
+    with pytest.raises(HomeAssistantError):
         await _call(hass, SERVICE_SET_PRESET_MODE, **{ATTR_PRESET_MODE: PRESET_ECO})
 
     assert hass.states.get(ENTITY_ID).attributes[ATTR_PRESET_MODE] == PRESET_NONE
@@ -488,7 +489,7 @@ async def test_turn_on_off_failure_rolls_back(
     assert hass.states.get(ENTITY_ID).state == start_mode
     getattr(mock_device, method).side_effect = aioaquarea.ApiError("500", "x")
 
-    with pytest.raises(aioaquarea.ApiError):
+    with pytest.raises(HomeAssistantError):
         await _call(hass, service)
 
     assert hass.states.get(ENTITY_ID).state == start_mode

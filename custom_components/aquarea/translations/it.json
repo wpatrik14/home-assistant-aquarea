@@ -231,6 +231,15 @@
   "exceptions": {
     "lifetime_sync_running": {
       "message": "Lo storico dei consumi è in lettura. Riprova al termine."
+    },
+    "command_failed": {
+      "message": "Impossibile inviare il comando al cloud Panasonic: {error}"
+    },
+    "not_authenticated": {
+      "message": "Il cloud Panasonic ha rifiutato l'accesso: {error}. Riautentica l'integrazione e riprova."
+    },
+    "unsupported_value": {
+      "message": "Il valore «{value}» non è supportato da questo dispositivo."
     }
   }
 }

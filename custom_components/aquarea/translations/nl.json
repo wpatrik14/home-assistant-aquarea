@@ -231,6 +231,15 @@
     "exceptions": {
         "lifetime_sync_running": {
             "message": "De verbruiksgeschiedenis wordt nu gelezen. Probeer het opnieuw als dit klaar is."
+        },
+        "command_failed": {
+            "message": "Het commando kon niet naar de Panasonic-cloud worden verzonden: {error}"
+        },
+        "not_authenticated": {
+            "message": "De Panasonic-cloud heeft de aanmelding geweigerd: {error}. Verifieer de integratie opnieuw en probeer het nogmaals."
+        },
+        "unsupported_value": {
+            "message": "„{value}” wordt niet ondersteund door dit apparaat."
         }
     }
 }
