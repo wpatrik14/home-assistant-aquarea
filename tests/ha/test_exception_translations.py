@@ -16,6 +16,7 @@ import aioaquarea
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -208,3 +209,41 @@ async def test_login_backoff_is_translated(
     assert err is not None
     assert err.translation_key == "login_backoff"
     assert set(err.translation_placeholders) == {"retry_time"}
+
+
+@pytest.mark.parametrize(
+    ("code", "key"),
+    [
+        (
+            aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
+            "invalid_credentials",
+        ),
+        (
+            aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
+            "invalid_credentials",
+        ),
+        ("MFA_REQUIRED", "mfa_required"),
+    ],
+)
+async def test_poll_credential_failure_is_translated(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_device: MagicMock,
+    freezer: FrozenDateTimeFactory,
+    code: str,
+    key: str,
+) -> None:
+    """The ConfigEntryAuthFailed that starts reauth carries a translation key."""
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator = mock_config_entry.runtime_data[DEVICE_ID]
+
+    mock_device.refresh_data.side_effect = aioaquarea.AuthenticationError(code, "x")
+    await _poll(hass, freezer)
+
+    err = coordinator.last_exception
+    assert isinstance(err, ConfigEntryAuthFailed)
+    assert err.translation_domain == DOMAIN
+    assert err.translation_key == key

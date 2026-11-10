@@ -153,10 +153,10 @@ rules:
     comment: "icons.json; tests/test_icons.py."
   reconfiguration-flow:
     status: done
-    comment: "async_step_reconfigure in config_flow.py (username/password, MFA, unique_id re-key)."
+    comment: "async_step_reconfigure in config_flow.py (password change for the entry's own Panasonic ID, MFA; another account aborts with wrong_account); tests/ha/test_config_flow.py."
   repair-issues:
     status: done
-    comment: "issues.py creates a repair issue when Panasonic rejects the app version, and one (not fixable) when the migration moves the pump status entity (translated in strings.json 'issues'); tests/ha/test_app_version_rejected.py, tests/ha/test_migrate.py."
+    comment: "issues.py creates repair issues (none fixable from Home Assistant, all translated in strings.json 'issues'): app_version_rejected (Panasonic rejects the app version), agreement_not_accepted (terms or privacy policy not accepted in the Panasonic app), and from the migration pump_entities_changed, pump_entities_not_moved and direction_case_changed. They clear when a login or poll works again, or with the entry; tests/ha/test_app_version_rejected.py, test_agreement_issue.py, test_migrate.py."
   stale-devices:
     status: todo
     comment: "No async_remove_config_entry_device or removal of devices that vanish from the account."

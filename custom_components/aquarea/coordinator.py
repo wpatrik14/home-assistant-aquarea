@@ -722,7 +722,14 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
                 aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
                 MFA_REQUIRED,
             ):
-                raise ConfigEntryAuthFailed from err
+                raise ConfigEntryAuthFailed(
+                    translation_domain=DOMAIN,
+                    translation_key=(
+                        "mfa_required"
+                        if err.error_code == MFA_REQUIRED
+                        else "invalid_credentials"
+                    ),
+                ) from err
             raise UpdateFailed(
                 translation_domain=DOMAIN,
                 translation_key="authentication_failed",
