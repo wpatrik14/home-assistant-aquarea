@@ -8,6 +8,8 @@ delayed refresh so the device's own state shows again.
 from __future__ import annotations
 
 from datetime import timedelta
+import json
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import aioaquarea
@@ -15,7 +17,6 @@ from freezegun.api import FrozenDateTimeFactory
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.const import (
     ATTR_ENTITY_ID,
-    ATTR_ICON,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_OFF,
@@ -95,16 +96,31 @@ async def test_state_follows_device(
     icon_on: str,
     icon_off: str,
 ) -> None:
-    """The switch shows the device's flag after a poll, with a matching icon."""
+    """The switch shows the device's flag after a poll."""
     await _setup(hass, mock_config_entry)
     state = hass.states.get(entity_id)
-    assert (state.state, state.attributes[ATTR_ICON]) == (STATE_OFF, icon_off)
+    assert state.state == STATE_OFF
 
     setattr(mock_device, attribute, flag.ON)
     await _advance(hass, freezer, timedelta(minutes=1))
 
     state = hass.states.get(entity_id)
-    assert (state.state, state.attributes[ATTR_ICON]) == (STATE_ON, icon_on)
+    assert state.state == STATE_ON
+
+
+@pytest.mark.parametrize(SWITCH_ARGS, SWITCHES)
+def test_icons_json(
+    entity_id: str,
+    attribute: str,
+    setter: str,
+    flag: type,
+    icon_on: str,
+    icon_off: str,
+) -> None:
+    """icons.json gives the switch its on and off icon (the frontend shows them)."""
+    path = Path(__file__).parents[2] / "custom_components" / "aquarea" / "icons.json"
+    icons = json.loads(path.read_text(encoding="utf-8"))["entity"]["switch"][attribute]
+    assert (icons["state"]["on"], icons["default"]) == (icon_on, icon_off)
 
 
 @pytest.mark.parametrize(SWITCH_ARGS, SWITCHES)

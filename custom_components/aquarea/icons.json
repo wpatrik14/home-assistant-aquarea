@@ -1,0 +1,74 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "defrost": {
+        "default": "mdi:snowflake-off",
+        "state": {
+          "on": "mdi:snowflake-melt"
+        }
+      },
+      "weekly_timer": {
+        "default": "mdi:calendar-clock"
+      }
+    },
+    "button": {
+      "request_defrost": {
+        "default": "mdi:snowflake-melt"
+      },
+      "rebuild_lifetime_consumption": {
+        "default": "mdi:database-refresh"
+      }
+    },
+    "select": {
+      "quiet_mode": {
+        "default": "mdi:volume-off"
+      },
+      "powerful_time": {
+        "default": "mdi:fire",
+        "state": {
+          "off": "mdi:fire-off"
+        }
+      }
+    },
+    "sensor": {
+      "direction": {
+        "default": "mdi:compass"
+      },
+      "pump_status": {
+        "default": "mdi:pump"
+      },
+      "error_code": {
+        "default": "mdi:alert-circle-outline"
+      },
+      "dhw_cycles_today": {
+        "default": "mdi:water-boiler"
+      },
+      "zone_cycles_today": {
+        "default": "mdi:radiator"
+      },
+      "defrost_cycles_today": {
+        "default": "mdi:snowflake-melt"
+      }
+    },
+    "switch": {
+      "force_dhw": {
+        "default": "mdi:water-boiler-off",
+        "state": {
+          "on": "mdi:water-boiler"
+        }
+      },
+      "force_heater": {
+        "default": "mdi:hvac-off",
+        "state": {
+          "on": "mdi:hvac"
+        }
+      },
+      "holiday_timer": {
+        "default": "mdi:timer-off",
+        "state": {
+          "on": "mdi:timer-check"
+        }
+      }
+    }
+  }
+}

@@ -3,8 +3,10 @@ name: pytest canary
 # Early warning for the next Home Assistant release: runs the pytest suite
 # against the newest pytest-homeassistant-custom-component (and so the newest
 # Home Assistant it pins, betas included) and the newest aioaquarea, instead of
-# the exact pins in requirements_test.txt. A failure here blocks nothing; it
-# shows what the next Dependabot bump of the pin will run into.
+# the exact pins in requirements_test.txt. A failure here blocks nothing (the
+# workflow only runs on a schedule, so it is no PR check) but the run turns red,
+# which shows what the next Dependabot bump of the pin will run into. An audit
+# job also checks the manifest requirements for known vulnerabilities.
 
 on:
   schedule:
@@ -18,15 +20,33 @@ jobs:
   canary:
     name: pytest (newest Home Assistant)
     runs-on: "ubuntu-latest"
-    continue-on-error: true
     steps:
       - uses: "actions/checkout@v4"
       - uses: "actions/setup-python@v5"
         with:
           python-version: "3.14"
       - name: Install the newest test harness
-        run: pip install --upgrade pytest-homeassistant-custom-component aioaquarea
+        run: pip install --upgrade pytest-homeassistant-custom-component aioaquarea-ng
       - name: Show the versions under test
         run: pip show homeassistant pytest-homeassistant-custom-component aioaquarea-ng | grep -E "^(Name|Version):"
       - name: Run pytest
         run: pytest
+
+  # Known-vulnerability scan of what the integration installs in Home
+  # Assistant: the manifest requirements plus their dependencies. Weekly and
+  # never a PR check, so an unrelated new advisory cannot block a merge; it
+  # just turns this run red.
+  audit:
+    name: pip-audit (manifest requirements)
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.14"
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Audit the manifest requirements
+        run: |
+          python -c "import json; print(*json.load(open('custom_components/aquarea/manifest.json'))['requirements'], sep='\n')" > manifest-requirements.txt
+          pip-audit --requirement manifest-requirements.txt
