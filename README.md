@@ -62,8 +62,10 @@ For other periods (weekly, monthly, yearly, or a daily total that follows tariff
 2. Name it (for example "Heat pump energy weekly"), choose **Weekly** (or Daily, Monthly, ...) as the meter reset cycle, and pick the *Lifetime consumption* sensor of your heat pump as the input sensor. Leave *Periodically resetting* off: the lifetime sensor never resets. Add tariffs if you want peak and off-peak totals.
 3. Submit. The new sensor can be used in the Energy dashboard or on a dashboard card.
 
+## Languages
+The integration is translated into English, Czech (`cs`), German (`de`), Spanish (`es`), Hungarian (`hu`), Italian (`it`), Lithuanian (`lt`), Dutch (`nl`), Polish (`pl`), Russian (`ru`) and Slovak (`sk`): the setup and options screens, entity names, repair messages and errors. Home Assistant picks the language from your profile settings; other languages fall back to English. Corrections and further languages are welcome as a PR (copy `custom_components/aquarea/translations/en.json`).
+
 ## Features in the works
-* Improve translations
 * Rework of the water tank entity
 * Additional sensors/switches for the device.
 

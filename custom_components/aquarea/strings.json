@@ -76,6 +76,158 @@
       "description": "Panasonic's servers no longer accept the app version that the Aquarea Smart Cloud integration announces, so logging in fails. Your username and password are not the problem and no re-authentication is needed. This is a change on Panasonic's side, which is usually fixed by updating the integration (and its aioaquarea-ng library): check for updates in HACS and restart Home Assistant. If you are already up to date, report it in the [issue tracker]({issues_url}). The integration keeps retrying, and this issue disappears by itself after a successful login."
     }
   },
+  "entity": {
+    "binary_sensor": {
+      "bivalent": {
+        "name": "Bivalent"
+      },
+      "bivalent_actual": {
+        "name": "Bivalent active (reported)"
+      },
+      "external_heater": {
+        "name": "External heater"
+      },
+      "defrost": {
+        "name": "Defrost"
+      },
+      "electric_anode": {
+        "name": "Electric anode"
+      },
+      "status": {
+        "name": "Status"
+      },
+      "uncontrollable": {
+        "name": "Uncontrollable (adapter flag)"
+      },
+      "weekly_timer": {
+        "name": "Weekly schedule"
+      }
+    },
+    "button": {
+      "rebuild_lifetime_consumption": {
+        "name": "Rebuild lifetime consumption"
+      },
+      "request_defrost": {
+        "name": "Request defrost"
+      }
+    },
+    "sensor": {
+      "heating_lifetime_energy_consumption": {
+        "name": "Heating lifetime consumption"
+      },
+      "cooling_lifetime_energy_consumption": {
+        "name": "Cooling lifetime consumption"
+      },
+      "tank_lifetime_energy_consumption": {
+        "name": "Tank lifetime consumption"
+      },
+      "lifetime_energy_consumption": {
+        "name": "Lifetime consumption"
+      },
+      "heating_today_energy_consumption": {
+        "name": "Heating consumption today"
+      },
+      "cooling_today_energy_consumption": {
+        "name": "Cooling consumption today"
+      },
+      "tank_today_energy_consumption": {
+        "name": "Tank consumption today"
+      },
+      "today_energy_consumption": {
+        "name": "Consumption today"
+      },
+      "heating_accumulated_energy_consumption": {
+        "name": "Heating accumulated consumption"
+      },
+      "cooling_accumulated_energy_consumption": {
+        "name": "Cooling accumulated consumption"
+      },
+      "tank_accumulated_energy_consumption": {
+        "name": "Tank accumulated consumption"
+      },
+      "accumulated_energy_consumption": {
+        "name": "Accumulated consumption"
+      },
+      "heating_energy_consumption": {
+        "name": "Heating consumption"
+      },
+      "cooling_energy_consumption": {
+        "name": "Cooling consumption"
+      },
+      "tank_energy_consumption": {
+        "name": "Tank consumption"
+      },
+      "energy_consumption": {
+        "name": "Consumption"
+      },
+      "outdoor_temperature": {
+        "name": "Outdoor temperature"
+      },
+      "tank_temperature": {
+        "name": "Tank temperature"
+      },
+      "zone_temperature": {
+        "name": "{zone_name} temperature"
+      },
+      "water_pressure": {
+        "name": "Water pressure"
+      },
+      "pump_status": {
+        "name": "Pump status"
+      },
+      "direction": {
+        "name": "Direction"
+      },
+      "error_code": {
+        "name": "Error code"
+      },
+      "dhw_cycles_today": {
+        "name": "DHW heating cycles today"
+      },
+      "zone_cycles_today": {
+        "name": "Zone cycles today"
+      },
+      "defrost_cycles_today": {
+        "name": "Defrost cycles today"
+      }
+    },
+    "select": {
+      "quiet_mode": {
+        "name": "Quiet mode",
+        "state": {
+          "level1": "Level 1",
+          "level2": "Level 2",
+          "level3": "Level 3",
+          "off": "Off"
+        }
+      },
+      "powerful_time": {
+        "name": "Powerful",
+        "state": {
+          "on-30m": "On 30 minutes",
+          "on-60m": "On 60 minutes",
+          "on-90m": "On 90 minutes",
+          "off": "Off"
+        }
+      }
+    },
+    "switch": {
+      "force_dhw": {
+        "name": "Force DHW"
+      },
+      "force_heater": {
+        "name": "Force heater"
+      },
+      "holiday_timer": {
+        "name": "Holiday timer"
+      }
+    },
+    "water_heater": {
+      "tank": {
+        "name": "Tank"
+      }
+    }
+  },
   "exceptions": {
     "lifetime_sync_running": {
       "message": "The consumption history is being read right now. Try again when it has finished."

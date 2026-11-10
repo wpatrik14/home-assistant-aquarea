@@ -20,12 +20,19 @@
                 "data": {
                     "password": "Wachtwoord",
                     "username": "Gebruikersnaam"
+                },
+                "data_description": {
+                    "username": "Uw Panasonic ID, dezelfde login als in de Panasonic Comfort Cloud-app.",
+                    "password": "Het wachtwoord van dit Panasonic ID."
                 }
             },
             "reauth_confirm": {
                 "description": "Voer het wachtwoord voor uw Panasonic ID {username} in:",
                 "data": {
                     "password": "Wachtwoord"
+                },
+                "data_description": {
+                    "password": "Het huidige wachtwoord van dit Panasonic ID."
                 }
             },
             "mfa_sms": {
@@ -56,6 +63,9 @@
                 "description": "Waarschuwing: een te kort vernieuwingsinterval kan ertoe leiden dat uw IP-adres door Panasonic Cloud wordt geblokkeerd.",
                 "data": {
                     "consumption_interval": "Vernieuwingsinterval verbruiksgegevens (minuten)"
+                },
+                "data_description": {
+                    "consumption_interval": "Hoe vaak het energieverbruik uit de Panasonic-cloud wordt opgehaald, in minuten. De cloud levert hooguit elke 15 minuten nieuwe verbruiksgegevens (met enige vertraging), dus 15 is de laagste zinvolle waarde; lagere waarden geven alleen extra belasting. De apparaatstatus wordt elke minuut vernieuwd, ongeacht deze instelling."
                 }
             }
         }
@@ -69,28 +79,28 @@
     "entity": {
         "binary_sensor": {
             "bivalent": {
-                "name": "Bivalent"
+                "name": "Bivalente werking"
             },
             "bivalent_actual": {
-                "name": "Bivalent active (reported)"
+                "name": "Bivalente werking actief (gemeld)"
             },
             "external_heater": {
-                "name": "External heater"
+                "name": "Externe verwarming"
             },
             "defrost": {
                 "name": "Ontdooien"
             },
             "electric_anode": {
-                "name": "Electric anode"
+                "name": "Elektrische anode"
             },
             "status": {
                 "name": "Status"
             },
             "uncontrollable": {
-                "name": "Uncontrollable (adapter flag)"
+                "name": "Niet bestuurbaar (adaptervlag)"
             },
             "weekly_timer": {
-                "name": "Weekly schedule"
+                "name": "Weekschema"
             }
         },
         "button": {
@@ -157,7 +167,7 @@
                 "name": "Tanktemperatuur"
             },
             "zone_temperature": {
-                "name": "{zone_name} temperature"
+                "name": "Temperatuur {zone_name}"
             },
             "water_pressure": {
                 "name": "Waterdruk"
@@ -210,6 +220,11 @@
             },
             "holiday_timer": {
                 "name": "Vakantietimer"
+            }
+        },
+        "water_heater": {
+            "tank": {
+                "name": "Tank"
             }
         }
     },

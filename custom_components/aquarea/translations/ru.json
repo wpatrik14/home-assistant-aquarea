@@ -20,12 +20,19 @@
                 "data": {
                     "password": "Пароль",
                     "username": "Имя пользователя"
+                },
+                "data_description": {
+                    "username": "Ваш Panasonic ID, те же данные для входа, что и в приложении Panasonic Comfort Cloud.",
+                    "password": "Пароль этого Panasonic ID."
                 }
             },
             "reauth_confirm": {
                 "description": "Пожалуйста, введите пароль для вашего Panasonic ID {username}:",
                 "data": {
                     "password": "Пароль"
+                },
+                "data_description": {
+                    "password": "Текущий пароль этого Panasonic ID."
                 }
             },
             "mfa_sms": {
@@ -56,6 +63,9 @@
                 "description": "Внимание: слишком короткий интервал обновления может привести к блокировке вашего IP-адреса облаком Panasonic.",
                 "data": {
                     "consumption_interval": "Интервал обновления данных о потреблении (минуты)"
+                },
+                "data_description": {
+                    "consumption_interval": "Как часто запрашивать данные о потреблении энергии из облака Panasonic, в минутах. Облако передаёт новые данные о потреблении не чаще чем раз в 15 минут (с некоторой задержкой), поэтому 15 — наименьшее полезное значение; меньшие значения лишь увеличивают нагрузку. Состояние устройства обновляется каждую минуту независимо от этой настройки."
                 }
             }
         }
@@ -69,28 +79,28 @@
     "entity": {
         "binary_sensor": {
             "bivalent": {
-                "name": "Bivalent"
+                "name": "Бивалентный режим"
             },
             "bivalent_actual": {
-                "name": "Bivalent active (reported)"
+                "name": "Бивалентный режим активен (по данным устройства)"
             },
             "external_heater": {
-                "name": "External heater"
+                "name": "Внешний нагреватель"
             },
             "defrost": {
                 "name": "Разморозка"
             },
             "electric_anode": {
-                "name": "Electric anode"
+                "name": "Электрический анод"
             },
             "status": {
                 "name": "Статус"
             },
             "uncontrollable": {
-                "name": "Uncontrollable (adapter flag)"
+                "name": "Не управляется (флаг адаптера)"
             },
             "weekly_timer": {
-                "name": "Weekly schedule"
+                "name": "Недельное расписание"
             }
         },
         "button": {
@@ -157,7 +167,7 @@
                 "name": "Температура бака"
             },
             "zone_temperature": {
-                "name": "{zone_name} temperature"
+                "name": "Температура: {zone_name}"
             },
             "water_pressure": {
                 "name": "Давление воды"
@@ -210,6 +220,11 @@
             },
             "holiday_timer": {
                 "name": "Таймер отпуска"
+            }
+        },
+        "water_heater": {
+            "tank": {
+                "name": "Бак"
             }
         }
     },

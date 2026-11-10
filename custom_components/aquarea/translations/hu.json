@@ -20,12 +20,19 @@
                 "data": {
                     "password": "Jelszó",
                     "username": "Felhasználónév"
+                },
+                "data_description": {
+                    "username": "A Panasonic ID-d, ugyanaz a bejelentkezés, mint a Panasonic Comfort Cloud alkalmazásban.",
+                    "password": "A Panasonic ID jelszava."
                 }
             },
             "reauth_confirm": {
                 "description": "Add meg a jelszavadat a következő Panasonic ID-hoz: {username}:",
                 "data": {
                     "password": "Jelszó"
+                },
+                "data_description": {
+                    "password": "A Panasonic ID jelenlegi jelszava."
                 }
             },
             "mfa_sms": {
@@ -56,6 +63,9 @@
                 "description": "Figyelem: a túl rövid frissítési időköz miatt a Panasonic Cloud letilthatja az IP-címedet.",
                 "data": {
                     "consumption_interval": "Fogyasztási adatok frissítési időköze (perc)"
+                },
+                "data_description": {
+                    "consumption_interval": "Milyen gyakran kérje le az energiafogyasztást a Panasonic felhőből, percben. A felhő legfeljebb 15 percenként (némi késéssel) ad új fogyasztási adatot, ezért a 15 a legalacsonyabb értelmes érték; az ennél kisebb értékek csak terhelést okoznak. A készülék állapota ettől a beállítástól függetlenül percenként frissül."
                 }
             }
         }
@@ -69,28 +79,28 @@
     "entity": {
       "binary_sensor": {
         "bivalent": {
-          "name": "Bivalent"
+          "name": "Bivalens üzem"
         },
         "bivalent_actual": {
-          "name": "Bivalent active (reported)"
+          "name": "Bivalens üzem aktív (jelentett)"
         },
         "external_heater": {
-          "name": "External heater"
+          "name": "Külső fűtőegység"
         },
         "defrost": {
           "name": "Leolvasztás"
         },
         "electric_anode": {
-          "name": "Electric anode"
+          "name": "Elektromos anód"
         },
         "status": {
           "name": "Állapot"
         },
         "uncontrollable": {
-          "name": "Uncontrollable (adapter flag)"
+          "name": "Nem vezérelhető (adapter jelző)"
         },
         "weekly_timer": {
-          "name": "Weekly schedule"
+          "name": "Heti ütemezés"
         }
       },
       "button": {
@@ -157,7 +167,7 @@
           "name": "Tartály hőmérséklete"
         },
         "zone_temperature": {
-          "name": "{zone_name} temperature"
+          "name": "{zone_name} hőmérséklete"
         },
         "water_pressure": {
           "name": "Víznyomás"
@@ -210,6 +220,11 @@
         },
         "holiday_timer": {
           "name": "Szabadság-időzítő"
+        }
+      },
+      "water_heater": {
+        "tank": {
+          "name": "Tartály"
         }
       }
     },

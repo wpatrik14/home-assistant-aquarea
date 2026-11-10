@@ -20,12 +20,19 @@
                 "data": {
                     "password": "Heslo",
                     "username": "Používateľské meno"
+                },
+                "data_description": {
+                    "username": "Vaše Panasonic ID, rovnaké prihlásenie ako v aplikácii Panasonic Comfort Cloud.",
+                    "password": "Heslo k tomuto Panasonic ID."
                 }
             },
             "reauth_confirm": {
                 "description": "Zadajte heslo pre svoje Panasonic ID {username}:",
                 "data": {
                     "password": "Heslo"
+                },
+                "data_description": {
+                    "password": "Aktuálne heslo k tomuto Panasonic ID."
                 }
             },
             "mfa_sms": {
@@ -56,6 +63,9 @@
                 "description": "Upozornenie: príliš krátky interval obnovovania môže spôsobiť zablokovanie vašej IP adresy cloudom Panasonic.",
                 "data": {
                     "consumption_interval": "Interval obnovovania údajov o spotrebe (minúty)"
+                },
+                "data_description": {
+                    "consumption_interval": "Ako často sa majú z cloudu Panasonic načítavať údaje o spotrebe energie, v minútach. Cloud poskytuje nové údaje o spotrebe najviac každých 15 minút (s určitým oneskorením), takže 15 je najnižšia užitočná hodnota; nižšie hodnoty len zvyšujú záťaž. Stav zariadenia sa obnovuje každú minútu bez ohľadu na toto nastavenie."
                 }
             }
         }
@@ -69,28 +79,28 @@
     "entity": {
       "binary_sensor": {
         "bivalent": {
-          "name": "Bivalent"
+          "name": "Bivalentný režim"
         },
         "bivalent_actual": {
-          "name": "Bivalent active (reported)"
+          "name": "Bivalentný režim aktívny (hlásený)"
         },
         "external_heater": {
-          "name": "External heater"
+          "name": "Externý ohrievač"
         },
         "defrost": {
           "name": "Odmrazovanie"
         },
         "electric_anode": {
-          "name": "Electric anode"
+          "name": "Elektrická anóda"
         },
         "status": {
           "name": "Stav"
         },
         "uncontrollable": {
-          "name": "Uncontrollable (adapter flag)"
+          "name": "Neovládateľné (príznak adaptéra)"
         },
         "weekly_timer": {
-          "name": "Weekly schedule"
+          "name": "Týždenný plán"
         }
       },
       "button": {
@@ -157,7 +167,7 @@
           "name": "Teplota nádrže"
         },
         "zone_temperature": {
-          "name": "{zone_name} temperature"
+          "name": "Teplota {zone_name}"
         },
         "water_pressure": {
           "name": "Tlak vody"
@@ -210,6 +220,11 @@
         },
         "holiday_timer": {
           "name": "Časovač dovolenky"
+        }
+      },
+      "water_heater": {
+        "tank": {
+          "name": "Nádrž"
         }
       }
     },
