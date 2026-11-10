@@ -147,12 +147,18 @@ def main():
             have = _leaves(_load(path).get(section, {}), section)
             missing = sorted(set(wanted) - set(have))
             extra = sorted(set(have) - set(wanted))
-            check(f"{name}: {section} keys", not missing and not extra,
-                  f"missing={missing} extra={extra}")
-            empty = sorted(k for k in set(have) & set(wanted) if not str(have[k]).strip())
+            check(
+                f"{name}: {section} keys",
+                not missing and not extra,
+                f"missing={missing} extra={extra}",
+            )
+            empty = sorted(
+                k for k in set(have) & set(wanted) if not str(have[k]).strip()
+            )
             check(f"{name}: {section} not empty", not empty, f"empty={empty}")
             bad = sorted(
-                k for k in set(have) & set(wanted)
+                k
+                for k in set(have) & set(wanted)
                 if _placeholders(have[k]) != _placeholders(wanted[k])
             )
             check(f"{name}: {section} placeholders", not bad, f"mismatch={bad}")
@@ -166,13 +172,18 @@ def main():
             continue
         have = _leaves(_load(path))
         untranslated = sorted(
-            k for k, v in have.items()
-            if english.get(k) == v and isinstance(v, str)
+            k
+            for k, v in have.items()
+            if english.get(k) == v
+            and isinstance(v, str)
             and (name, k) not in INTENTIONALLY_ENGLISH
             and not re.fullmatch(r"[\W\d_]*|\{\w+\}", v)
         )
-        check(f"{name}: no untranslated strings", not untranslated,
-              f"english={untranslated}")
+        check(
+            f"{name}: no untranslated strings",
+            not untranslated,
+            f"english={untranslated}",
+        )
         lacking = sorted(k for k in english if k not in have)
         check(f"{name}: has every en.json string", not lacking, f"missing={lacking}")
 
