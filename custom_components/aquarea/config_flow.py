@@ -60,6 +60,13 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._challenge: aioaquarea.MfaChallenge | None = None
         self._password: str | None = None
 
+    @callback
+    def async_remove(self) -> None:
+        """Release the login session when the flow ends (finished or aborted)."""
+        if self._session is not None:
+            self._session.detach()
+            self._session = None
+
     @staticmethod
     @callback
     def async_get_options_flow(
@@ -318,7 +325,9 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         self._challenge = None
         if self._session is None:
-            self._session = async_create_clientsession(self.hass)
+            # Outside an entry's setup Home Assistant would only detach the session at
+            # shutdown, so each flow would leave one behind; async_remove does it.
+            self._session = async_create_clientsession(self.hass, auto_cleanup=False)
 
         self._api = aioaquarea.Client(self._session, username, password)
         try:

@@ -36,6 +36,9 @@ from .statistics import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Read-only: the coordinator polls, entities only read its data.
+PARALLEL_UPDATES = 0
+
 
 @dataclass(frozen=True, kw_only=True)
 class AquareaEnergyConsumptionSensorDescription(SensorEntityDescription):

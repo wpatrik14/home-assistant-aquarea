@@ -22,6 +22,9 @@ from .entity import AquareaBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+# Read-only: the coordinator polls, entities only read its data.
+PARALLEL_UPDATES = 0
+
 
 def _flag_state(raw: int | bool | None) -> bool | None:
     """Turn a raw 0/1/2... flag reported by the device into on/off.
