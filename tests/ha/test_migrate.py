@@ -320,6 +320,81 @@ async def test_migration_retries_once_the_entity_id_is_free(
     ]
 
 
+async def test_blocked_move_is_completed_after_the_platform_registered_a_suffixed_id(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    old_entry: MockConfigEntry,
+) -> None:
+    """Blocked at setup, the platform registers `_2`; once the id is free it is renamed.
+
+    The user's customisations of the sensor are copied to the renamed entry,
+    the issue goes and the migration is done.
+    """
+    registry = er.async_get(hass)
+    uid = f"{DEVICE_ID}_pump_status"
+    area = ar.async_get(hass).async_create("Utility room")
+    old = _old_pump_sensor(hass, old_entry)
+    registry.async_update_entity(
+        old.entity_id,
+        name="Circulation pump",
+        icon="mdi:water-pump",
+        area_id=area.id,
+        labels={"heating"},
+        aliases={"pump"},
+    )
+    registry.async_update_entity_options(
+        old.entity_id, "conversation", {"should_expose": True}
+    )
+    other = registry.async_get_or_create(
+        "binary_sensor",
+        "other_integration",
+        "unrelated",
+        suggested_object_id="heat_pump_pump_status",
+    )
+
+    # First start: blocked. The platform registers the entity under `_2`.
+    await hass.config_entries.async_setup(old_entry.entry_id)
+    await hass.async_block_till_done()
+    assert old_entry.state is ConfigEntryState.LOADED
+    assert old_entry.minor_version == 1
+    assert (
+        registry.async_get_entity_id("binary_sensor", DOMAIN, uid)
+        == "binary_sensor.heat_pump_pump_status_2"
+    )
+
+    # Reload with the id still taken: still blocked, nothing is reported as moved.
+    await hass.config_entries.async_reload(old_entry.entry_id)
+    await hass.async_block_till_done()
+    assert old_entry.minor_version == 1
+    assert registry.async_get(old.entity_id) is not None
+    assert [issue.translation_key for issue in _issues(hass)] == [
+        "pump_entities_not_moved"
+    ]
+
+    # The user frees the id and reloads.
+    registry.async_remove(other.entity_id)
+    await hass.config_entries.async_reload(old_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert old_entry.state is ConfigEntryState.LOADED
+    assert old_entry.minor_version == AquareaConfigFlow.MINOR_VERSION
+    assert registry.async_get_entity_id("sensor", DOMAIN, uid) is None
+    assert (
+        registry.async_get_entity_id("binary_sensor", DOMAIN, uid)
+        == "binary_sensor.heat_pump_pump_status"
+    )
+    new = registry.async_get("binary_sensor.heat_pump_pump_status")
+    assert new.name == "Circulation pump"
+    assert new.icon == "mdi:water-pump"
+    assert new.area_id == area.id
+    assert new.labels == {"heating"}
+    assert new.aliases == {"pump"}
+    assert new.options["conversation"] == {"should_expose": True}
+    assert [issue.translation_key for issue in _issues(hass)] == [
+        "pump_entities_changed"
+    ]
+
+
 async def test_direction_notice_without_a_moved_sensor(
     hass: HomeAssistant, old_entry: MockConfigEntry
 ) -> None:
@@ -486,6 +561,40 @@ async def test_setup_loads_when_the_move_is_blocked(
     await hass.async_block_till_done()
 
     assert old_entry.state is ConfigEntryState.LOADED
+    assert [issue.translation_key for issue in _issues(hass)] == [
+        "pump_entities_not_moved"
+    ]
+    # The platform registered the entity under a suffixed id, not the taken one.
+    assert (
+        er.async_get(hass).async_get_entity_id(
+            "binary_sensor", DOMAIN, f"{DEVICE_ID}_pump_status"
+        )
+        == "binary_sensor.heat_pump_pump_status_2"
+    )
+
+
+async def test_blocked_move_has_no_direction_issue(
+    hass: HomeAssistant, old_entry: MockConfigEntry
+) -> None:
+    """The not-moved text already covers the direction states."""
+    registry = er.async_get(hass)
+    _old_pump_sensor(hass, old_entry)
+    registry.async_get_or_create(
+        "binary_sensor",
+        "other_integration",
+        "unrelated",
+        suggested_object_id="heat_pump_pump_status",
+    )
+    registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{DEVICE_ID}_direction",
+        config_entry=old_entry,
+        suggested_object_id="heat_pump_direction",
+    )
+
+    assert await async_migrate_entry(hass, old_entry)
+
     assert [issue.translation_key for issue in _issues(hass)] == [
         "pump_entities_not_moved"
     ]

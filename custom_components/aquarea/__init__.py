@@ -80,6 +80,22 @@ def _create_client(hass: HomeAssistant, entry: AquareaConfigEntry) -> aioaquarea
     )
 
 
+def _copy_customisations(
+    registry: er.EntityRegistry, new_id: str, old: er.RegistryEntry
+) -> None:
+    """Copy what the user set by hand on the sensor; the platform fills in the rest."""
+    customised: dict[str, Any] = {
+        "name": old.name,
+        "icon": old.icon,
+        "device_class": old.device_class,
+        "area_id": old.area_id,
+        "aliases": old.aliases,
+        "labels": old.labels,
+        "categories": old.categories,
+    }
+    registry.async_update_entity(new_id, **customised)
+
+
 def _move_pump_status_sensors(
     hass: HomeAssistant, entry: AquareaConfigEntry
 ) -> tuple[dict[str, str], dict[str, str]]:
@@ -101,15 +117,18 @@ def _move_pump_status_sensors(
         if old.domain != "sensor" or not old.unique_id.endswith(PUMP_STATUS_SUFFIX):
             continue
         object_id = old.entity_id.split(".", 1)[1]
-        new_id = registry.async_get_entity_id("binary_sensor", DOMAIN, old.unique_id)
-        if new_id is None:
-            new_id = f"binary_sensor.{object_id}"
-            if registry.async_is_registered(new_id) or hass.states.get(new_id):
-                _LOGGER.warning(
-                    "Not moving %s: %s is already in use", old.entity_id, new_id
-                )
-                blocked[old.entity_id] = new_id
-                continue
+        preferred = f"binary_sensor.{object_id}"
+        existing = registry.async_get_entity_id("binary_sensor", DOMAIN, old.unique_id)
+        if existing == preferred:
+            # An interrupted earlier run already created the new entry; keep it.
+            new_id = existing
+        elif registry.async_is_registered(preferred) or hass.states.get(preferred):
+            _LOGGER.warning(
+                "Not moving %s: %s is already in use", old.entity_id, preferred
+            )
+            blocked[old.entity_id] = preferred
+            continue
+        elif existing is None:
             options = {key: dict(value) for key, value in old.options.items()}
             created = registry.async_get_or_create(
                 "binary_sensor",
@@ -128,18 +147,21 @@ def _move_pump_status_sensors(
                 translation_key=old.translation_key,
             )
             new_id = created.entity_id
-            # What the user set by hand; the platform fills in the rest.
-            customised: dict[str, Any] = {
-                "name": old.name,
-                "icon": old.icon,
-                "device_class": old.device_class,
-                "area_id": old.area_id,
-                "aliases": old.aliases,
-                "labels": old.labels,
-                "categories": old.categories,
-            }
-            registry.async_update_entity(new_id, **customised)
-        # else: an interrupted earlier run already created the new entry; keep it.
+            _copy_customisations(registry, new_id, old)
+        else:
+            # An earlier run was blocked and the binary sensor platform has
+            # registered the entity meanwhile, under a suffixed id (_2). The
+            # preferred id is free now: take it, and carry over what the user
+            # set on the sensor, which that entry does not have.
+            new_id = registry.async_update_entity(
+                existing, new_entity_id=preferred
+            ).entity_id
+            for domain, value in old.options.items():
+                registry.async_update_entity_options(new_id, domain, dict(value))
+            registry.async_update_entity(
+                new_id, disabled_by=old.disabled_by, hidden_by=old.hidden_by
+            )
+            _copy_customisations(registry, new_id, old)
         registry.async_remove(old.entity_id)
         moved[old.entity_id] = new_id
         _LOGGER.info("Moved entity %s -> %s", old.entity_id, new_id)
@@ -177,11 +199,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AquareaConfigEntry) ->
             async_create_pump_not_moved_issue(hass, entry, blocked)
         else:
             async_clear_pump_not_moved_issue(hass, entry)
-        if not async_pump_entities_issue_exists(hass, entry) and _has_direction_sensor(
-            hass, entry
+        if (
+            not blocked
+            and not async_pump_entities_issue_exists(hass, entry)
+            and _has_direction_sensor(hass, entry)
         ):
-            # No notice about the moved sensor, which also covers the
-            # direction states: the lowercase change needs its own.
+            # No notice about the pump sensor, which also covers the direction
+            # states (the moved and the not-moved text both do): the lowercase
+            # change needs its own.
             async_create_direction_case_issue(hass, entry)
         if not blocked:
             hass.config_entries.async_update_entry(entry, minor_version=2)
