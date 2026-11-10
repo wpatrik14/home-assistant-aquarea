@@ -4,7 +4,8 @@
             "already_configured": "Zariadenie je už nakonfigurované",
             "reauth_successful": "Opätovné overenie bolo úspešné",
             "reconfigure_successful": "Prekonfigurovanie prebehlo úspešne",
-            "reauth_no_username": "Nie je možné znova overiť: tento konfiguračný záznam nemá uložené používateľské meno. Odstráňte integráciu a pridajte ju znova."
+            "reauth_no_username": "Nie je možné znova overiť: tento konfiguračný záznam nemá uložené používateľské meno. Odstráňte integráciu a pridajte ju znova.",
+            "wrong_account": "Toto Panasonic ID nie je to, s ktorým bol tento záznam nastavený. Prekonfigurovanie môže zmeniť iba heslo; ak chcete použiť iný účet, pridajte integráciu znova."
         },
         "error": {
             "cannot_connect": "Nepodarilo sa pripojiť",

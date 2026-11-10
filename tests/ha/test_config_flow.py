@@ -356,30 +356,57 @@ async def test_reconfigure_updates_password(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_reconfigure_new_account_rekeys_entry(
+async def test_reconfigure_other_account_aborts(
     hass: HomeAssistant,
     mock_aquarea_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
 ) -> None:
-    """A different Panasonic ID replaces the old one, unique ID and title too."""
+    """A different Panasonic ID would orphan the devices: no login, nothing changes."""
     mock_config_entry.add_to_hass(hass)
-    mock_aquarea_client.refresh_token = "token-placeholder"
 
     result = await mock_config_entry.start_reconfigure_flow(hass)
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_USERNAME: NEW_USERNAME, CONF_PASSWORD: NEW_PASSWORD}
     )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_account"
+    mock_aquarea_client.login.assert_not_awaited()
+    assert mock_config_entry.data == {
+        CONF_USERNAME: USERNAME,
+        CONF_PASSWORD: PASSWORD,
+    }
+    assert mock_config_entry.unique_id == USERNAME.lower()
+    assert mock_config_entry.title == USERNAME
+    assert len(mock_setup_entry.mock_calls) == 0
+
+
+async def test_reconfigure_same_account_other_spelling(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    mock_setup_entry: AsyncMock,
+) -> None:
+    """The same Panasonic ID in other letter case is the same account."""
+    mock_config_entry.add_to_hass(hass)
+    mock_aquarea_client.refresh_token = "token-placeholder"
+
+    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_USERNAME: USERNAME.upper(), CONF_PASSWORD: NEW_PASSWORD},
+    )
     await hass.async_block_till_done()
 
     assert result["reason"] == "reconfigure_successful"
     assert mock_config_entry.data == {
-        CONF_USERNAME: NEW_USERNAME,
+        CONF_USERNAME: USERNAME.upper(),
         CONF_PASSWORD: NEW_PASSWORD,
         "refresh_token": "token-placeholder",
     }
-    assert mock_config_entry.unique_id == NEW_USERNAME.lower()
-    assert mock_config_entry.title == NEW_USERNAME
+    assert mock_config_entry.unique_id == USERNAME.lower()
+    assert mock_config_entry.title == USERNAME.upper()
 
 
 @pytest.mark.parametrize(("error", "expected"), LOGIN_ERRORS)
@@ -439,7 +466,7 @@ async def test_reconfigure_with_mfa(
 
     result = await mock_config_entry.start_reconfigure_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_USERNAME: NEW_USERNAME, CONF_PASSWORD: NEW_PASSWORD}
+        result["flow_id"], {CONF_USERNAME: USERNAME, CONF_PASSWORD: NEW_PASSWORD}
     )
     assert result["step_id"] == step_id
 
@@ -455,11 +482,11 @@ async def test_reconfigure_with_mfa(
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
     assert mock_config_entry.data == {
-        CONF_USERNAME: NEW_USERNAME,
+        CONF_USERNAME: USERNAME,
         CONF_PASSWORD: NEW_PASSWORD,
         "refresh_token": "mfa-token-placeholder",
     }
-    assert mock_config_entry.unique_id == NEW_USERNAME.lower()
+    assert mock_config_entry.unique_id == USERNAME.lower()
 
 
 async def test_reconfigure_mfa_expired_returns_to_reconfigure_form(
@@ -474,7 +501,7 @@ async def test_reconfigure_mfa_expired_returns_to_reconfigure_form(
     )
     result = await mock_config_entry.start_reconfigure_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_USERNAME: NEW_USERNAME, CONF_PASSWORD: NEW_PASSWORD}
+        result["flow_id"], {CONF_USERNAME: USERNAME, CONF_PASSWORD: NEW_PASSWORD}
     )
     mock_aquarea_client.complete_mfa.side_effect = aioaquarea.AuthenticationError(
         "MFA_EXPIRED", "message from the cloud"
@@ -490,7 +517,7 @@ async def test_reconfigure_mfa_expired_returns_to_reconfigure_form(
         for key in result["data_schema"].schema
         if key.description
     }
-    assert suggested == {CONF_USERNAME: NEW_USERNAME}
+    assert suggested == {CONF_USERNAME: USERNAME}
 
 
 async def test_reconfigure_to_configured_account_aborts(

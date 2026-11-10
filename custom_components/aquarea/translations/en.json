@@ -4,7 +4,8 @@
             "already_configured": "Device is already configured",
             "reauth_successful": "Re-authentication was successful",
             "reconfigure_successful": "Reconfiguration was successful",
-            "reauth_no_username": "Could not reauthenticate: this configuration entry has no stored username. Remove the integration and add it again."
+            "reauth_no_username": "Could not reauthenticate: this configuration entry has no stored username. Remove the integration and add it again.",
+            "wrong_account": "This Panasonic ID is not the one this entry was set up with. Reconfigure can only change the password; to use another account, add the integration again."
         },
         "error": {
             "cannot_connect": "Failed to connect",

@@ -4,7 +4,8 @@
             "already_configured": "Gerät ist bereits konfiguriert",
             "reauth_successful": "Die erneute Authentifizierung war erfolgreich",
             "reconfigure_successful": "Die Neukonfiguration war erfolgreich",
-            "reauth_no_username": "Erneute Authentifizierung nicht möglich: Für diesen Konfigurationseintrag ist kein Benutzername gespeichert. Entferne die Integration und füge sie erneut hinzu."
+            "reauth_no_username": "Erneute Authentifizierung nicht möglich: Für diesen Konfigurationseintrag ist kein Benutzername gespeichert. Entferne die Integration und füge sie erneut hinzu.",
+            "wrong_account": "Diese Panasonic-ID ist nicht die, mit der dieser Eintrag eingerichtet wurde. Beim Neukonfigurieren kann nur das Passwort geändert werden; um ein anderes Konto zu verwenden, füge die Integration erneut hinzu."
         },
         "error": {
             "cannot_connect": "Verbindung fehlgeschlagen",

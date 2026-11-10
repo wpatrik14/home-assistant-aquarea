@@ -4,7 +4,8 @@
             "already_configured": "Įrenginys jau nustatytas",
             "reauth_successful": "Pakartotinis autentifikavimas pavyko",
             "reconfigure_successful": "Perkonfigūravimas sėkmingas",
-            "reauth_no_username": "Nepavyko iš naujo autentifikuoti: šiame konfigūracijos įraše nėra išsaugoto vartotojo vardo. Pašalinkite integraciją ir pridėkite ją iš naujo."
+            "reauth_no_username": "Nepavyko iš naujo autentifikuoti: šiame konfigūracijos įraše nėra išsaugoto vartotojo vardo. Pašalinkite integraciją ir pridėkite ją iš naujo.",
+            "wrong_account": "Šis Panasonic ID nėra tas, su kuriuo buvo sukurtas šis įrašas. Perkonfigūravimas gali pakeisti tik slaptažodį; norėdami naudoti kitą paskyrą, pridėkite integraciją iš naujo."
         },
         "error": {
             "cannot_connect": "Nepavyko prisijungti",

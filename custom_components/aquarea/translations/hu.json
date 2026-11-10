@@ -4,7 +4,8 @@
             "already_configured": "Az eszköz már konfigurálva van",
             "reauth_successful": "Az újrahitelesítés sikeres volt",
             "reconfigure_successful": "Az újrakonfigurálás sikeres volt",
-            "reauth_no_username": "Nem sikerült újra hitelesíteni: ehhez a konfigurációs bejegyzéshez nincs tárolt felhasználónév. Távolítsd el az integrációt, és add hozzá újra."
+            "reauth_no_username": "Nem sikerült újra hitelesíteni: ehhez a konfigurációs bejegyzéshez nincs tárolt felhasználónév. Távolítsd el az integrációt, és add hozzá újra.",
+            "wrong_account": "Ez a Panasonic ID nem az, amellyel ez a bejegyzés létrejött. Az újrakonfigurálás csak a jelszót módosíthatja; másik fiók használatához add hozzá újra az integrációt."
         },
         "error": {
             "cannot_connect": "Nem sikerült csatlakozni",

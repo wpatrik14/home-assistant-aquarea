@@ -4,7 +4,8 @@
             "already_configured": "Het apparaat is al geconfigureerd",
             "reauth_successful": "Herauthenticatie was geslaagd",
             "reconfigure_successful": "Herconfiguratie was geslaagd",
-            "reauth_no_username": "Kan niet opnieuw verifiëren: deze configuratie heeft geen opgeslagen gebruikersnaam. Verwijder de integratie en voeg deze opnieuw toe."
+            "reauth_no_username": "Kan niet opnieuw verifiëren: deze configuratie heeft geen opgeslagen gebruikersnaam. Verwijder de integratie en voeg deze opnieuw toe.",
+            "wrong_account": "Dit Panasonic ID is niet het ID waarmee deze invoer is ingesteld. Opnieuw configureren kan alleen het wachtwoord wijzigen; voeg de integratie opnieuw toe om een ander account te gebruiken."
         },
         "error": {
             "cannot_connect": "Geen verbinding mogelijk",

@@ -4,7 +4,8 @@
       "already_configured": "Il dispositivo è già configurato",
       "reauth_successful": "La riautenticazione è stata eseguita correttamente",
       "reconfigure_successful": "La riconfigurazione è stata eseguita correttamente",
-      "reauth_no_username": "Impossibile ri-autenticare: questa voce di configurazione non ha un nome utente salvato. Rimuovi l'integrazione e aggiungila di nuovo."
+      "reauth_no_username": "Impossibile ri-autenticare: questa voce di configurazione non ha un nome utente salvato. Rimuovi l'integrazione e aggiungila di nuovo.",
+      "wrong_account": "Questo Panasonic ID non è quello con cui è stata configurata questa voce. La riconfigurazione può cambiare solo la password; per usare un altro account, aggiungi di nuovo l'integrazione."
     },
     "error": {
       "cannot_connect": "Connessione non riuscita",
