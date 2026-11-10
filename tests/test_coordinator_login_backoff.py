@@ -63,7 +63,9 @@ aioaquarea = types.SimpleNamespace(
 
 
 class UpdateFailed(Exception):
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.kwargs = kwargs
 
 
 class _Clock:
@@ -117,6 +119,7 @@ def _load():
     namespace = {
         "aioaquarea": aioaquarea,
         "UpdateFailed": UpdateFailed,
+        "DOMAIN": "aquarea",
         "dt_util": types.SimpleNamespace(
             utcnow=lambda: _Clock.now, as_local=lambda moment: moment
         ),

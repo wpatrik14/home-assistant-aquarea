@@ -4,7 +4,8 @@
             "already_configured": "Az eszköz már konfigurálva van",
             "reauth_successful": "Az újrahitelesítés sikeres volt",
             "reconfigure_successful": "Az újrakonfigurálás sikeres volt",
-            "reauth_no_username": "Nem sikerült újra hitelesíteni: ehhez a konfigurációs bejegyzéshez nincs tárolt felhasználónév. Távolítsd el az integrációt, és add hozzá újra."
+            "reauth_no_username": "Nem sikerült újra hitelesíteni: ehhez a konfigurációs bejegyzéshez nincs tárolt felhasználónév. Távolítsd el az integrációt, és add hozzá újra.",
+            "wrong_account": "Ez a Panasonic ID nem az, amellyel ez a bejegyzés létrejött. Az újrakonfigurálás csak a jelszót módosíthatja; másik fiók használatához add hozzá újra az integrációt."
         },
         "error": {
             "cannot_connect": "Nem sikerült csatlakozni",
@@ -91,6 +92,18 @@
         "pump_entities_changed": {
             "title": "A szivattyú állapot- és irányentitásai megváltoztak",
             "description": "A(z) {entry_title} szivattyú állapot érzékelője mostantól bináris érzékelő, ezért az entitásazonosítója átkerült a binary_sensor tartományba:\n\n{entities}\n\nFrissítsd azokat az automatizmusokat, szkripteket, sablonokat és irányítópultokat, amelyek a régi entitásazonosítókat használják. A régi entitás előzménye nem kerül át; a recorder a régi entitásazonosító alatt őrzi meg.\n\nA szivattyú irány érzékelő állapotai is megváltoztak: mostantól kisbetűsek (`idle`, `pump`, `water` a `IDLE`, `PUMP`, `WATER` helyett). Frissítsd azokat a feltételeket és sablonokat, amelyek összehasonlítják őket. Ha végeztél, figyelmen kívül hagyhatod ezt a problémát."
+        },
+        "pump_entities_not_moved": {
+            "title": "A szivattyú állapot érzékelője nem helyezhető át",
+            "description": "A(z) {entry_title} szivattyú állapot érzékelője mostantól bináris érzékelő, de nem sikerült áthelyezni, mert az új entitásazonosítót már egy másik entitás használja:\n\n{entities}\n\nNevezd át vagy told el a másik entitást, majd töltsd újra az Aquarea Smart Cloud integrációt (vagy indítsd újra a Home Assistantet): az áthelyezést minden indításkor újra megpróbáljuk, és ez a probléma megszűnik, ha sikerült. Addig az új bináris érzékelő más entitásazonosítóval működik (_2 végű). Ha az azonosító felszabadul, átnevezzük a kívántra, és a régi érzékelő neve, területe és címkéi átkerülnek; ha inkább törlöd a régi érzékelőt, az új bináris érzékelő megtartja a jelenlegi azonosítóját.\n\nA szivattyú irány érzékelő állapotai is megváltoztak: mostantól kisbetűsek (`idle`, `pump`, `water` a `IDLE`, `PUMP`, `WATER` helyett). Frissítsd azokat a feltételeket és sablonokat, amelyek összehasonlítják őket."
+        },
+        "direction_case_changed": {
+            "title": "A szivattyú irány állapotai kisbetűsek lettek",
+            "description": "A(z) {entry_title} szivattyú irány érzékelőjének állapotai mostantól kisbetűsek (`idle`, `pump`, `water` a `IDLE`, `PUMP`, `WATER` helyett). Frissítsd azokat az automatizmusokat, szkripteket, sablonokat és irányítópult-feltételeket, amelyek összehasonlítják őket. Ha végeztél, figyelmen kívül hagyhatod ezt a problémát."
+        },
+        "agreement_not_accepted": {
+            "title": "El kell fogadni a Panasonic feltételeit",
+            "description": "A Panasonic frissítette a felhasználási feltételeit vagy adatvédelmi szabályzatát, és amíg nem fogadod el őket, a(z) {entry_title} minden kérése sikertelen. A felhasználóneved és a jelszavad rendben van. Nyisd meg a Panasonic Comfort Cloud alkalmazást, jelentkezz be, és fogadd el az új feltételeket. Az integráció tovább próbálkozik, és ez a probléma magától megszűnik, ha működik. Ha nem, jelezd a [hibakövetőben]({issues_url})."
         }
     },
     "entity": {
@@ -262,6 +275,30 @@
         },
         "unsupported_value": {
             "message": "A(z) „{value}” érték nem támogatott ennél az eszköznél."
+        },
+        "invalid_credentials": {
+            "message": "Érvénytelen Aquarea Smart Cloud hitelesítő adatok."
+        },
+        "mfa_required": {
+            "message": "A Panasonic ID többfaktoros hitelesítést igényel."
+        },
+        "app_version_rejected": {
+            "message": "A Panasonic elutasította az integráció által küldött alkalmazásverziót (nem a bejelentkezésed a hiba): frissítsd az integrációt, lásd a javítási problémát."
+        },
+        "agreement_not_accepted": {
+            "message": "A Panasonic frissítette a felhasználási feltételeit vagy adatvédelmi szabályzatát: nyisd meg a Panasonic Comfort Cloud alkalmazást és fogadd el őket, utána az Aquarea magától helyreáll."
+        },
+        "authentication_failed": {
+            "message": "Az Aquarea Smart Cloud hitelesítése sikertelen: {error}"
+        },
+        "cloud_error": {
+            "message": "Hiba az Aquarea Smart Clouddal való kommunikáció során: {error}"
+        },
+        "cannot_connect": {
+            "message": "Az Aquarea Smart Cloud nem érhető el: {error}"
+        },
+        "login_backoff": {
+            "message": "A Panasonic elutasította a bejelentkezést; a következő próbálkozás ekkor lesz: {retry_time}. Ha ez tartósan fennáll, ellenőrizd, hogy a nyilvános IP-címed nincs-e letiltva (próbálj másik hálózatot vagy VPN-t)."
         }
     }
 }

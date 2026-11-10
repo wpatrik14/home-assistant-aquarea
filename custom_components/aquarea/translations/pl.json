@@ -4,7 +4,8 @@
             "already_configured": "Urządzenie jest już skonfigurowane",
             "reauth_successful": "Ponowne uwierzytelnienie przebiegło pomyślnie",
             "reconfigure_successful": "Rekonfiguracja przebiegła pomyślnie",
-            "reauth_no_username": "Nie można ponownie uwierzytelnić: ten wpis konfiguracji nie ma zapisanej nazwy użytkownika. Usuń integrację i dodaj ją ponownie."
+            "reauth_no_username": "Nie można ponownie uwierzytelnić: ten wpis konfiguracji nie ma zapisanej nazwy użytkownika. Usuń integrację i dodaj ją ponownie.",
+            "wrong_account": "Ten Panasonic ID nie jest tym, z którym skonfigurowano ten wpis. Rekonfiguracja może zmienić tylko hasło; aby użyć innego konta, dodaj integrację ponownie."
         },
         "error": {
             "cannot_connect": "Nie udało się połączyć",
@@ -91,6 +92,18 @@
         "pump_entities_changed": {
             "title": "Zmieniły się encje stanu i kierunku pompy",
             "description": "Czujnik stanu pompy urządzenia {entry_title} jest teraz czujnikiem binarnym, dlatego jego identyfikator encji został przeniesiony do domeny binary_sensor:\n\n{entities}\n\nZaktualizuj automatyzacje, skrypty, szablony i pulpity, które używają starych identyfikatorów encji. Historia starej encji nie jest przenoszona; recorder przechowuje ją pod starym identyfikatorem encji.\n\nZmieniły się także stany czujnika kierunku pompy: są teraz pisane małymi literami (`idle`, `pump`, `water` zamiast `IDLE`, `PUMP`, `WATER`). Zaktualizuj warunki lub szablony, które je porównują. Po zakończeniu możesz zignorować ten problem."
+        },
+        "pump_entities_not_moved": {
+            "title": "Nie udało się przenieść czujnika stanu pompy",
+            "description": "Czujnik stanu pompy {entry_title} jest teraz czujnikiem binarnym, ale nie udało się go przenieść, ponieważ nowy identyfikator encji jest już używany przez inną encję:\n\n{entities}\n\nZmień nazwę lub usuń drugą encję, a następnie przeładuj integrację Aquarea Smart Cloud (lub uruchom ponownie Home Assistanta): przeniesienie jest ponawiane przy każdym uruchomieniu, a ten problem zniknie, gdy się uda. Do tego czasu nowy czujnik binarny ma inny identyfikator encji (kończący się na _2). Gdy identyfikator się zwolni, zostanie zmieniony na właściwy, a nazwa, obszar i etykiety starego czujnika zostaną przeniesione; jeśli zamiast tego usuniesz stary czujnik, nowy czujnik binarny zachowa obecny identyfikator.\n\nZmieniły się także stany czujnika kierunku pompy: są teraz pisane małymi literami (`idle`, `pump`, `water` zamiast `IDLE`, `PUMP`, `WATER`). Zaktualizuj warunki i szablony, które je porównują."
+        },
+        "direction_case_changed": {
+            "title": "Stany kierunku pompy są teraz pisane małymi literami",
+            "description": "Stany czujnika kierunku pompy {entry_title} są teraz pisane małymi literami (`idle`, `pump`, `water` zamiast `IDLE`, `PUMP`, `WATER`). Zaktualizuj automatyzacje, skrypty, szablony i warunki na pulpicie, które je porównują. Po zakończeniu możesz zignorować ten problem."
+        },
+        "agreement_not_accepted": {
+            "title": "Trzeba zaakceptować warunki Panasonic",
+            "description": "Panasonic zaktualizował regulamin lub politykę prywatności i dopóki ich nie zaakceptujesz, wszystkie żądania {entry_title} kończą się niepowodzeniem. Nazwa użytkownika i hasło są w porządku. Otwórz aplikację Panasonic Comfort Cloud, zaloguj się i zaakceptuj nowe warunki. Integracja nadal próbuje, a ten problem zniknie sam, gdy wszystko zadziała. Jeśli nie, zgłoś to w [issue trackerze]({issues_url})."
         }
     },
     "entity": {
@@ -262,6 +275,30 @@
         },
         "unsupported_value": {
             "message": "Wartość „{value}” nie jest obsługiwana przez to urządzenie."
+        },
+        "invalid_credentials": {
+            "message": "Nieprawidłowe dane logowania do Aquarea Smart Cloud."
+        },
+        "mfa_required": {
+            "message": "Panasonic ID wymaga uwierzytelniania wieloskładnikowego."
+        },
+        "app_version_rejected": {
+            "message": "Panasonic odrzucił wersję aplikacji, którą zgłasza ta integracja (to nie problem z logowaniem): zaktualizuj integrację, zobacz problem do naprawy."
+        },
+        "agreement_not_accepted": {
+            "message": "Panasonic zaktualizował regulamin lub politykę prywatności: otwórz aplikację Panasonic Comfort Cloud i zaakceptuj je, a Aquarea sama wróci do działania."
+        },
+        "authentication_failed": {
+            "message": "Uwierzytelnianie w Aquarea Smart Cloud nie powiodło się: {error}"
+        },
+        "cloud_error": {
+            "message": "Błąd komunikacji z Aquarea Smart Cloud: {error}"
+        },
+        "cannot_connect": {
+            "message": "Nie można połączyć się z Aquarea Smart Cloud: {error}"
+        },
+        "login_backoff": {
+            "message": "Panasonic odrzucił logowanie; następna próba nastąpi o {retry_time}. Jeśli to się powtarza, sprawdź, czy Twój publiczny adres IP nie jest zablokowany (spróbuj innej sieci lub VPN)."
         }
     }
 }

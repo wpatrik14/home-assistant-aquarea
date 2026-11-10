@@ -2,6 +2,7 @@
 
 from functools import partial
 import logging
+import re
 from typing import Any
 
 import aioaquarea
@@ -16,15 +17,20 @@ from .config_flow import AquareaConfigFlow
 from .const import APP_VERSION_REJECTED, CONF_REFRESH_TOKEN, DOMAIN, MFA_REQUIRED
 from .coordinator import (
     AGREEMENT_NOT_ACCEPTED_CODE,
-    AGREEMENT_NOT_ACCEPTED_MESSAGE,
     AquareaConfigEntry,
     AquareaDataUpdateCoordinator,
 )
 from .issues import (
-    APP_VERSION_REJECTED_MESSAGE,
+    async_clear_agreement_issue,
     async_clear_app_version_issue,
+    async_clear_migration_issues,
+    async_clear_pump_not_moved_issue,
+    async_create_agreement_issue,
     async_create_app_version_issue,
+    async_create_direction_case_issue,
     async_create_pump_entities_issue,
+    async_create_pump_not_moved_issue,
+    async_pump_entities_issue_exists,
 )
 from .lifetime import LifetimeStore
 
@@ -32,6 +38,8 @@ _LOGGER = logging.getLogger(__name__)
 
 # Unique id suffix of the pump status entity, a sensor before version 1.2.
 PUMP_STATUS_SUFFIX = "_pump_status"
+# Unique id suffix of the pump direction sensor, whose states became lowercase.
+DIRECTION_SUFFIX = "_direction"
 
 PLATFORMS: list[Platform] = [
     Platform.BUTTON,
@@ -73,9 +81,43 @@ def _create_client(hass: HomeAssistant, entry: AquareaConfigEntry) -> aioaquarea
     )
 
 
+def _copy_customisations(
+    registry: er.EntityRegistry, new_id: str, old: er.RegistryEntry
+) -> None:
+    """Copy what the user set by hand on the sensor; the platform fills in the rest.
+
+    Only values the sensor really has are copied, and a value already set on
+    the new entry (the user may have changed it there) is kept: sets are
+    merged.
+    """
+    new = registry.async_get(new_id)
+    assert new is not None
+    changes: dict[str, Any] = {}
+    for field in ("name", "icon", "device_class", "area_id"):
+        if getattr(old, field) and not getattr(new, field):
+            changes[field] = getattr(old, field)
+    # New entries may carry a computed-name marker in their aliases: only the
+    # strings are the user's.
+    if old.aliases and not any(isinstance(alias, str) for alias in new.aliases):
+        changes["aliases"] = old.aliases
+    if old.labels:
+        changes["labels"] = set(new.labels) | set(old.labels)
+    if old.categories:
+        changes["categories"] = {**old.categories, **new.categories}
+    if old.disabled_by and not new.disabled_by:
+        changes["disabled_by"] = old.disabled_by
+    if old.hidden_by and not new.hidden_by:
+        changes["hidden_by"] = old.hidden_by
+    if changes:
+        registry.async_update_entity(new_id, **changes)
+    for domain, value in old.options.items():
+        if value and not new.options.get(domain):
+            registry.async_update_entity_options(new_id, domain, dict(value))
+
+
 def _move_pump_status_sensors(
     hass: HomeAssistant, entry: AquareaConfigEntry
-) -> dict[str, str]:
+) -> tuple[dict[str, str], dict[str, str]]:
     """Re-register the pump status sensors as binary sensors.
 
     The registry refuses a domain change on an existing entry
@@ -84,23 +126,36 @@ def _move_pump_status_sensors(
     entry with the same unique id and object id is created, carrying over what
     the user customised. The recorder history stays under the old entity id.
 
-    Returns a mapping of old entity id -> new entity id for everything moved.
-    An entry is left alone when the new entity id belongs to something else.
+    Returns two mappings of old entity id -> new entity id: what was moved, and
+    what was left alone because the new entity id belongs to something else.
     """
     registry = er.async_get(hass)
     moved: dict[str, str] = {}
+    blocked: dict[str, str] = {}
     for old in er.async_entries_for_config_entry(registry, entry.entry_id):
         if old.domain != "sensor" or not old.unique_id.endswith(PUMP_STATUS_SUFFIX):
             continue
         object_id = old.entity_id.split(".", 1)[1]
-        new_id = registry.async_get_entity_id("binary_sensor", DOMAIN, old.unique_id)
-        if new_id is None:
-            new_id = f"binary_sensor.{object_id}"
-            if registry.async_is_registered(new_id) or hass.states.get(new_id):
-                _LOGGER.warning(
-                    "Not moving %s: %s is already in use", old.entity_id, new_id
-                )
-                continue
+        preferred = f"binary_sensor.{object_id}"
+        existing = registry.async_get_entity_id("binary_sensor", DOMAIN, old.unique_id)
+        taken = registry.async_is_registered(
+            preferred
+        ) or not hass.states.async_available(preferred)
+        if existing == preferred:
+            # An interrupted earlier run already created the new entry; keep it.
+            new_id = existing
+        elif existing is not None and not re.fullmatch(
+            rf"{re.escape(preferred)}_\d+", existing
+        ):
+            # The user gave the new entity an id of their own: keep it.
+            new_id = existing
+        elif taken:
+            _LOGGER.warning(
+                "Not moving %s: %s is already in use", old.entity_id, preferred
+            )
+            blocked[old.entity_id] = preferred
+            continue
+        elif existing is None:
             options = {key: dict(value) for key, value in old.options.items()}
             created = registry.async_get_or_create(
                 "binary_sensor",
@@ -119,22 +174,40 @@ def _move_pump_status_sensors(
                 translation_key=old.translation_key,
             )
             new_id = created.entity_id
-            # What the user set by hand; the platform fills in the rest.
-            customised: dict[str, Any] = {
-                "name": old.name,
-                "icon": old.icon,
-                "device_class": old.device_class,
-                "area_id": old.area_id,
-                "aliases": old.aliases,
-                "labels": old.labels,
-                "categories": old.categories,
-            }
-            registry.async_update_entity(new_id, **customised)
-        # else: an interrupted earlier run already created the new entry; keep it.
+            _copy_customisations(registry, new_id, old)
+        else:
+            # An earlier run was blocked and the binary sensor platform has
+            # registered the entity meanwhile, under a suffixed id (_2). The
+            # preferred id is free now: take it and carry over what the user
+            # set on the sensor.
+            try:
+                new_id = registry.async_update_entity(
+                    existing, new_entity_id=preferred
+                ).entity_id
+            except ValueError as err:
+                # The registry also counts reserved ids that have no state.
+                _LOGGER.warning(
+                    "Not moving %s: %s cannot be used (%s)",
+                    old.entity_id,
+                    preferred,
+                    err,
+                )
+                blocked[old.entity_id] = preferred
+                continue
+            _copy_customisations(registry, new_id, old)
         registry.async_remove(old.entity_id)
         moved[old.entity_id] = new_id
         _LOGGER.info("Moved entity %s -> %s", old.entity_id, new_id)
-    return moved
+    return moved, blocked
+
+
+def _has_direction_sensor(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
+    """Return whether the entry has a pump direction sensor in the registry."""
+    registry = er.async_get(hass)
+    return any(
+        e.domain == "sensor" and e.unique_id.endswith(DIRECTION_SUFFIX)
+        for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+    )
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
@@ -149,10 +222,27 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AquareaConfigEntry) ->
     supported = (AquareaConfigFlow.VERSION, AquareaConfigFlow.MINOR_VERSION)
     if entry.version == 1 and entry.minor_version < 2:
         # 1.2: the pump status sensor became a binary sensor.
-        moved = _move_pump_status_sensors(hass, entry)
+        moved, blocked = _move_pump_status_sensors(hass, entry)
         if moved:
             async_create_pump_entities_issue(hass, entry, moved)
-        hass.config_entries.async_update_entry(entry, minor_version=2)
+        if blocked:
+            # Keep the old minor version: the move is tried again on the next
+            # setup, once the user has freed the entity id, instead of being
+            # given up silently.
+            async_create_pump_not_moved_issue(hass, entry, blocked)
+        else:
+            async_clear_pump_not_moved_issue(hass, entry)
+        if (
+            not blocked
+            and not async_pump_entities_issue_exists(hass, entry)
+            and _has_direction_sensor(hass, entry)
+        ):
+            # No notice about the pump sensor, which also covers the direction
+            # states (the moved and the not-moved text both do): the lowercase
+            # change needs its own.
+            async_create_direction_case_issue(hass, entry)
+        if not blocked:
+            hass.config_entries.async_update_entry(entry, minor_version=2)
         return True
     if (entry.version, entry.minor_version) <= supported:
         return True
@@ -193,6 +283,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
         async_clear_app_version_issue(hass, entry)
         # Get all the devices, we will filter the disabled ones later
         devices = await client.get_devices()
+        async_clear_agreement_issue(hass, entry)
 
         # One coordinator per device; the platforms read them from the
         # entry's runtime_data.
@@ -217,7 +308,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
             aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
         ):
             raise ConfigEntryAuthFailed(
-                "Invalid Aquarea Smart Cloud credentials"
+                translation_domain=DOMAIN, translation_key="invalid_credentials"
             ) from err
         if err.error_code == APP_VERSION_REJECTED:
             # Panasonic stopped accepting the app version: the credentials are
@@ -225,40 +316,57 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
             # problem). Show a repair issue, and retry: an update of the
             # library or Panasonic accepting the version again fixes it.
             async_create_app_version_issue(hass, entry)
-            raise ConfigEntryNotReady(APP_VERSION_REJECTED_MESSAGE) from err
+            raise ConfigEntryNotReady(
+                translation_domain=DOMAIN, translation_key="app_version_rejected"
+            ) from err
         if err.error_code == MFA_REQUIRED:
             # Retrying cannot pass the challenge, and every attempt sends the
             # user a Panasonic login email. Reauth asks for the code.
             raise ConfigEntryAuthFailed(
-                "The Panasonic ID requires multi-factor authentication"
+                translation_domain=DOMAIN, translation_key="mfa_required"
             ) from err
         # Any other authentication failure (SESSION_CLOSED, API_ERROR,
         # TOKEN_EXPIRED, ...) is transient. Never fall through to `return True`
         # here: that would report a successful setup while no devices,
         # coordinators or platforms had been set up.
         raise ConfigEntryNotReady(
-            f"Aquarea Smart Cloud authentication failed: {err}"
+            translation_domain=DOMAIN,
+            translation_key="authentication_failed",
+            translation_placeholders={"error": str(err)},
         ) from err
     except aioaquarea.ClientError as err:
         if getattr(err, "error_code", None) == AGREEMENT_NOT_ACCEPTED_CODE:
-            raise ConfigEntryNotReady(AGREEMENT_NOT_ACCEPTED_MESSAGE) from err
+            # The user can fix it (accept the terms in the Panasonic app): say
+            # so in a repair issue, which the next working setup clears.
+            async_create_agreement_issue(hass, entry)
+            raise ConfigEntryNotReady(
+                translation_domain=DOMAIN, translation_key="agreement_not_accepted"
+            ) from err
         # ApiError, RequestFailedError, InvalidData - the cloud is reachable
         # but unhappy. Worth retrying.
-        raise ConfigEntryNotReady(f"Aquarea Smart Cloud error: {err}") from err
+        raise ConfigEntryNotReady(
+            translation_domain=DOMAIN,
+            translation_key="cloud_error",
+            translation_placeholders={"error": str(err)},
+        ) from err
     except (aiohttp.ClientError, TimeoutError) as err:
         # DNS failures, connection resets, timeouts. Without this, a transient
         # network blip leaves the entry in `setup_error` forever, because Home
         # Assistant only retries setup when ConfigEntryNotReady is raised.
         raise ConfigEntryNotReady(
-            f"Unable to reach Aquarea Smart Cloud: {err}"
+            translation_domain=DOMAIN,
+            translation_key="cannot_connect",
+            translation_placeholders={"error": str(err)},
         ) from err
 
     return True
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> None:
-    """Drop the repair issue and the stored lifetime totals of a removed entry."""
+    """Drop the repair issues and the stored lifetime totals of a removed entry."""
     async_clear_app_version_issue(hass, entry)
+    async_clear_agreement_issue(hass, entry)
+    async_clear_migration_issues(hass, entry)
     await LifetimeStore(hass, entry.entry_id).async_remove()
 
 

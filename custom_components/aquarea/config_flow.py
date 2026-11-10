@@ -88,24 +88,23 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
-            await self.async_set_unique_id(str.lower(user_input[CONF_USERNAME]))
+            # A pasted ID often carries a space or a newline: it would be a
+            # different unique id (and a failed login) for the same account.
+            username = user_input[CONF_USERNAME].strip()
+            await self.async_set_unique_id(username.lower())
             self._abort_if_unique_id_configured()
 
-            errors = await self._validate_input(
-                user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
-            )
+            errors = await self._validate_input(username, user_input[CONF_PASSWORD])
 
             if self._challenge is not None:
-                self._username = user_input[CONF_USERNAME]
+                self._username = username
                 self._password = user_input[CONF_PASSWORD]
                 return self._show_mfa_form()
 
             if not errors:
                 return self.async_create_entry(
-                    title=user_input[CONF_USERNAME],
-                    data=self._entry_data(
-                        user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
-                    ),
+                    title=username,
+                    data=self._entry_data(username, user_input[CONF_PASSWORD]),
                 )
 
         return self.async_show_form(
@@ -156,23 +155,30 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Change the Panasonic ID and/or password of an existing entry.
+        """Change the password (or the spelling of the Panasonic ID) of an entry.
 
-        The unique ID is the lower-cased Panasonic ID (see `async_step_user`),
-        so it follows the username: a different ID that another entry already
-        uses aborts with `already_configured`; otherwise a successful
-        reconfigure re-keys the entry to the new ID. Reauth keeps the ID fixed
-        and never needs this.
+        The unique ID is the lower-cased Panasonic ID (see `async_step_user`).
+        The entities are keyed by the device ids of the account, which another
+        account does not have, so the entry stays on its account: another
+        Panasonic ID aborts with `already_configured` when another entry uses
+        it, and with `wrong_account` otherwise. Using a different account
+        means adding the integration again. An entry without a unique ID, or
+        with one that is not normalised, is compared by its stored username
+        and gets the normalised unique ID.
         """
         entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
         if user_input is not None:
-            username = user_input[CONF_USERNAME]
+            username = user_input[CONF_USERNAME].strip()
+            unique_id = username.lower()
             existing = await self.async_set_unique_id(
-                str.lower(username), raise_on_progress=False
+                unique_id, raise_on_progress=False
             )
             if existing is not None and existing.entry_id != entry.entry_id:
                 return self.async_abort(reason="already_configured")
+            current = entry.unique_id or entry.data.get(CONF_USERNAME) or ""
+            if unique_id != current.strip().lower():
+                return self.async_abort(reason="wrong_account")
 
             errors = await self._validate_input(username, user_input[CONF_PASSWORD])
 
@@ -198,14 +204,14 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def _complete_reconfigure(
         self, entry: ConfigEntry, username: str, password: str
     ) -> ConfigFlowResult:
-        """Store the verified credentials, re-key the entry and reload it."""
+        """Store the verified credentials and reload the entry."""
         title: Any = UNDEFINED
         if entry.title == entry.data.get(CONF_USERNAME):
             # The title was derived from the username; keep it that way.
             title = username
         return self.async_update_reload_and_abort(
             entry,
-            unique_id=str.lower(username),
+            unique_id=username.strip().lower(),
             title=title,
             data=self._login_data(entry, username, password),
             reason="reconfigure_successful",

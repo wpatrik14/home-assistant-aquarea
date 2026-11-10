@@ -10,7 +10,6 @@ import logging
 import aioaquarea
 from aioaquarea.statistics import DateType
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ServiceValidationError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -27,8 +26,9 @@ from .const import (
     YESTERDAY_REFETCH_HOURS,
 )
 from .issues import (
-    APP_VERSION_REJECTED_MESSAGE,
+    async_clear_agreement_issue,
     async_clear_app_version_issue,
+    async_create_agreement_issue,
     async_create_app_version_issue,
 )
 from .lifetime import (
@@ -46,10 +46,6 @@ _LOGGER = logging.getLogger(__name__)
 # code) when Panasonic's terms or privacy policy changed. Compared by code so
 # older library releases still import.
 AGREEMENT_NOT_ACCEPTED_CODE = "4103"
-AGREEMENT_NOT_ACCEPTED_MESSAGE = (
-    "Panasonic updated its terms or privacy policy: open the Panasonic Comfort "
-    "Cloud app and accept them, then Aquarea will recover on its own"
-)
 
 # Which optional arguments the installed aioaquarea-ng's
 # get_device_consumption_report accepts (see _async_lifetime_sync):
@@ -190,7 +186,8 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
             hass,
             _LOGGER,
             config_entry=entry,
-            name=f"{DOMAIN}-{entry.data[CONF_USERNAME]}-{device_info.device_id}",
+            # Not the username: the name appears in every log line of the coordinator.
+            name=f"{DOMAIN}-{device_info.device_id}",
             update_interval=timedelta(seconds=scan_interval),
         )
 
@@ -612,10 +609,11 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
         now = dt_util.utcnow()
         if self._login_retry_at is not None and now < self._login_retry_at:
             raise UpdateFailed(
-                "Panasonic refused the login; the next attempt is at "
-                f"{dt_util.as_local(self._login_retry_at):%H:%M}. If this keeps "
-                "happening, check whether your public IP address is blocked "
-                "(try another network or a VPN)."
+                translation_domain=DOMAIN,
+                translation_key="login_backoff",
+                translation_placeholders={
+                    "retry_time": f"{dt_util.as_local(self._login_retry_at):%H:%M}"
+                },
             )
         try:
             await self._client.login()
@@ -710,27 +708,46 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
 
             # Panasonic accepts the app version again (or still does)
             async_clear_app_version_issue(self.hass, self._entry)
+            async_clear_agreement_issue(self.hass, self._entry)
             return self._device  # noqa: TRY300 - the handlers below cover the whole fetch
         except aioaquarea.AuthenticationError as err:
             if err.error_code == APP_VERSION_REJECTED:
                 # Not a credentials problem: no reauth, keep polling.
                 async_create_app_version_issue(self.hass, self._entry)
-                raise UpdateFailed(APP_VERSION_REJECTED_MESSAGE) from err
+                raise UpdateFailed(
+                    translation_domain=DOMAIN, translation_key="app_version_rejected"
+                ) from err
             if err.error_code in (
                 aioaquarea.AuthenticationErrorCodes.INVALID_USERNAME_OR_PASSWORD,
                 aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS,
                 MFA_REQUIRED,
             ):
-                raise ConfigEntryAuthFailed from err
-            raise UpdateFailed(f"Authentication error: {err}") from err
+                raise ConfigEntryAuthFailed(
+                    translation_domain=DOMAIN,
+                    translation_key=(
+                        "mfa_required"
+                        if err.error_code == MFA_REQUIRED
+                        else "invalid_credentials"
+                    ),
+                ) from err
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="authentication_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
         except aioaquarea.ClientError as err:
             if getattr(err, "error_code", None) == AGREEMENT_NOT_ACCEPTED_CODE:
                 # aioaquarea-ng 1.4.0 AgreementNotAcceptedError: every request
                 # fails until the terms are accepted in the Panasonic app.
-                raise UpdateFailed(AGREEMENT_NOT_ACCEPTED_MESSAGE) from err
+                async_create_agreement_issue(self.hass, self._entry)
+                raise UpdateFailed(
+                    translation_domain=DOMAIN, translation_key="agreement_not_accepted"
+                ) from err
             # Covers RequestFailedError, non-auth ApiError and InvalidData,
             # which share only this base class. Anything else would reach
             # Home Assistant's generic handler and log a traceback every poll.
             raise UpdateFailed(
-                f"Error communicating with Aquarea Smart Cloud API: {err}"
+                translation_domain=DOMAIN,
+                translation_key="cloud_error",
+                translation_placeholders={"error": str(err)},
             ) from err

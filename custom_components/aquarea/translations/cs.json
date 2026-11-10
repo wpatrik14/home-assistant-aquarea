@@ -4,7 +4,8 @@
             "already_configured": "Zařízení je již nakonfigurováno",
             "reauth_successful": "Opětovné ověření bylo úspěšné",
             "reconfigure_successful": "Překonfigurování proběhlo úspěšně",
-            "reauth_no_username": "Nelze se znovu ověřit: tento záznam konfigurace nemá uloženo uživatelské jméno. Odeberte integraci a přidejte ji znovu."
+            "reauth_no_username": "Nelze se znovu ověřit: tento záznam konfigurace nemá uloženo uživatelské jméno. Odeberte integraci a přidejte ji znovu.",
+            "wrong_account": "Toto Panasonic ID není to, se kterým byl tento záznam nastaven. Překonfigurování může změnit pouze heslo; chcete-li použít jiný účet, přidejte integraci znovu."
         },
         "error": {
             "cannot_connect": "Nepodařilo se připojit",
@@ -91,6 +92,18 @@
         "pump_entities_changed": {
             "title": "Entity stavu a směru čerpadla se změnily",
             "description": "Senzor stavu čerpadla zařízení {entry_title} je nyní binární senzor, a proto se jeho ID entity přesunulo do domény binary_sensor:\n\n{entities}\n\nAktualizujte automatizace, skripty, šablony a dashboardy, které používají původní ID entit. Historie původní entity se nepřenáší; recorder ji uchovává pod původním ID entity.\n\nZměnily se také stavy senzoru směru čerpadla: jsou nyní malými písmeny (`idle`, `pump`, `water` místo `IDLE`, `PUMP`, `WATER`). Upravte všechny podmínky nebo šablony, které je porovnávají. Po dokončení můžete toto upozornění ignorovat."
+        },
+        "pump_entities_not_moved": {
+            "title": "Senzor stavu čerpadla nelze přesunout",
+            "description": "Senzor stavu čerpadla {entry_title} je nyní binární senzor, ale nepodařilo se jej přesunout, protože nové ID entity už používá jiná entita:\n\n{entities}\n\nPřejmenujte nebo odstraňte druhou entitu a poté znovu načtěte integraci Aquarea Smart Cloud (nebo restartujte Home Assistant): přesun se zkouší při každém spuštění a tento problém zmizí, jakmile se podaří. Do té doby má nový binární senzor jiné ID entity (končící na _2). Jakmile se ID uvolní, přejmenuje se na požadované a název, oblast a štítky starého senzoru se převezmou; pokud místo toho starý senzor smažete, nový binární senzor si ponechá své současné ID.\n\nZměnily se i stavy senzoru směru čerpadla: nyní jsou malými písmeny (`idle`, `pump`, `water` místo `IDLE`, `PUMP`, `WATER`). Upravte podmínky a šablony, které je porovnávají."
+        },
+        "direction_case_changed": {
+            "title": "Stavy směru čerpadla jsou nyní malými písmeny",
+            "description": "Stavy senzoru směru čerpadla {entry_title} jsou nyní malými písmeny (`idle`, `pump`, `water` místo `IDLE`, `PUMP`, `WATER`). Upravte automatizace, skripty, šablony a podmínky na dashboardu, které je porovnávají. Až budete hotovi, můžete tento problém ignorovat."
+        },
+        "agreement_not_accepted": {
+            "title": "Je třeba přijmout podmínky Panasonic",
+            "description": "Panasonic aktualizoval své podmínky nebo zásady ochrany osobních údajů a dokud je nepřijmete, všechny požadavky {entry_title} selhávají. Vaše uživatelské jméno a heslo jsou v pořádku. Otevřete aplikaci Panasonic Comfort Cloud, přihlaste se a přijměte nové podmínky. Integrace se dál pokouší a tento problém sám zmizí, jakmile bude vše fungovat. Pokud ne, nahlaste to v [issue trackeru]({issues_url})."
         }
     },
     "entity": {
@@ -262,6 +275,30 @@
         },
         "unsupported_value": {
             "message": "Hodnota „{value}“ není tímto zařízením podporována."
+        },
+        "invalid_credentials": {
+            "message": "Neplatné přihlašovací údaje k Aquarea Smart Cloud."
+        },
+        "mfa_required": {
+            "message": "Panasonic ID vyžaduje vícefázové ověření."
+        },
+        "app_version_rejected": {
+            "message": "Panasonic odmítl verzi aplikace, kterou tato integrace hlásí (nejde o vaše přihlášení): aktualizujte integraci, viz problém k opravě."
+        },
+        "agreement_not_accepted": {
+            "message": "Panasonic aktualizoval své podmínky nebo zásady ochrany osobních údajů: otevřete aplikaci Panasonic Comfort Cloud a přijměte je, poté se Aquarea sama obnoví."
+        },
+        "authentication_failed": {
+            "message": "Ověření v Aquarea Smart Cloud selhalo: {error}"
+        },
+        "cloud_error": {
+            "message": "Chyba komunikace s Aquarea Smart Cloud: {error}"
+        },
+        "cannot_connect": {
+            "message": "Aquarea Smart Cloud není dostupná: {error}"
+        },
+        "login_backoff": {
+            "message": "Panasonic odmítl přihlášení; další pokus proběhne v {retry_time}. Pokud to přetrvává, zkontrolujte, zda není zablokována vaše veřejná IP adresa (zkuste jinou síť nebo VPN)."
         }
     }
 }

@@ -4,7 +4,8 @@
             "already_configured": "El dispositivo ya está configurado",
             "reauth_successful": "La reautenticación se ha realizado correctamente",
             "reconfigure_successful": "La reconfiguración se ha realizado correctamente",
-            "reauth_no_username": "No se pudo volver a autenticar: esta entrada de configuración no tiene un nombre de usuario guardado. Elimina la integración y vuelve a añadirla."
+            "reauth_no_username": "No se pudo volver a autenticar: esta entrada de configuración no tiene un nombre de usuario guardado. Elimina la integración y vuelve a añadirla.",
+            "wrong_account": "Este Panasonic ID no es el que se usó para configurar esta entrada. Reconfigurar solo permite cambiar la contraseña; para usar otra cuenta, añade la integración de nuevo."
         },
         "error": {
             "cannot_connect": "No se pudo conectar",
@@ -91,6 +92,18 @@
         "pump_entities_changed": {
             "title": "Cambiaron las entidades de estado y dirección de la bomba",
             "description": "El sensor de estado de la bomba de {entry_title} ahora es un sensor binario, por lo que su ID de entidad pasó al dominio binary_sensor:\n\n{entities}\n\nActualiza las automatizaciones, scripts, plantillas y paneles que usen los ID de entidad antiguos. El historial de la entidad antigua no se traspasa; el registrador lo conserva con el ID de entidad antiguo.\n\nTambién cambiaron los estados del sensor de dirección de la bomba: ahora están en minúsculas (`idle`, `pump`, `water` en lugar de `IDLE`, `PUMP`, `WATER`). Actualiza las condiciones o plantillas que los comparen. Puedes ignorar este problema cuando termines."
+        },
+        "pump_entities_not_moved": {
+            "title": "No se pudo mover el sensor de estado de la bomba",
+            "description": "El sensor de estado de la bomba de {entry_title} ahora es un sensor binario, pero no se pudo mover porque otra entidad ya usa el nuevo ID de entidad:\n\n{entities}\n\nRenombra o elimina la otra entidad y luego recarga la integración Aquarea Smart Cloud (o reinicia Home Assistant): el movimiento se intenta de nuevo en cada inicio y este problema desaparece cuando funcione. Hasta entonces, el nuevo sensor binario tiene otro ID de entidad (que termina en _2). Cuando el ID quede libre, se renombrará al preferido y se copiarán el nombre, el área y las etiquetas del sensor antiguo; si en su lugar eliminas el sensor antiguo, el nuevo sensor binario conserva su ID actual.\n\nLos estados del sensor de dirección de la bomba también cambiaron: ahora van en minúsculas (`idle`, `pump`, `water` en lugar de `IDLE`, `PUMP`, `WATER`). Actualiza las condiciones y plantillas que los comparen."
+        },
+        "direction_case_changed": {
+            "title": "Los estados de la dirección de la bomba ahora van en minúsculas",
+            "description": "Los estados del sensor de dirección de la bomba de {entry_title} ahora van en minúsculas (`idle`, `pump`, `water` en lugar de `IDLE`, `PUMP`, `WATER`). Actualiza las automatizaciones, scripts, plantillas y condiciones del panel que los comparen. Puedes ignorar este problema cuando termines."
+        },
+        "agreement_not_accepted": {
+            "title": "Hay que aceptar los términos de Panasonic",
+            "description": "Panasonic actualizó sus términos o su política de privacidad y, hasta que los aceptes, todas las solicitudes de {entry_title} fallan. Tu usuario y contraseña están bien. Abre la aplicación Panasonic Comfort Cloud, inicia sesión y acepta los nuevos términos. La integración sigue reintentando y este problema desaparece solo cuando funcione. Si no, infórmalo en el [rastreador de incidencias]({issues_url})."
         }
     },
     "entity": {
@@ -262,6 +275,30 @@
         },
         "unsupported_value": {
             "message": "El valor «{value}» no es compatible con este dispositivo."
+        },
+        "invalid_credentials": {
+            "message": "Credenciales de Aquarea Smart Cloud no válidas."
+        },
+        "mfa_required": {
+            "message": "El Panasonic ID requiere autenticación multifactor."
+        },
+        "app_version_rejected": {
+            "message": "Panasonic rechazó la versión de la aplicación que anuncia esta integración (no es tu inicio de sesión): actualiza la integración, consulta el problema de reparación."
+        },
+        "agreement_not_accepted": {
+            "message": "Panasonic actualizó sus términos o su política de privacidad: abre la aplicación Panasonic Comfort Cloud y acéptalos; después Aquarea se recuperará sola."
+        },
+        "authentication_failed": {
+            "message": "Falló la autenticación en Aquarea Smart Cloud: {error}"
+        },
+        "cloud_error": {
+            "message": "Error al comunicarse con Aquarea Smart Cloud: {error}"
+        },
+        "cannot_connect": {
+            "message": "No se puede acceder a Aquarea Smart Cloud: {error}"
+        },
+        "login_backoff": {
+            "message": "Panasonic rechazó el inicio de sesión; el próximo intento es a las {retry_time}. Si esto continúa, comprueba si tu dirección IP pública está bloqueada (prueba otra red o una VPN)."
         }
     }
 }

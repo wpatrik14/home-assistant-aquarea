@@ -10,7 +10,7 @@ rules:
     comment: "The integration registers no service actions (no hass.services.async_register in custom_components/aquarea/)."
   appropriate-polling:
     status: done
-    comment: "DataUpdateCoordinator with a configurable interval, DEFAULT_SCAN_INTERVAL in const.py, minimum enforced in the options flow (config_flow.py)."
+    comment: "DataUpdateCoordinator polling the device state every 60 s (DEFAULT_SCAN_INTERVAL in const.py; fixed, not configurable). Only the consumption refresh interval is an option (minimum 15 minutes, enforced in the options flow in config_flow.py). The weekly schedule is read only while an entity subscribes, and a refused login backs off (coordinator.py)."
   brands:
     status: done
     comment: "Brand images ship in custom_components/aquarea/brand/ (icon and dark_icon, with @2x)."
@@ -74,7 +74,7 @@ rules:
     comment: "async_unload_entry unloads platforms (__init__.py); tests/ha/test_init.py, tests/test_unload_entry.py."
   docs-configuration-parameters:
     status: done
-    comment: "README.md documents the options (update interval, consumption interval)."
+    comment: "README.md 'Options' documents the one option, the consumption refresh interval (the 60 s device poll is fixed and not an option)."
   docs-installation-parameters:
     status: done
     comment: "README.md 'Remarks' explains the account to use for setup, including MFA."
@@ -147,16 +147,16 @@ rules:
     comment: "Entity names via translation_key in strings.json; tests/test_translations.py."
   exception-translations:
     status: done
-    comment: "strings.json 'exceptions' defines lifetime_sync_running, command_failed, not_authenticated and unsupported_value, used by entity.py, climate.py and coordinator.py."
+    comment: "Every user-facing raise carries translation_domain/translation_key (and placeholders) defined in strings.json 'exceptions' and all translations: setup errors in __init__.py, poll and login back-off errors and lifetime_sync_running in coordinator.py, command_failed/not_authenticated in entity.py, unsupported_value in climate.py; tests/ha/test_exception_translations.py."
   icon-translations:
     status: done
     comment: "icons.json; tests/test_icons.py."
   reconfiguration-flow:
     status: done
-    comment: "async_step_reconfigure in config_flow.py (username/password, MFA, unique_id re-key)."
+    comment: "async_step_reconfigure in config_flow.py (password change for the entry's own Panasonic ID, MFA; another account aborts with wrong_account); tests/ha/test_config_flow.py."
   repair-issues:
     status: done
-    comment: "issues.py creates a repair issue when Panasonic rejects the app version, and one (not fixable) when the migration moves the pump status entity (translated in strings.json 'issues'); tests/ha/test_app_version_rejected.py, tests/ha/test_migrate.py."
+    comment: "issues.py creates repair issues (none fixable from Home Assistant, all translated in strings.json 'issues'): app_version_rejected (Panasonic rejects the app version), agreement_not_accepted (terms or privacy policy not accepted in the Panasonic app), and from the migration pump_entities_changed, pump_entities_not_moved and direction_case_changed. They clear when a login or poll works again, or with the entry; tests/ha/test_app_version_rejected.py, test_agreement_issue.py, test_migrate.py."
   stale-devices:
     status: todo
     comment: "No async_remove_config_entry_device or removal of devices that vanish from the account."

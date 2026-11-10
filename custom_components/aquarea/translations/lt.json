@@ -4,7 +4,8 @@
             "already_configured": "Įrenginys jau nustatytas",
             "reauth_successful": "Pakartotinis autentifikavimas pavyko",
             "reconfigure_successful": "Perkonfigūravimas sėkmingas",
-            "reauth_no_username": "Nepavyko iš naujo autentifikuoti: šiame konfigūracijos įraše nėra išsaugoto vartotojo vardo. Pašalinkite integraciją ir pridėkite ją iš naujo."
+            "reauth_no_username": "Nepavyko iš naujo autentifikuoti: šiame konfigūracijos įraše nėra išsaugoto vartotojo vardo. Pašalinkite integraciją ir pridėkite ją iš naujo.",
+            "wrong_account": "Šis Panasonic ID nėra tas, su kuriuo buvo sukurtas šis įrašas. Perkonfigūravimas gali pakeisti tik slaptažodį; norėdami naudoti kitą paskyrą, pridėkite integraciją iš naujo."
         },
         "error": {
             "cannot_connect": "Nepavyko prisijungti",
@@ -91,6 +92,18 @@
         "pump_entities_changed": {
             "title": "Pasikeitė siurblio būsenos ir krypties objektai",
             "description": "{entry_title} siurblio būsenos jutiklis dabar yra dvejetainis jutiklis, todėl jo objekto ID perkeltas į binary_sensor sritį:\n\n{entities}\n\nAtnaujinkite automatizavimus, scenarijus, šablonus ir skydelius, kuriuose naudojami seni objektų ID. Seno objekto istorija neperkeliama; rekorderis ją saugo prie seno objekto ID.\n\nPasikeitė ir siurblio krypties jutiklio būsenos: dabar jos rašomos mažosiomis raidėmis (`idle`, `pump`, `water` vietoj `IDLE`, `PUMP`, `WATER`). Atnaujinkite sąlygas ar šablonus, kurie jas lygina. Baigę galite šią problemą ignoruoti."
+        },
+        "pump_entities_not_moved": {
+            "title": "Siurblio būsenos jutiklio perkelti nepavyko",
+            "description": "{entry_title} siurblio būsenos jutiklis dabar yra dvejetainis jutiklis, tačiau jo perkelti nepavyko, nes naują objekto ID jau naudoja kitas objektas:\n\n{entities}\n\nPervadinkite arba pašalinkite kitą objektą, tada iš naujo įkelkite „Aquarea Smart Cloud“ integraciją (arba perkraukite Home Assistant): perkėlimas bandomas kiekvieną kartą paleidus, o ši problema išnyks, kai pavyks. Iki tol naujas dvejetainis jutiklis turi kitą objekto ID (baigiasi _2). Kai ID atsilaisvins, jis bus pervardytas į norimą, o seno jutiklio pavadinimas, sritis ir žymos bus perkeltos; jei vietoj to ištrinsite seną jutiklį, naujas dvejetainis jutiklis išsaugos dabartinį ID.\n\nPasikeitė ir siurblio krypties jutiklio būsenos: dabar jos rašomos mažosiomis raidėmis (`idle`, `pump`, `water` vietoj `IDLE`, `PUMP`, `WATER`). Atnaujinkite sąlygas ir šablonus, kurie jas lygina."
+        },
+        "direction_case_changed": {
+            "title": "Siurblio krypties būsenos dabar rašomos mažosiomis raidėmis",
+            "description": "{entry_title} siurblio krypties jutiklio būsenos dabar rašomos mažosiomis raidėmis (`idle`, `pump`, `water` vietoj `IDLE`, `PUMP`, `WATER`). Atnaujinkite automatizacijas, scenarijus, šablonus ir prietaisų skydelio sąlygas, kurie jas lygina. Baigę galite ignoruoti šią problemą."
+        },
+        "agreement_not_accepted": {
+            "title": "Reikia priimti „Panasonic“ sąlygas",
+            "description": "„Panasonic“ atnaujino savo sąlygas arba privatumo politiką, ir kol jų nepriimsite, visos {entry_title} užklausos nepavyksta. Jūsų vartotojo vardas ir slaptažodis tinka. Atidarykite programą „Panasonic Comfort Cloud“, prisijunkite ir priimkite naujas sąlygas. Integracija toliau bando, o ši problema išnyks pati, kai viskas veiks. Jei ne, praneškite [problemų sekiklyje]({issues_url})."
         }
     },
     "entity": {
@@ -262,6 +275,30 @@
         },
         "unsupported_value": {
             "message": "Šis įrenginys nepalaiko reikšmės „{value}“."
+        },
+        "invalid_credentials": {
+            "message": "Neteisingi Aquarea Smart Cloud prisijungimo duomenys."
+        },
+        "mfa_required": {
+            "message": "Panasonic ID reikalinga daugiafaktorė autentifikacija."
+        },
+        "app_version_rejected": {
+            "message": "„Panasonic“ atmetė programos versiją, kurią praneša ši integracija (ne jūsų prisijungimas): atnaujinkite integraciją, žr. taisymo problemą."
+        },
+        "agreement_not_accepted": {
+            "message": "„Panasonic“ atnaujino savo sąlygas arba privatumo politiką: atidarykite programą „Panasonic Comfort Cloud“ ir jas priimkite, tada „Aquarea“ atsigaus pati."
+        },
+        "authentication_failed": {
+            "message": "„Aquarea Smart Cloud“ autentifikavimas nepavyko: {error}"
+        },
+        "cloud_error": {
+            "message": "Ryšio su „Aquarea Smart Cloud“ klaida: {error}"
+        },
+        "cannot_connect": {
+            "message": "Nepavyko pasiekti „Aquarea Smart Cloud“: {error}"
+        },
+        "login_backoff": {
+            "message": "„Panasonic“ atmetė prisijungimą; kitas bandymas bus {retry_time}. Jei tai kartojasi, patikrinkite, ar neužblokuotas jūsų viešasis IP adresas (išbandykite kitą tinklą arba VPN)."
         }
     }
 }
