@@ -13,6 +13,9 @@ from .entity import AquareaBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+# Commands go to the Panasonic cloud one at a time, so they cannot race.
+PARALLEL_UPDATES = 1
+
 
 async def async_setup_entry(
     hass: HomeAssistant,

@@ -31,6 +31,9 @@ from .entity import AquareaBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+# Commands go to the Panasonic cloud one at a time, so they cannot race.
+PARALLEL_UPDATES = 1
+
 SPECIAL_STATUS_LOOKUP: dict[str, SpecialStatus | None] = {
     PRESET_ECO: SpecialStatus.ECO,
     PRESET_COMFORT: SpecialStatus.COMFORT,

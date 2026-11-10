@@ -15,6 +15,9 @@ SELECT_DELAY = 10.0
 
 _LOGGER = logging.getLogger(__name__)
 
+# Commands go to the Panasonic cloud one at a time, so they cannot race.
+PARALLEL_UPDATES = 1
+
 QUIET_MODE_LOOKUP = {
     "level1": QuietMode.LEVEL1,
     "level2": QuietMode.LEVEL2,

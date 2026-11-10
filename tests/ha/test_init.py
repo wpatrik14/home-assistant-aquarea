@@ -8,8 +8,9 @@ data moves (`hass.data` to `entry.runtime_data`), which is what they guard.
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aioaquarea
 import aiohttp
@@ -18,6 +19,7 @@ from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -386,3 +388,67 @@ async def test_poll_agreement_not_accepted_is_clear(
 
     assert "Panasonic Comfort Cloud app" in caplog.text
     assert _reauth_flows(hass, mock_config_entry) == []
+
+
+@pytest.fixture
+def created_sessions() -> Generator[list]:
+    """Record every client session the integration creates."""
+    sessions: list = []
+
+    def _create(hass: HomeAssistant, *args, **kwargs):
+        session = async_create_clientsession(hass, *args, **kwargs)
+        sessions.append(session)
+        return session
+
+    with patch("custom_components.aquarea.async_create_clientsession", _create):
+        yield sessions
+
+
+async def test_unload_and_reload_close_the_session(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    created_sessions: list,
+) -> None:
+    """Each setup owns one session; unloading it (and so reloading) closes it."""
+    await _setup(hass, mock_config_entry)
+    assert len(created_sessions) == 1
+    assert not created_sessions[0].closed
+
+    assert await hass.config_entries.async_reload(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert len(created_sessions) == 2
+    assert created_sessions[0].closed
+    assert not created_sessions[1].closed
+
+    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert created_sessions[1].closed
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        aioaquarea.AuthenticationError(
+            aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS, "no"
+        ),
+        aiohttp.ClientConnectionError("down"),
+    ],
+    ids=["auth_failed", "not_ready"],
+)
+async def test_failed_setup_closes_the_session(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+    created_sessions: list,
+    error: Exception,
+) -> None:
+    """A setup that raises (reauth or retry) does not leave its session open."""
+    mock_aquarea_client.login.side_effect = error
+
+    await _setup(hass, mock_config_entry)
+
+    assert mock_config_entry.state is not ConfigEntryState.LOADED
+    assert len(created_sessions) == 1
+    assert created_sessions[0].closed

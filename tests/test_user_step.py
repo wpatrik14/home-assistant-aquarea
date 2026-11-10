@@ -204,7 +204,7 @@ class _ConfigFlow:
         }
 
 
-def _create_clientsession(hass):
+def _create_clientsession(hass, **kwargs):
     flow = _current_flow[0]
     flow.sessions_created += 1
     return f"session-{flow.sessions_created}"

@@ -18,6 +18,7 @@ from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_USER
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 import voluptuous as vol
@@ -430,3 +431,44 @@ async def test_defensive_branches_unreachable_through_flow_manager(
         flow._try_get_username({CONF_USERNAME: "other"})  # noqa: SLF001
         == "from-init-data"
     )
+
+
+@pytest.mark.parametrize("finish", [True, False], ids=["created", "aborted"])
+async def test_flow_closes_its_session_when_it_ends(
+    hass: HomeAssistant,
+    mock_aquarea_client: AsyncMock,
+    mock_setup_entry: AsyncMock,
+    finish: bool,
+) -> None:
+    """The login session is closed when the flow creates the entry or is aborted."""
+    sessions: list = []
+
+    def _create(hass: HomeAssistant, **kwargs):
+        session = async_create_clientsession(hass, **kwargs)
+        sessions.append(session)
+        return session
+
+    with patch(
+        "custom_components.aquarea.config_flow.async_create_clientsession", _create
+    ):
+        if not finish:
+            mock_aquarea_client.login.side_effect = _auth_error(
+                aioaquarea.AuthenticationErrorCodes.INVALID_CREDENTIALS
+            )
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], USER_INPUT
+        )
+        assert len(sessions) == 1
+        if finish:
+            assert result["type"] is FlowResultType.CREATE_ENTRY
+        else:
+            # A failed login keeps the form (and the session) for the retry.
+            assert result["type"] is FlowResultType.FORM
+            assert not sessions[0].closed
+            hass.config_entries.flow.async_abort(result["flow_id"])
+        await hass.async_block_till_done()
+
+    assert sessions[0].closed

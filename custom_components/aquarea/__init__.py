@@ -40,6 +40,9 @@ PLATFORMS: list[Platform] = [
 def _create_client(hass: HomeAssistant, entry: AquareaConfigEntry) -> aioaquarea.Client:
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
+    # One session per entry, not the shared one: the login cookies live in it
+    # and must not mix between accounts. Created during setup, Home Assistant
+    # detaches (closes) it when the entry unloads or its setup fails.
     session = async_create_clientsession(hass)
 
     @callback
