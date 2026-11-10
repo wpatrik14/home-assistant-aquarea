@@ -11,7 +11,7 @@ Panasonic Aquarea Smart Cloud is a cloud service that allows you to control your
 
 This is a fork of the original integration by [cjaliaga](https://github.com/cjaliaga/home-assistant-aquarea).
 
-The integration uses [aioaquarea](https://github.com/cjaliaga/aioaquarea) to communicate with the Panasonic Aquarea Smart Cloud service.
+The integration uses [aioaquarea-ng](https://github.com/wpatrik14/aioaquarea) (a maintained fork of [cjaliaga's aioaquarea](https://github.com/cjaliaga/aioaquarea), published on PyPI as `aioaquarea-ng`) to communicate with the Panasonic Aquarea Smart Cloud service.
 
 This integration is actively maintained. Please report any issues you find and any feedback you may have. Thanks!
 
