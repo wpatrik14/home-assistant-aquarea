@@ -10,7 +10,6 @@ import logging
 import aioaquarea
 from aioaquarea.statistics import DateType
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ServiceValidationError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -190,7 +189,8 @@ class AquareaDataUpdateCoordinator(DataUpdateCoordinator[aioaquarea.Device]):
             hass,
             _LOGGER,
             config_entry=entry,
-            name=f"{DOMAIN}-{entry.data[CONF_USERNAME]}-{device_info.device_id}",
+            # Not the username: the name appears in every log line of the coordinator.
+            name=f"{DOMAIN}-{device_info.device_id}",
             update_interval=timedelta(seconds=scan_interval),
         )
 
