@@ -1,0 +1,172 @@
+# Self-assessment against Home Assistant's integration quality scale.
+# https://developers.home-assistant.io/docs/core/integration-quality-scale/rules
+# This is a custom integration, so the scale is not enforced or shown by Home
+# Assistant (manifest.json deliberately has no quality_scale key); the file is
+# a checklist. Each rule is done, todo or exempt, with the evidence as a comment.
+rules:
+  # Bronze
+  action-setup:
+    status: exempt
+    comment: "The integration registers no service actions (no hass.services.async_register in custom_components/aquarea/)."
+  appropriate-polling:
+    status: done
+    comment: "DataUpdateCoordinator with a configurable interval, DEFAULT_SCAN_INTERVAL in const.py, minimum enforced in the options flow (config_flow.py)."
+  brands:
+    status: done
+    comment: "Brand images ship in custom_components/aquarea/brand/ (icon and dark_icon, with @2x)."
+  common-modules:
+    status: done
+    comment: "coordinator.py holds the DataUpdateCoordinator, entity.py the shared base entity."
+  config-flow-test-coverage:
+    status: done
+    comment: "CI fails below 100% coverage of config_flow.py (.github/workflows/tests.yaml); tests in tests/ha/test_config_flow.py, test_mfa*.py, test_reauth.py."
+  config-flow:
+    status: done
+    comment: "UI setup in config_flow.py with data descriptions in strings.json; no YAML setup."
+  dependency-transparency:
+    status: done
+    comment: "Requirement aioaquarea-ng is a public PyPI package; source and releases are on GitHub, pinned exactly for tests in requirements_test.txt."
+  docs-actions:
+    status: exempt
+    comment: "No service actions to document."
+  docs-conditions:
+    status: exempt
+    comment: "The integration provides no device conditions."
+  docs-high-level-description:
+    status: done
+    comment: "README.md intro."
+  docs-installation-instructions:
+    status: done
+    comment: "README.md 'Installation' (HACS and manual)."
+  docs-removal-instructions:
+    status: done
+    comment: "README.md 'Removing the integration'."
+  docs-triggers:
+    status: exempt
+    comment: "The integration provides no device triggers."
+  entity-event-setup:
+    status: done
+    comment: "Listeners are registered in async_added_to_hass (entity.py, climate.py, sensor.py, binary_sensor.py) via CoordinatorEntity cleanup."
+  entity-unique-id:
+    status: done
+    comment: "entity.py and the platforms set _attr_unique_id from the device id and a per-entity suffix."
+  has-entity-name:
+    status: done
+    comment: "_attr_has_entity_name = True in entity.py."
+  runtime-data:
+    status: done
+    comment: "entry.runtime_data holds the coordinators (__init__.py, typed AquareaConfigEntry)."
+  test-before-configure:
+    status: done
+    comment: "async_step_user logs in to Panasonic before creating the entry (config_flow.py)."
+  test-before-setup:
+    status: done
+    comment: "async_setup_entry raises ConfigEntryAuthFailed / ConfigEntryNotReady on login or first refresh failure (__init__.py); tests/test_setup_entry_errors.py, tests/ha/test_init.py."
+  unique-config-entry:
+    status: done
+    comment: "The unique id is the lowercased username with _abort_if_unique_id_configured (config_flow.py)."
+  # Silver
+  action-exceptions:
+    status: done
+    comment: "Cloud command failures are raised as translated HomeAssistantError via _async_send_command in custom_components/aquarea/entity.py; unsupported modes raise ServiceValidationError (climate.py); tests in tests/ha/."
+  config-entry-unloading:
+    status: done
+    comment: "async_unload_entry unloads platforms (__init__.py); tests/ha/test_init.py, tests/test_unload_entry.py."
+  docs-configuration-parameters:
+    status: done
+    comment: "README.md documents the options (update interval, consumption interval)."
+  docs-installation-parameters:
+    status: done
+    comment: "README.md 'Remarks' explains the account to use for setup, including MFA."
+  entity-unavailable:
+    status: done
+    comment: "Entities are CoordinatorEntity subclasses, unavailable when the last refresh failed; binary_sensor.py/sensor.py refine availability."
+  integration-owner:
+    status: done
+    comment: "codeowners in manifest.json."
+  log-when-unavailable:
+    status: done
+    comment: "The coordinator raises UpdateFailed, which Home Assistant logs once on failure and once on recovery (coordinator.py)."
+  parallel-updates:
+    status: done
+    comment: "PARALLEL_UPDATES set in every platform module; tests/ha/test_parallel_updates.py."
+  reauthentication-flow:
+    status: done
+    comment: "async_step_reauth / reauth_confirm incl. MFA (config_flow.py); tests/ha/test_reauth.py, test_mfa.py."
+  test-coverage:
+    status: done
+    comment: "Coverage gate fail_under = 95.40 in pyproject.toml; pytest suite in tests/ha/ (CI: pytest job)."
+  # Gold
+  devices:
+    status: done
+    comment: "DeviceInfo with identifiers/manufacturer/model in entity.py."
+  diagnostics:
+    status: done
+    comment: "diagnostics.py with redaction; tests/ha/test_diagnostics.py."
+  discovery-update-info:
+    status: exempt
+    comment: "Cloud service, no local discovery."
+  discovery:
+    status: exempt
+    comment: "Cloud service, devices are listed through the account."
+  docs-data-update:
+    status: done
+    comment: "README.md describes the polling interval and the lifetime/daily consumption updates."
+  docs-examples:
+    status: todo
+    comment: "README.md has a Utility Meter how-to but no automation examples."
+  docs-known-limitations:
+    status: done
+    comment: "README.md 'Remarks' and the lifetime consumption section list the limits."
+  docs-supported-devices:
+    status: todo
+    comment: "README.md says 'Panasonic Aquarea heat pump' with Smart Cloud but has no list of tested models."
+  docs-supported-functions:
+    status: done
+    comment: "README.md 'Features' lists the entities."
+  docs-troubleshooting:
+    status: todo
+    comment: "README.md has no dedicated troubleshooting section (only scattered notes such as the app version repair)."
+  docs-use-cases:
+    status: todo
+    comment: "README.md does not describe use cases beyond the feature list."
+  dynamic-devices:
+    status: todo
+    comment: "Devices are read once in async_setup_entry (__init__.py); a heat pump added to the account later needs a reload."
+  entity-category:
+    status: done
+    comment: "Diagnostic/config categories set on diagnostic entities (sensor.py, binary_sensor.py, button.py)."
+  entity-device-class:
+    status: done
+    comment: "Device classes set where they exist (sensor.py, binary_sensor.py, ...)."
+  entity-disabled-by-default:
+    status: done
+    comment: "Noisy or unverified entities use entity_registry_enabled_default = False (README.md 'Features')."
+  entity-translations:
+    status: done
+    comment: "Entity names via translation_key in strings.json; tests/test_translations.py."
+  exception-translations:
+    status: done
+    comment: "strings.json 'exceptions' defines lifetime_sync_running, command_failed, not_authenticated and unsupported_value, used by entity.py, climate.py and coordinator.py."
+  icon-translations:
+    status: done
+    comment: "icons.json; tests/test_icons.py."
+  reconfiguration-flow:
+    status: todo
+    comment: "No async_step_reconfigure in config_flow.py yet; planned (P8)."
+  repair-issues:
+    status: done
+    comment: "issues.py creates a repair issue when Panasonic rejects the app version (translated in strings.json 'issues'); tests/ha/test_app_version_rejected.py."
+  stale-devices:
+    status: todo
+    comment: "No async_remove_config_entry_device or removal of devices that vanish from the account."
+  # Platinum
+  async-dependency:
+    status: done
+    comment: "aioaquarea-ng is built on aiohttp / asyncio."
+  inject-websession:
+    status: done
+    comment: "async_create_clientsession(hass) is passed to the library (__init__.py, config_flow.py)."
+  strict-typing:
+    status: todo
+    comment: "mypy runs in CI (.github/workflows/mypy.yaml) but not in strict mode, and the library is treated as untyped (pyproject.toml); no .strict-typing registration (core-only)."
