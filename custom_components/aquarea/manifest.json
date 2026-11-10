@@ -9,7 +9,6 @@
     "recorder"
   ],
   "documentation": "https://github.com/wpatrik14/home-assistant-aquarea",
-  "homekit": {},
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/wpatrik14/home-assistant-aquarea/issues",
   "loggers": [
@@ -18,7 +17,5 @@
   "requirements": [
     "aioaquarea-ng>=1.6.0"
   ],
-  "ssdp": [],
-  "version": "1.11.0",
-  "zeroconf": []
+  "version": "1.11.0"
 }
