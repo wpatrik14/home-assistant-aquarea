@@ -92,6 +92,14 @@
         "pump_entities_changed": {
             "title": "Pasikeitė siurblio būsenos ir krypties objektai",
             "description": "{entry_title} siurblio būsenos jutiklis dabar yra dvejetainis jutiklis, todėl jo objekto ID perkeltas į binary_sensor sritį:\n\n{entities}\n\nAtnaujinkite automatizavimus, scenarijus, šablonus ir skydelius, kuriuose naudojami seni objektų ID. Seno objekto istorija neperkeliama; rekorderis ją saugo prie seno objekto ID.\n\nPasikeitė ir siurblio krypties jutiklio būsenos: dabar jos rašomos mažosiomis raidėmis (`idle`, `pump`, `water` vietoj `IDLE`, `PUMP`, `WATER`). Atnaujinkite sąlygas ar šablonus, kurie jas lygina. Baigę galite šią problemą ignoruoti."
+        },
+        "pump_entities_not_moved": {
+            "title": "Siurblio būsenos jutiklio perkelti nepavyko",
+            "description": "{entry_title} siurblio būsenos jutiklis dabar yra dvejetainis jutiklis, tačiau jo perkelti nepavyko, nes naują objekto ID jau naudoja kitas objektas:\n\n{entities}\n\nPervadinkite arba pašalinkite kitą objektą, tada iš naujo įkelkite „Aquarea Smart Cloud“ integraciją (arba perkraukite Home Assistant): perkėlimas bandomas kiekvieną kartą paleidus, o ši problema išnyks, kai pavyks. Iki tol naujas dvejetainis jutiklis gauna kitą objekto ID.\n\nPasikeitė ir siurblio krypties jutiklio būsenos: dabar jos rašomos mažosiomis raidėmis (`idle`, `pump`, `water` vietoj `IDLE`, `PUMP`, `WATER`). Atnaujinkite sąlygas ir šablonus, kurie jas lygina."
+        },
+        "direction_case_changed": {
+            "title": "Siurblio krypties būsenos dabar rašomos mažosiomis raidėmis",
+            "description": "{entry_title} siurblio krypties jutiklio būsenos dabar rašomos mažosiomis raidėmis (`idle`, `pump`, `water` vietoj `IDLE`, `PUMP`, `WATER`). Atnaujinkite automatizacijas, scenarijus, šablonus ir prietaisų skydelio sąlygas, kurie jas lygina. Baigę galite ignoruoti šią problemą."
         }
     },
     "entity": {

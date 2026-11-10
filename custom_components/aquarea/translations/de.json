@@ -92,6 +92,14 @@
         "pump_entities_changed": {
             "title": "Entitäten für Pumpenstatus und -richtung geändert",
             "description": "Der Pumpenstatus-Sensor von {entry_title} ist jetzt ein Binärsensor, daher wurde seine Entitäts-ID in die Domain binary_sensor verschoben:\n\n{entities}\n\nPasse die Automatisierungen, Skripte, Vorlagen und Dashboards an, die die alten Entitäts-IDs verwenden. Der Verlauf der alten Entität wird nicht übernommen; der Recorder behält ihn unter der alten Entitäts-ID.\n\nAuch die Zustände des Pumpenrichtungs-Sensors haben sich geändert: Sie sind jetzt kleingeschrieben (`idle`, `pump`, `water` statt `IDLE`, `PUMP`, `WATER`). Passe alle Bedingungen oder Vorlagen an, die sie vergleichen. Du kannst dieses Problem ignorieren, sobald du fertig bist."
+        },
+        "pump_entities_not_moved": {
+            "title": "Pumpenstatus-Sensor konnte nicht verschoben werden",
+            "description": "Der Pumpenstatus-Sensor von {entry_title} ist jetzt ein Binärsensor, konnte aber nicht verschoben werden, weil die neue Entitäts-ID bereits von einer anderen Entität verwendet wird:\n\n{entities}\n\nBenenne die andere Entität um oder entferne sie und lade dann die Aquarea-Smart-Cloud-Integration neu (oder starte Home Assistant neu): Das Verschieben wird bei jedem Start erneut versucht, und dieses Problem verschwindet, sobald es geklappt hat. Bis dahin erhält der neue Binärsensor eine andere Entitäts-ID.\n\nAuch die Zustände des Pumpenrichtungs-Sensors haben sich geändert: Sie sind jetzt kleingeschrieben (`idle`, `pump`, `water` statt `IDLE`, `PUMP`, `WATER`). Passe Bedingungen und Vorlagen an, die sie vergleichen."
+        },
+        "direction_case_changed": {
+            "title": "Die Zustände der Pumpenrichtung sind jetzt kleingeschrieben",
+            "description": "Die Zustände des Pumpenrichtungs-Sensors von {entry_title} sind jetzt kleingeschrieben (`idle`, `pump`, `water` statt `IDLE`, `PUMP`, `WATER`). Passe Automatisierungen, Skripte, Vorlagen und Dashboard-Bedingungen an, die sie vergleichen. Du kannst dieses Problem ignorieren, sobald du fertig bist."
         }
     },
     "entity": {

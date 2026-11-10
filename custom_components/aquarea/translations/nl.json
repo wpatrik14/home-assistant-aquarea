@@ -92,6 +92,14 @@
         "pump_entities_changed": {
             "title": "Entiteiten voor pompstatus en -richting gewijzigd",
             "description": "De pompstatussensor van {entry_title} is nu een binaire sensor, daarom is de entiteits-ID verplaatst naar het domein binary_sensor:\n\n{entities}\n\nPas de automatiseringen, scripts, sjablonen en dashboards aan die de oude entiteits-ID's gebruiken. De geschiedenis van de oude entiteit wordt niet overgenomen; de recorder bewaart die onder de oude entiteits-ID.\n\nOok de statussen van de pomprichtingssensor zijn gewijzigd: ze zijn nu in kleine letters (`idle`, `pump`, `water` in plaats van `IDLE`, `PUMP`, `WATER`). Pas voorwaarden of sjablonen aan die ze vergelijken. Je kunt dit probleem negeren zodra je klaar bent."
+        },
+        "pump_entities_not_moved": {
+            "title": "Pompstatussensor kon niet worden verplaatst",
+            "description": "De pompstatussensor van {entry_title} is nu een binaire sensor, maar kon niet worden verplaatst omdat een andere entiteit de nieuwe entiteits-ID al gebruikt:\n\n{entities}\n\nGeef de andere entiteit een andere naam of verwijder hem, en laad daarna de Aquarea Smart Cloud-integratie opnieuw (of start Home Assistant opnieuw): het verplaatsen wordt bij elke start opnieuw geprobeerd en dit probleem verdwijnt zodra het lukt. Tot die tijd krijgt de nieuwe binaire sensor een andere entiteits-ID.\n\nDe statussen van de pomprichtingssensor zijn ook veranderd: ze zijn nu in kleine letters (`idle`, `pump`, `water` in plaats van `IDLE`, `PUMP`, `WATER`). Pas voorwaarden en sjablonen aan die ze vergelijken."
+        },
+        "direction_case_changed": {
+            "title": "Pomprichtingsstatussen zijn nu in kleine letters",
+            "description": "De statussen van de pomprichtingssensor van {entry_title} zijn nu in kleine letters (`idle`, `pump`, `water` in plaats van `IDLE`, `PUMP`, `WATER`). Pas automatiseringen, scripts, sjablonen en dashboardvoorwaarden aan die ze vergelijken. Je kunt dit probleem negeren als je klaar bent."
         }
     },
     "entity": {

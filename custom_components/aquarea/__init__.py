@@ -23,8 +23,13 @@ from .coordinator import (
 from .issues import (
     APP_VERSION_REJECTED_MESSAGE,
     async_clear_app_version_issue,
+    async_clear_migration_issues,
+    async_clear_pump_not_moved_issue,
     async_create_app_version_issue,
+    async_create_direction_case_issue,
     async_create_pump_entities_issue,
+    async_create_pump_not_moved_issue,
+    async_pump_entities_issue_exists,
 )
 from .lifetime import LifetimeStore
 
@@ -32,6 +37,8 @@ _LOGGER = logging.getLogger(__name__)
 
 # Unique id suffix of the pump status entity, a sensor before version 1.2.
 PUMP_STATUS_SUFFIX = "_pump_status"
+# Unique id suffix of the pump direction sensor, whose states became lowercase.
+DIRECTION_SUFFIX = "_direction"
 
 PLATFORMS: list[Platform] = [
     Platform.BUTTON,
@@ -75,7 +82,7 @@ def _create_client(hass: HomeAssistant, entry: AquareaConfigEntry) -> aioaquarea
 
 def _move_pump_status_sensors(
     hass: HomeAssistant, entry: AquareaConfigEntry
-) -> dict[str, str]:
+) -> tuple[dict[str, str], dict[str, str]]:
     """Re-register the pump status sensors as binary sensors.
 
     The registry refuses a domain change on an existing entry
@@ -84,11 +91,12 @@ def _move_pump_status_sensors(
     entry with the same unique id and object id is created, carrying over what
     the user customised. The recorder history stays under the old entity id.
 
-    Returns a mapping of old entity id -> new entity id for everything moved.
-    An entry is left alone when the new entity id belongs to something else.
+    Returns two mappings of old entity id -> new entity id: what was moved, and
+    what was left alone because the new entity id belongs to something else.
     """
     registry = er.async_get(hass)
     moved: dict[str, str] = {}
+    blocked: dict[str, str] = {}
     for old in er.async_entries_for_config_entry(registry, entry.entry_id):
         if old.domain != "sensor" or not old.unique_id.endswith(PUMP_STATUS_SUFFIX):
             continue
@@ -100,6 +108,7 @@ def _move_pump_status_sensors(
                 _LOGGER.warning(
                     "Not moving %s: %s is already in use", old.entity_id, new_id
                 )
+                blocked[old.entity_id] = new_id
                 continue
             options = {key: dict(value) for key, value in old.options.items()}
             created = registry.async_get_or_create(
@@ -134,7 +143,16 @@ def _move_pump_status_sensors(
         registry.async_remove(old.entity_id)
         moved[old.entity_id] = new_id
         _LOGGER.info("Moved entity %s -> %s", old.entity_id, new_id)
-    return moved
+    return moved, blocked
+
+
+def _has_direction_sensor(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
+    """Return whether the entry has a pump direction sensor in the registry."""
+    registry = er.async_get(hass)
+    return any(
+        e.domain == "sensor" and e.unique_id.endswith(DIRECTION_SUFFIX)
+        for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+    )
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
@@ -149,10 +167,24 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AquareaConfigEntry) ->
     supported = (AquareaConfigFlow.VERSION, AquareaConfigFlow.MINOR_VERSION)
     if entry.version == 1 and entry.minor_version < 2:
         # 1.2: the pump status sensor became a binary sensor.
-        moved = _move_pump_status_sensors(hass, entry)
+        moved, blocked = _move_pump_status_sensors(hass, entry)
         if moved:
             async_create_pump_entities_issue(hass, entry, moved)
-        hass.config_entries.async_update_entry(entry, minor_version=2)
+        if blocked:
+            # Keep the old minor version: the move is tried again on the next
+            # setup, once the user has freed the entity id, instead of being
+            # given up silently.
+            async_create_pump_not_moved_issue(hass, entry, blocked)
+        else:
+            async_clear_pump_not_moved_issue(hass, entry)
+        if not async_pump_entities_issue_exists(hass, entry) and _has_direction_sensor(
+            hass, entry
+        ):
+            # No notice about the moved sensor, which also covers the
+            # direction states: the lowercase change needs its own.
+            async_create_direction_case_issue(hass, entry)
+        if not blocked:
+            hass.config_entries.async_update_entry(entry, minor_version=2)
         return True
     if (entry.version, entry.minor_version) <= supported:
         return True
@@ -257,8 +289,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> b
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> None:
-    """Drop the repair issue and the stored lifetime totals of a removed entry."""
+    """Drop the repair issues and the stored lifetime totals of a removed entry."""
     async_clear_app_version_issue(hass, entry)
+    async_clear_migration_issues(hass, entry)
     await LifetimeStore(hass, entry.entry_id).async_remove()
 
 

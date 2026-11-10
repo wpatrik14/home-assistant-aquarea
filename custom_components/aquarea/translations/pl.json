@@ -92,6 +92,14 @@
         "pump_entities_changed": {
             "title": "Zmieniły się encje stanu i kierunku pompy",
             "description": "Czujnik stanu pompy urządzenia {entry_title} jest teraz czujnikiem binarnym, dlatego jego identyfikator encji został przeniesiony do domeny binary_sensor:\n\n{entities}\n\nZaktualizuj automatyzacje, skrypty, szablony i pulpity, które używają starych identyfikatorów encji. Historia starej encji nie jest przenoszona; recorder przechowuje ją pod starym identyfikatorem encji.\n\nZmieniły się także stany czujnika kierunku pompy: są teraz pisane małymi literami (`idle`, `pump`, `water` zamiast `IDLE`, `PUMP`, `WATER`). Zaktualizuj warunki lub szablony, które je porównują. Po zakończeniu możesz zignorować ten problem."
+        },
+        "pump_entities_not_moved": {
+            "title": "Nie udało się przenieść czujnika stanu pompy",
+            "description": "Czujnik stanu pompy {entry_title} jest teraz czujnikiem binarnym, ale nie udało się go przenieść, ponieważ nowy identyfikator encji jest już używany przez inną encję:\n\n{entities}\n\nZmień nazwę lub usuń drugą encję, a następnie przeładuj integrację Aquarea Smart Cloud (lub uruchom ponownie Home Assistanta): przeniesienie jest ponawiane przy każdym uruchomieniu, a ten problem zniknie, gdy się uda. Do tego czasu nowy czujnik binarny otrzyma inny identyfikator encji.\n\nZmieniły się także stany czujnika kierunku pompy: są teraz pisane małymi literami (`idle`, `pump`, `water` zamiast `IDLE`, `PUMP`, `WATER`). Zaktualizuj warunki i szablony, które je porównują."
+        },
+        "direction_case_changed": {
+            "title": "Stany kierunku pompy są teraz pisane małymi literami",
+            "description": "Stany czujnika kierunku pompy {entry_title} są teraz pisane małymi literami (`idle`, `pump`, `water` zamiast `IDLE`, `PUMP`, `WATER`). Zaktualizuj automatyzacje, skrypty, szablony i warunki na pulpicie, które je porównują. Po zakończeniu możesz zignorować ten problem."
         }
     },
     "entity": {

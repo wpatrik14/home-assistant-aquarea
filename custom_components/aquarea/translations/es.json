@@ -92,6 +92,14 @@
         "pump_entities_changed": {
             "title": "Cambiaron las entidades de estado y dirección de la bomba",
             "description": "El sensor de estado de la bomba de {entry_title} ahora es un sensor binario, por lo que su ID de entidad pasó al dominio binary_sensor:\n\n{entities}\n\nActualiza las automatizaciones, scripts, plantillas y paneles que usen los ID de entidad antiguos. El historial de la entidad antigua no se traspasa; el registrador lo conserva con el ID de entidad antiguo.\n\nTambién cambiaron los estados del sensor de dirección de la bomba: ahora están en minúsculas (`idle`, `pump`, `water` en lugar de `IDLE`, `PUMP`, `WATER`). Actualiza las condiciones o plantillas que los comparen. Puedes ignorar este problema cuando termines."
+        },
+        "pump_entities_not_moved": {
+            "title": "No se pudo mover el sensor de estado de la bomba",
+            "description": "El sensor de estado de la bomba de {entry_title} ahora es un sensor binario, pero no se pudo mover porque otra entidad ya usa el nuevo ID de entidad:\n\n{entities}\n\nRenombra o elimina la otra entidad y luego recarga la integración Aquarea Smart Cloud (o reinicia Home Assistant): el movimiento se intenta de nuevo en cada inicio y este problema desaparece cuando funcione. Hasta entonces, el nuevo sensor binario recibe otro ID de entidad.\n\nLos estados del sensor de dirección de la bomba también cambiaron: ahora van en minúsculas (`idle`, `pump`, `water` en lugar de `IDLE`, `PUMP`, `WATER`). Actualiza las condiciones y plantillas que los comparen."
+        },
+        "direction_case_changed": {
+            "title": "Los estados de la dirección de la bomba ahora van en minúsculas",
+            "description": "Los estados del sensor de dirección de la bomba de {entry_title} ahora van en minúsculas (`idle`, `pump`, `water` en lugar de `IDLE`, `PUMP`, `WATER`). Actualiza las automatizaciones, scripts, plantillas y condiciones del panel que los comparen. Puedes ignorar este problema cuando termines."
         }
     },
     "entity": {

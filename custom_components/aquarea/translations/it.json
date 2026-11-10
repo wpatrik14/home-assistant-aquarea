@@ -92,6 +92,14 @@
     "pump_entities_changed": {
       "title": "Le entità di stato e direzione della pompa sono cambiate",
       "description": "Il sensore di stato della pompa di {entry_title} ora è un sensore binario, quindi il suo ID entità è passato al dominio binary_sensor:\n\n{entities}\n\nAggiorna le automazioni, gli script, i template e le dashboard che usano i vecchi ID entità. La cronologia della vecchia entità non viene trasferita; il recorder la conserva con il vecchio ID entità.\n\nSono cambiati anche gli stati del sensore di direzione della pompa: ora sono in minuscolo (`idle`, `pump`, `water` invece di `IDLE`, `PUMP`, `WATER`). Aggiorna le condizioni o i template che li confrontano. Puoi ignorare questo problema quando hai finito."
+    },
+    "pump_entities_not_moved": {
+      "title": "Impossibile spostare il sensore di stato della pompa",
+      "description": "Il sensore di stato della pompa di {entry_title} è ora un sensore binario, ma non è stato possibile spostarlo perché il nuovo ID entità è già usato da un'altra entità:\n\n{entities}\n\nRinomina o rimuovi l'altra entità, poi ricarica l'integrazione Aquarea Smart Cloud (o riavvia Home Assistant): lo spostamento viene ritentato a ogni avvio e questo problema scompare quando riesce. Fino ad allora il nuovo sensore binario riceve un altro ID entità.\n\nAnche gli stati del sensore di direzione della pompa sono cambiati: ora sono in minuscolo (`idle`, `pump`, `water` invece di `IDLE`, `PUMP`, `WATER`). Aggiorna le condizioni e i template che li confrontano."
+    },
+    "direction_case_changed": {
+      "title": "Gli stati della direzione della pompa ora sono in minuscolo",
+      "description": "Gli stati del sensore di direzione della pompa di {entry_title} ora sono in minuscolo (`idle`, `pump`, `water` invece di `IDLE`, `PUMP`, `WATER`). Aggiorna automazioni, script, template e condizioni della dashboard che li confrontano. Puoi ignorare questo problema una volta finito."
     }
   },
   "entity": {
