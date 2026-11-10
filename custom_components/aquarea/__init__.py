@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
+from .config_flow import AquareaConfigFlow
 from .const import APP_VERSION_REJECTED, CONF_REFRESH_TOKEN, MFA_REQUIRED
 from .coordinator import (
     AGREEMENT_NOT_ACCEPTED_CODE,
@@ -60,6 +61,39 @@ def _create_client(hass: HomeAssistant, entry: AquareaConfigEntry) -> aioaquarea
         mfa_send_code=False,
         refresh_token_callback=_store_refresh_token,
     )
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
+    """Migrate a config entry to the current version.
+
+    Home Assistant calls this whenever the stored version differs from the
+    flow's. An entry written by a newer release (restoring a backup, or going
+    back to an older release) would otherwise end in `migration_error`. The
+    data has not changed shape, so keep it and only set the version back.
+    """
+    supported = (AquareaConfigFlow.VERSION, AquareaConfigFlow.MINOR_VERSION)
+    if (entry.version, entry.minor_version) <= supported:
+        return True
+    if not entry.data.get(CONF_USERNAME):
+        _LOGGER.error(
+            "Config entry has version %s.%s, newer than the supported %s.%s, "
+            "and its data is unusable",
+            entry.version,
+            entry.minor_version,
+            *supported,
+        )
+        return False
+    _LOGGER.warning(
+        "Config entry has version %s.%s, newer than the supported %s.%s; "
+        "keeping its data and setting the version back",
+        entry.version,
+        entry.minor_version,
+        *supported,
+    )
+    hass.config_entries.async_update_entry(
+        entry, version=supported[0], minor_version=supported[1]
+    )
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
