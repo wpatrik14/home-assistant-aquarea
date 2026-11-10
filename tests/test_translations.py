@@ -12,8 +12,14 @@ It also compares the form fields of every config and options step. When the
 `scan_interval` option was removed, its label stayed in all eleven
 translations; a field must now be labelled in a translation exactly when
 strings.json has it, and a translation may not describe (`data_description`)
-a field strings.json does not. Descriptions themselves may be missing:
-Home Assistant falls back to English for them.
+a field strings.json does not. Descriptions must be translated too: a
+translation has exactly the `data_description` keys strings.json has.
+
+Entity names and states (`entity.*`) must have the same keys in every
+translation as in strings.json, with no empty values and the same
+{placeholders}; they must also be translated: a value identical to the English
+one is only accepted for the (file, key) pairs in INTENTIONALLY_ENGLISH. Every
+step description must exist in every translation too, as must the exceptions.
 
 Intentionally dependency-free (stdlib only):
 
@@ -29,6 +35,34 @@ import sys
 BASE = os.path.join(os.path.dirname(__file__), "..", "custom_components", "aquarea")
 SECTIONS = ("abort", "error")
 FLOWS = ("config", "options")
+
+# Strings that are the same as the English one on purpose: a brand or mode name
+# Panasonic uses untranslated, or a word that is spelled the same in the language.
+INTENTIONALLY_ENGLISH = {
+    ("de.json", "entity.binary_sensor.status.name"),
+    ("nl.json", "entity.binary_sensor.status.name"),
+    ("pl.json", "entity.binary_sensor.status.name"),
+    ("nl.json", "entity.water_heater.tank.name"),
+    ("es.json", "entity.select.powerful_time.name"),
+    ("it.json", "entity.select.powerful_time.name"),
+    ("lt.json", "entity.select.powerful_time.name"),
+    ("it.json", "config.step.user.data.password"),
+    ("it.json", "config.step.reauth_confirm.data.password"),
+}
+
+
+def _leaves(node, path=""):
+    """Map the dotted path of every string below `node` to its value."""
+    if isinstance(node, dict):
+        out = {}
+        for key, value in node.items():
+            out.update(_leaves(value, f"{path}.{key}" if path else key))
+        return out
+    return {path: node}
+
+
+def _placeholders(text):
+    return set(re.findall(r"\{(\w+)\}", str(text)))
 
 
 def _load(path):
@@ -78,14 +112,13 @@ def main():
                     wanted == got,
                     f"missing={sorted(wanted - got)} extra={sorted(got - wanted)}",
                 )
-                stray = sorted(
-                    set(have.get("data_description", {}))
-                    - set(step.get("data_description", {}))
-                )
+                wanted_desc = set(step.get("data_description", {}))
+                got_desc = set(have.get("data_description", {}))
                 check(
                     f"{name}: {flow}.{step_id} descriptions",
-                    not stray,
-                    f"extra={stray}",
+                    wanted_desc == got_desc,
+                    f"missing={sorted(wanted_desc - got_desc)} "
+                    f"extra={sorted(got_desc - wanted_desc)}",
                 )
 
     # Repair issues: every translation has a title and a description with the
@@ -104,6 +137,55 @@ def main():
                     bool(have.get(field, "").strip()) and wanted == got,
                     f"placeholders {sorted(wanted)} vs {sorted(got)}",
                 )
+
+    # Entity names/states and exceptions: same keys, no empty values, same
+    # placeholders as strings.json, and translated.
+    for section in ("entity", "exceptions"):
+        wanted = _leaves(strings.get(section, {}), section)
+        for path in files:
+            name = os.path.basename(path)
+            have = _leaves(_load(path).get(section, {}), section)
+            missing = sorted(set(wanted) - set(have))
+            extra = sorted(set(have) - set(wanted))
+            check(
+                f"{name}: {section} keys",
+                not missing and not extra,
+                f"missing={missing} extra={extra}",
+            )
+            empty = sorted(
+                k for k in set(have) & set(wanted) if not str(have[k]).strip()
+            )
+            check(f"{name}: {section} not empty", not empty, f"empty={empty}")
+            bad = sorted(
+                k
+                for k in set(have) & set(wanted)
+                if _placeholders(have[k]) != _placeholders(wanted[k])
+            )
+            check(f"{name}: {section} placeholders", not bad, f"mismatch={bad}")
+
+    # Every translation (not English itself) translates every string it shares
+    # with the English file, and describes every field strings.json describes.
+    english = _leaves(_load(os.path.join(BASE, "translations", "en.json")))
+    for path in files:
+        name = os.path.basename(path)
+        if name == "en.json":
+            continue
+        have = _leaves(_load(path))
+        untranslated = sorted(
+            k
+            for k, v in have.items()
+            if english.get(k) == v
+            and isinstance(v, str)
+            and (name, k) not in INTENTIONALLY_ENGLISH
+            and not re.fullmatch(r"[\W\d_]*|\{\w+\}", v)
+        )
+        check(
+            f"{name}: no untranslated strings",
+            not untranslated,
+            f"english={untranslated}",
+        )
+        lacking = sorted(k for k in english if k not in have)
+        check(f"{name}: has every en.json string", not lacking, f"missing={lacking}")
 
     print()
     print("ALL PASSED" if not failures else f"{failures} FAILURE(S)")

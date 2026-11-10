@@ -20,12 +20,19 @@
                 "data": {
                     "password": "Hasło",
                     "username": "Nazwa użytkownika"
+                },
+                "data_description": {
+                    "username": "Twój Panasonic ID, te same dane logowania co w aplikacji Panasonic Comfort Cloud.",
+                    "password": "Hasło do tego Panasonic ID."
                 }
             },
             "reauth_confirm": {
                 "description": "Wprowadź hasło dla swojego identyfikatora Panasonic ID {username}:",
                 "data": {
                     "password": "Hasło"
+                },
+                "data_description": {
+                    "password": "Aktualne hasło do tego Panasonic ID."
                 }
             },
             "mfa_sms": {
@@ -56,6 +63,9 @@
                 "description": "Uwaga: zbyt krótki interwał odświeżania może spowodować zablokowanie Twojego adresu IP przez Panasonic Cloud.",
                 "data": {
                     "consumption_interval": "Interwał odświeżania danych o zużyciu (minuty)"
+                },
+                "data_description": {
+                    "consumption_interval": "Jak często pobierać zużycie energii z chmury Panasonic, w minutach. Chmura udostępnia nowe dane o zużyciu najwyżej co 15 minut (z pewnym opóźnieniem), więc 15 to najniższa sensowna wartość; niższe wartości tylko zwiększają obciążenie. Stan urządzenia jest odświeżany co minutę, niezależnie od tego ustawienia."
                 }
             }
         }
@@ -69,28 +79,28 @@
     "entity": {
         "binary_sensor": {
             "bivalent": {
-                "name": "Bivalent"
+                "name": "Praca biwalentna"
             },
             "bivalent_actual": {
-                "name": "Bivalent active (reported)"
+                "name": "Praca biwalentna aktywna (zgłoszona)"
             },
             "external_heater": {
-                "name": "External heater"
+                "name": "Grzałka zewnętrzna"
             },
             "defrost": {
                 "name": "Odszranianie"
             },
             "electric_anode": {
-                "name": "Electric anode"
+                "name": "Anoda elektryczna"
             },
             "status": {
                 "name": "Status"
             },
             "uncontrollable": {
-                "name": "Uncontrollable (adapter flag)"
+                "name": "Niesterowalne (flaga adaptera)"
             },
             "weekly_timer": {
-                "name": "Weekly schedule"
+                "name": "Harmonogram tygodniowy"
             }
         },
         "button": {
@@ -157,7 +167,7 @@
                 "name": "Temperatura zbiornika"
             },
             "zone_temperature": {
-                "name": "{zone_name} temperature"
+                "name": "Temperatura: {zone_name}"
             },
             "water_pressure": {
                 "name": "Ciśnienie wody"
@@ -210,6 +220,11 @@
             },
             "holiday_timer": {
                 "name": "Harmonogram wakacyjny"
+            }
+        },
+        "water_heater": {
+            "tank": {
+                "name": "Zbiornik"
             }
         }
     },

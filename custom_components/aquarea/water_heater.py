@@ -53,7 +53,7 @@ class WaterHeater(AquareaBaseEntity, WaterHeaterEntity):
         """Initialize the water heater."""
         super().__init__(coordinator)
 
-        self._attr_name = "Tank"
+        self._attr_translation_key = "tank"
         self._attr_unique_id = f"{super().unique_id}_tank"
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_supported_features = (

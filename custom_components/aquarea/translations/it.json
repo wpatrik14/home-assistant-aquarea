@@ -20,12 +20,19 @@
         "data": {
           "password": "Password",
           "username": "Nome utente"
+        },
+        "data_description": {
+          "username": "Il tuo Panasonic ID, lo stesso accesso dell'app Panasonic Comfort Cloud.",
+          "password": "La password di questo Panasonic ID."
         }
       },
       "reauth_confirm": {
         "description": "Inserire la password del tuo ID Panasonic {username}:",
         "data": {
           "password": "Password"
+        },
+        "data_description": {
+          "password": "La password attuale di questo Panasonic ID."
         }
       },
       "mfa_sms": {
@@ -56,6 +63,9 @@
               "description": "Attenzione: un intervallo di aggiornamento troppo breve può causare il blocco del tuo IP da parte di Panasonic Cloud.",
               "data": {
                   "consumption_interval": "Intervallo di aggiornamento dei dati di consumo (minuti)"
+              },
+              "data_description": {
+                  "consumption_interval": "Ogni quanto leggere il consumo energetico dal cloud Panasonic, in minuti. Il cloud fornisce nuovi dati di consumo al massimo ogni 15 minuti (con un certo ritardo), quindi 15 è il valore minimo utile; valori inferiori aggiungono solo carico. Lo stato del dispositivo viene aggiornato ogni minuto indipendentemente da questa impostazione."
               }
           }
       }
@@ -69,28 +79,28 @@
   "entity": {
     "binary_sensor": {
       "bivalent": {
-        "name": "Bivalent"
+        "name": "Funzionamento bivalente"
       },
       "bivalent_actual": {
-        "name": "Bivalent active (reported)"
+        "name": "Funzionamento bivalente attivo (segnalato)"
       },
       "external_heater": {
-        "name": "External heater"
+        "name": "Riscaldatore esterno"
       },
       "defrost": {
         "name": "Sbrinamento"
       },
       "electric_anode": {
-        "name": "Electric anode"
+        "name": "Anodo elettrico"
       },
       "status": {
         "name": "Stato"
       },
       "uncontrollable": {
-        "name": "Uncontrollable (adapter flag)"
+        "name": "Non controllabile (flag adattatore)"
       },
       "weekly_timer": {
-        "name": "Weekly schedule"
+        "name": "Programma settimanale"
       }
     },
     "button": {
@@ -157,7 +167,7 @@
         "name": "Temperatura serbatoio"
       },
       "zone_temperature": {
-        "name": "{zone_name} temperature"
+        "name": "Temperatura {zone_name}"
       },
       "water_pressure": {
         "name": "Pressione dell'acqua"
@@ -210,6 +220,11 @@
       },
       "holiday_timer": {
         "name": "Timer vacanza"
+      }
+    },
+    "water_heater": {
+      "tank": {
+        "name": "Serbatoio"
       }
     }
   },

@@ -221,6 +221,11 @@
         "holiday_timer": {
           "name": "Holiday timer"
         }
+      },
+      "water_heater": {
+        "tank": {
+          "name": "Tank"
+        }
       }
     },
     "exceptions": {

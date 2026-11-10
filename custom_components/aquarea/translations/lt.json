@@ -20,12 +20,19 @@
                 "data": {
                     "password": "Slaptažodis",
                     "username": "Prisijungimo vardas"
+                },
+                "data_description": {
+                    "username": "Jūsų Panasonic ID, tie patys prisijungimo duomenys kaip ir Panasonic Comfort Cloud programėlėje.",
+                    "password": "Šio Panasonic ID slaptažodis."
                 }
             },
             "reauth_confirm": {
                 "description": "Įveskite slatažodį Panasonic ID vartotojui {username}:",
                 "data": {
                     "password": "Slaptažodis"
+                },
+                "data_description": {
+                    "password": "Dabartinis šio Panasonic ID slaptažodis."
                 }
             },
             "mfa_sms": {
@@ -56,6 +63,9 @@
                 "description": "Įspėjimas: per trumpas atnaujinimo intervalas gali sukelti jūsų IP adreso blokavimą Panasonic Cloud.",
                 "data": {
                     "consumption_interval": "Suvartojimo duomenų atnaujinimo intervalas (minutėmis)"
+                },
+                "data_description": {
+                    "consumption_interval": "Kaip dažnai gauti energijos suvartojimo duomenis iš Panasonic debesies, minutėmis. Debesis naujus suvartojimo duomenis pateikia ne dažniau kaip kas 15 minučių (su tam tikru vėlavimu), todėl 15 yra mažiausia naudinga reikšmė; mažesnės reikšmės tik didina apkrovą. Įrenginio būsena atnaujinama kas minutę nepriklausomai nuo šio nustatymo."
                 }
             }
         }
@@ -69,28 +79,28 @@
     "entity": {
       "binary_sensor": {
         "bivalent": {
-          "name": "Bivalent"
+          "name": "Bivalentinis režimas"
         },
         "bivalent_actual": {
-          "name": "Bivalent active (reported)"
+          "name": "Bivalentinis režimas aktyvus (pranešta)"
         },
         "external_heater": {
-          "name": "External heater"
+          "name": "Išorinis šildytuvas"
         },
         "defrost": {
           "name": "Atitirpinimas"
         },
         "electric_anode": {
-          "name": "Electric anode"
+          "name": "Elektrinis anodas"
         },
         "status": {
           "name": "Būklė"
         },
         "uncontrollable": {
-          "name": "Uncontrollable (adapter flag)"
+          "name": "Nevaldoma (adapterio žymė)"
         },
         "weekly_timer": {
-          "name": "Weekly schedule"
+          "name": "Savaitės tvarkaraštis"
         }
       },
       "button": {
@@ -157,7 +167,7 @@
           "name": "Talpyklos temperatūra"
         },
         "zone_temperature": {
-          "name": "{zone_name} temperature"
+          "name": "{zone_name} temperatūra"
         },
         "water_pressure": {
           "name": "Vandens slėgis"
@@ -210,6 +220,11 @@
         },
         "holiday_timer": {
           "name": "Atostogų laikmatis"
+        }
+      },
+      "water_heater": {
+        "tank": {
+          "name": "Talpykla"
         }
       }
     },
