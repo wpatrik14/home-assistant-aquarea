@@ -165,6 +165,7 @@ class _ConfigFlow:
     _session = None
     _api_error_msg = None
     _challenge = None  # no multi-factor challenge pending
+    _skip_legacy = False
 
     def __init__(self, configured=()):
         self.hass = object()
@@ -259,6 +260,7 @@ def _load_flow_class():
         "STEP_USER_DATA_SCHEMA": STEP_USER_DATA_SCHEMA,
         "CONF_USERNAME": CONF_USERNAME,
         "CONF_PASSWORD": CONF_PASSWORD,
+        "find_legacy_entries": lambda hass: [],  # no entry of the old domain
         "_LOGGER": _LOGGER,
     }
     # config_flow.py has `from __future__ import annotations`; compile with the
