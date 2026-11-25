@@ -117,7 +117,7 @@ The minimum supported version of Home Assistant is **2026.3**. Older versions ca
 
 Version 3.0.0 renames the integration's domain from `aquarea` to `aquarea_smart_cloud`, because the old name clashed with the heishamon integration (whichever was installed second overwrote the other). Your setup moves over without losing anything:
 
-1. Update through HACS (or copy the new folder) and **restart Home Assistant**. If `custom_components/aquarea` still exists afterwards, delete that folder; it is the old copy.
+1. **HACS refuses to update across a domain change** ("changed its domain from aquarea to aquarea_smart_cloud, remove it and install it again"). In HACS open **Aquarea Smart Cloud**, select **⋮** > **Remove** (this deletes only the old `custom_components/aquarea` folder; your setup, entities and history stay in Home Assistant), then download it again from HACS, and **restart Home Assistant**. Manual installs: delete the `aquarea` folder, copy the new `aquarea_smart_cloud` folder and restart.
 2. Go to **Settings** > **Devices & services** > **+ ADD INTEGRATION** > **Aquarea Smart Cloud**. It finds your existing setup and offers **Move the existing setup**.
 3. Confirm. The account, devices, entities (same entity ids, history and customisations), and the stored lifetime totals are moved to the new entry, and the old entry is removed. Automations and dashboards keep working.
 
