@@ -113,6 +113,17 @@ The minimum supported version of Home Assistant is **2026.3**. Older versions ca
    - Go to "Settings" >> "Devices & Services", click "+ ADD INTEGRATION" and select "Aquarea Smart Cloud"
 4. Follow the configuration steps. You'll need to provide your Panasonic ID and your password. The integration will discover the devices associated to your Panasonic ID.
 
+## Using it together with heishamon
+
+This integration and [heishamon-homeassistant](https://github.com/kamaradclimber/heishamon-homeassistant) both install as `custom_components/aquarea` with the domain `aquarea`, so whichever is installed second overwrites the first ([#188](https://github.com/wpatrik14/home-assistant-aquarea/issues/188)). Both control the same heat pump (this one through the Panasonic cloud, heishamon locally), so most people only need one. If you do want both, rename one copy by hand:
+
+1. Install this integration, then rename its folder, for example `custom_components/aquarea` to `custom_components/aquarea_cloud`.
+2. In that folder set the same new name in `manifest.json` (`"domain": "aquarea_cloud"`) and in `const.py` (`DOMAIN = "aquarea_cloud"`).
+3. Restart Home Assistant and add the integration (**Aquarea Smart Cloud**) again. It is a new integration with a new domain, so it does not take over the entities of an existing `aquarea` setup.
+4. Install heishamon as usual; it keeps the `aquarea` folder.
+
+HACS updates write the original `aquarea` folder again, so repeat the rename after each update, or install this one manually and update it by copying the release.
+
 ## Removing the integration
 
 This integration follows standard integration removal; no extra steps are required in Home Assistant.
