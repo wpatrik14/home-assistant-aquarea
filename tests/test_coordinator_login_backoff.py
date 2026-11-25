@@ -29,11 +29,7 @@ import sys
 import types
 
 COORDINATOR = os.path.join(
-    os.path.dirname(__file__),
-    "..",
-    "custom_components",
-    "aquarea_smart_cloud",
-    "coordinator.py",
+    os.path.dirname(__file__), "..", "custom_components", "aquarea", "coordinator.py"
 )
 
 
@@ -123,7 +119,7 @@ def _load():
     namespace = {
         "aioaquarea": aioaquarea,
         "UpdateFailed": UpdateFailed,
-        "DOMAIN": "aquarea_smart_cloud",
+        "DOMAIN": "aquarea",
         "dt_util": types.SimpleNamespace(
             utcnow=lambda: _Clock.now, as_local=lambda moment: moment
         ),

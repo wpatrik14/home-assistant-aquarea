@@ -27,7 +27,7 @@ jobs:
         run: |
           CURRENT=$(python3 -c "
           import json, re
-          manifest = json.load(open('custom_components/aquarea_smart_cloud/manifest.json'))
+          manifest = json.load(open('custom_components/aquarea/manifest.json'))
           req = next(r for r in manifest['requirements'] if r.startswith('aioaquarea-ng'))
           version = re.search(r'[\d.]+', req).group()
           print(version)
@@ -54,7 +54,7 @@ jobs:
         run: |
           python3 -c "
           import json, os, re
-          path = 'custom_components/aquarea_smart_cloud/manifest.json'
+          path = 'custom_components/aquarea/manifest.json'
           latest = os.environ['LATEST']
           manifest = json.load(open(path))
           manifest['requirements'] = [

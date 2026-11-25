@@ -17,12 +17,8 @@ from homeassistant.data_entry_flow import FlowResultType
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.aquarea_smart_cloud.config_flow import AquareaConfigFlow
-from custom_components.aquarea_smart_cloud.const import (
-    CONF_CODE,
-    CONF_REFRESH_TOKEN,
-    DOMAIN,
-)
+from custom_components.aquarea.config_flow import AquareaConfigFlow
+from custom_components.aquarea.const import CONF_CODE, CONF_REFRESH_TOKEN, DOMAIN
 
 from .conftest import PASSWORD, USERNAME
 
@@ -38,9 +34,7 @@ OTP = aioaquarea.MfaChallenge("otp", None, ("otp",), False)
 @pytest.fixture(autouse=True)
 def mock_setup_entry():
     """Keep a created or updated entry from being set up for real."""
-    with patch(
-        "custom_components.aquarea_smart_cloud.async_setup_entry", return_value=True
-    ) as m:
+    with patch("custom_components.aquarea.async_setup_entry", return_value=True) as m:
         yield m
 
 

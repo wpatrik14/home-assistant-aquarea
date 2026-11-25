@@ -20,9 +20,7 @@ import os
 import re
 import sys
 
-BASE = os.path.join(
-    os.path.dirname(__file__), "..", "custom_components", "aquarea_smart_cloud"
-)
+BASE = os.path.join(os.path.dirname(__file__), "..", "custom_components", "aquarea")
 
 # (platform, translation_key) pairs that had a hard-coded icon in the code.
 MIGRATED = {

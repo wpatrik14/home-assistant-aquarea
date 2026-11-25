@@ -21,7 +21,7 @@ COORDINATOR = os.path.join(
     os.path.dirname(__file__),
     "..",
     "custom_components",
-    "aquarea_smart_cloud",
+    "aquarea",
     "coordinator.py",
 )
 

@@ -23,7 +23,6 @@ from .const import (
     APP_VERSION_REJECTED,
     CONF_CODE,
     CONF_CONSUMPTION_INTERVAL,
-    CONF_LEGACY_ENTRY,
     CONF_REFRESH_TOKEN,
     CONF_RESEND_CODE,
     DEFAULT_CONSUMPTION_INTERVAL,
@@ -33,7 +32,6 @@ from .const import (
     MFA_REQUIRED,
     MIN_CONSUMPTION_INTERVAL,
 )
-from .legacy import find_legacy_entries
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,7 +56,6 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     _username: str | None = None
     _session: aiohttp.ClientSession | None = None
     _api_error_msg: str | None = None
-    _skip_legacy = False
 
     def __init__(self, *args, **kwargs):
         """Initialize the flow state."""
@@ -89,12 +86,6 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the initial step."""
-        if (
-            user_input is None
-            and not self._skip_legacy
-            and find_legacy_entries(self.hass)
-        ):
-            return await self.async_step_legacy_menu()
         errors = {}
         if user_input is not None:
             # A pasted ID often carries a space or a newline: it would be a
@@ -122,46 +113,6 @@ class AquareaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 STEP_USER_DATA_SCHEMA, user_input
             ),
             errors=errors,
-        )
-
-    async def async_step_legacy_menu(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Offer to move the entry of the old domain, or to add another account."""
-        return self.async_show_menu(
-            step_id="legacy_menu", menu_options=["legacy_import", "account"]
-        )
-
-    async def async_step_account(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Add another account instead of moving the old entry."""
-        self._skip_legacy = True
-        return await self.async_step_user(user_input)
-
-    async def async_step_legacy_import(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Move the entry of the old `aquarea` domain to this integration.
-
-        The new entry keeps the account; its setup moves the devices, entities
-        (same ids and history) and lifetime totals and removes the old entry.
-        """
-        legacy = find_legacy_entries(self.hass)
-        if not legacy:
-            return await self.async_step_account()
-        old = legacy[0]
-        username = str(old.data[CONF_USERNAME]).strip()
-        if user_input is not None:
-            await self.async_set_unique_id(username.lower())
-            self._abort_if_unique_id_configured()
-            return self.async_create_entry(
-                title=old.title,
-                data={**old.data, CONF_LEGACY_ENTRY: old.entry_id},
-            )
-        return self.async_show_form(
-            step_id="legacy_import",
-            description_placeholders={"username": username},
         )
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]):

@@ -26,9 +26,7 @@ import os
 import sys
 import types
 
-BASE = os.path.join(
-    os.path.dirname(__file__), "..", "custom_components", "aquarea_smart_cloud"
-)
+BASE = os.path.join(os.path.dirname(__file__), "..", "custom_components", "aquarea")
 
 COMMANDS = {
     "switch.py": ("async_turn_on", "async_turn_off"),

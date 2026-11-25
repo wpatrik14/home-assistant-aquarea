@@ -13,7 +13,7 @@ from homeassistant.helpers import entity_registry as er
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.aquarea_smart_cloud.const import DOMAIN
+from custom_components.aquarea.const import DOMAIN
 
 from .conftest import DEVICE_ID
 
