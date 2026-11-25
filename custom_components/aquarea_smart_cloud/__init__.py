@@ -14,7 +14,13 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .config_flow import AquareaConfigFlow
-from .const import APP_VERSION_REJECTED, CONF_REFRESH_TOKEN, DOMAIN, MFA_REQUIRED
+from .const import (
+    APP_VERSION_REJECTED,
+    CONF_LEGACY_ENTRY,
+    CONF_REFRESH_TOKEN,
+    DOMAIN,
+    MFA_REQUIRED,
+)
 from .coordinator import (
     AGREEMENT_NOT_ACCEPTED_CODE,
     AquareaConfigEntry,
@@ -32,6 +38,7 @@ from .issues import (
     async_create_pump_not_moved_issue,
     async_pump_entities_issue_exists,
 )
+from .legacy import async_adopt_legacy_entry
 from .lifetime import LifetimeStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -270,6 +277,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AquareaConfigEntry) ->
 
 async def async_setup_entry(hass: HomeAssistant, entry: AquareaConfigEntry) -> bool:
     """Set up Aquarea Smart Cloud from a config entry."""
+
+    if CONF_LEGACY_ENTRY in entry.data:
+        # Created from an entry of the old `aquarea` domain: take over its
+        # entities, devices and lifetime totals before the platforms register.
+        await async_adopt_legacy_entry(hass, entry)
 
     client = _create_client(hass, entry)
     coordinators: dict[str, AquareaDataUpdateCoordinator] = {}

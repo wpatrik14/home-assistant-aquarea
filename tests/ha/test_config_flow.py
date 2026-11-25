@@ -23,8 +23,11 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 import voluptuous as vol
 
-from custom_components.aquarea.config_flow import AquareaConfigFlow
-from custom_components.aquarea.const import CONF_CONSUMPTION_INTERVAL, DOMAIN
+from custom_components.aquarea_smart_cloud.config_flow import AquareaConfigFlow
+from custom_components.aquarea_smart_cloud.const import (
+    CONF_CONSUMPTION_INTERVAL,
+    DOMAIN,
+)
 
 from .conftest import PASSWORD, USERNAME
 
@@ -37,7 +40,7 @@ USER_INPUT = {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Keep a created or updated entry from being set up for real."""
     with patch(
-        "custom_components.aquarea.async_setup_entry", return_value=True
+        "custom_components.aquarea_smart_cloud.async_setup_entry", return_value=True
     ) as mock:
         yield mock
 
@@ -823,7 +826,8 @@ async def test_flow_closes_its_session_when_it_ends(
         return session
 
     with patch(
-        "custom_components.aquarea.config_flow.async_create_clientsession", _create
+        "custom_components.aquarea_smart_cloud.config_flow.async_create_clientsession",
+        _create,
     ):
         if not finish:
             mock_aquarea_client.login.side_effect = _auth_error(

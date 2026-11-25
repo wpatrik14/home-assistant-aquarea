@@ -38,7 +38,9 @@ import os
 import sys
 import types
 
-BASE = os.path.join(os.path.dirname(__file__), "..", "custom_components", "aquarea")
+BASE = os.path.join(
+    os.path.dirname(__file__), "..", "custom_components", "aquarea_smart_cloud"
+)
 
 
 class OnOff(enum.Enum):

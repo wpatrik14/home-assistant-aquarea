@@ -68,6 +68,16 @@
                 "data_description": {
                     "code": "6místný kód. Funguje i záložní kód."
                 }
+            },
+            "legacy_menu": {
+                "description": "Byla nalezena dřívější konfigurace této integrace (doména \"aquarea\"). Přesuňte ji, aby zůstala zařízení, entity a historie.",
+                "menu_options": {
+                    "legacy_import": "Přesunout stávající konfiguraci",
+                    "account": "Přidat další účet"
+                }
+            },
+            "legacy_import": {
+                "description": "Přesunout konfiguraci uživatele {username} do této integrace. Zařízení, entity, historie a celkové spotřeby zůstanou zachovány, starý záznam bude odstraněn."
             }
         }
     },

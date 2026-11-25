@@ -49,7 +49,7 @@ INIT = os.path.join(
     os.path.dirname(__file__),
     "..",
     "custom_components",
-    "aquarea",
+    "aquarea_smart_cloud",
     "__init__.py",
 )
 
@@ -153,7 +153,7 @@ def _load_setup_entry(namespace_extra=None):
         "aiohttp": aiohttp,
         "ConfigEntryAuthFailed": ConfigEntryAuthFailed,
         "ConfigEntryNotReady": ConfigEntryNotReady,
-        "DOMAIN": "aquarea",
+        "DOMAIN": "aquarea_smart_cloud",
         "PLATFORMS": ["sensor"],
         "_LOGGER": _NullLogger(),
         "AquareaDataUpdateCoordinator": _Coordinator,

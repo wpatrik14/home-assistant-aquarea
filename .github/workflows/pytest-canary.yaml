@@ -48,5 +48,5 @@ jobs:
         run: pip install pip-audit
       - name: Audit the manifest requirements
         run: |
-          python -c "import json; print(*json.load(open('custom_components/aquarea/manifest.json'))['requirements'], sep='\n')" > manifest-requirements.txt
+          python -c "import json; print(*json.load(open('custom_components/aquarea_smart_cloud/manifest.json'))['requirements'], sep='\n')" > manifest-requirements.txt
           pip-audit --requirement manifest-requirements.txt

@@ -26,7 +26,10 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_time_changed,
 )
 
-from custom_components.aquarea.const import CONF_CONSUMPTION_INTERVAL, DOMAIN
+from custom_components.aquarea_smart_cloud.const import (
+    CONF_CONSUMPTION_INTERVAL,
+    DOMAIN,
+)
 
 from .conftest import DEVICE_ID
 
@@ -400,7 +403,9 @@ def created_sessions() -> Generator[list]:
         sessions.append(session)
         return session
 
-    with patch("custom_components.aquarea.async_create_clientsession", _create):
+    with patch(
+        "custom_components.aquarea_smart_cloud.async_create_clientsession", _create
+    ):
         yield sessions
 
 

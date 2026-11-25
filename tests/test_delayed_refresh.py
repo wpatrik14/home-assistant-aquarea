@@ -36,7 +36,9 @@ import os
 import sys
 import types
 
-BASE = os.path.join(os.path.dirname(__file__), "..", "custom_components", "aquarea")
+BASE = os.path.join(
+    os.path.dirname(__file__), "..", "custom_components", "aquarea_smart_cloud"
+)
 PLATFORMS = ("climate.py", "water_heater.py", "switch.py", "select.py")
 
 
@@ -113,7 +115,7 @@ def _load_helper():
         type_params=[],
     )
     module = ast.fix_missing_locations(ast.Module([flow], []))
-    namespace = {"DOMAIN": "aquarea"}
+    namespace = {"DOMAIN": "aquarea_smart_cloud"}
     exec(
         compile(
             module,

@@ -21,7 +21,7 @@ testpaths = ["tests/ha"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "--cov=custom_components/aquarea --cov-report=term-missing"
+addopts = "--cov=custom_components/aquarea_smart_cloud --cov-report=term-missing"
 
 [tool.coverage.report]
 # Overall floor for tests/ha/: raise it when coverage goes up, never lower it.

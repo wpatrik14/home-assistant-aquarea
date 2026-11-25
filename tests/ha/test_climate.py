@@ -505,14 +505,14 @@ async def test_orphaned_zone_entity_is_removed(
     registry = er.async_get(hass)
     stale = registry.async_get_or_create(
         "climate",
-        "aquarea",
+        "aquarea_smart_cloud",
         f"{DEVICE_ID}_climate_2",
         config_entry=mock_config_entry,
         suggested_object_id="heat_pump_zone_2",
     )
     other = registry.async_get_or_create(
         "sensor",
-        "aquarea",
+        "aquarea_smart_cloud",
         f"{DEVICE_ID}_climate_2_unrelated",
         config_entry=mock_config_entry,
     )
@@ -554,7 +554,7 @@ async def test_orphan_cleanup_skipped_without_zones(
     registry = er.async_get(hass)
     entry = registry.async_get_or_create(
         "climate",
-        "aquarea",
+        "aquarea_smart_cloud",
         f"{DEVICE_ID}_climate_1",
         config_entry=mock_config_entry,
     )

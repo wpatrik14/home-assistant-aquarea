@@ -38,8 +38,8 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
     do_adhoc_statistics,
 )
 
-from custom_components.aquarea.const import CONF_CONSUMPTION_INTERVAL
-from custom_components.aquarea.statistics import (
+from custom_components.aquarea_smart_cloud.const import CONF_CONSUMPTION_INTERVAL
+from custom_components.aquarea_smart_cloud.statistics import (
     CLOUD_TIME_ZONE,
     RecordedHour,
     async_redistribute_hourly_statistics,
@@ -954,7 +954,7 @@ async def test_each_hourly_fetch_corrects_every_energy_sensor(
 
     mock_aquarea_client.get_device_consumption.side_effect = consumption
     with patch(
-        "custom_components.aquarea.sensor.async_redistribute_hourly_statistics",
+        "custom_components.aquarea_smart_cloud.sensor.async_redistribute_hourly_statistics",
         AsyncMock(return_value=0),
     ) as redistribute:
         mock_config_entry.add_to_hass(hass)
@@ -1010,7 +1010,7 @@ async def test_three_days_are_cached_and_the_oldest_is_context(
 
     assert coordinator.hourly_consumption_first_day == _cloud(5, 0).date()
     with patch(
-        "custom_components.aquarea.sensor.async_redistribute_hourly_statistics",
+        "custom_components.aquarea_smart_cloud.sensor.async_redistribute_hourly_statistics",
         AsyncMock(return_value=0),
     ) as redistribute:
         freezer.tick(timedelta(hours=1))
@@ -1073,7 +1073,7 @@ async def test_no_correction_when_every_hourly_fetch_failed(
 
     mock_aquarea_client.get_device_consumption.side_effect = consumption
     with patch(
-        "custom_components.aquarea.sensor.async_redistribute_hourly_statistics",
+        "custom_components.aquarea_smart_cloud.sensor.async_redistribute_hourly_statistics",
         AsyncMock(return_value=0),
     ) as redistribute:
         mock_config_entry.add_to_hass(hass)
@@ -1106,7 +1106,7 @@ async def test_a_bad_total_reaches_the_correction_through_the_listener(
 
     mock_aquarea_client.get_device_consumption.side_effect = consumption
     with patch(
-        "custom_components.aquarea.sensor.async_redistribute_hourly_statistics",
+        "custom_components.aquarea_smart_cloud.sensor.async_redistribute_hourly_statistics",
         AsyncMock(return_value=0),
     ) as redistribute:
         mock_config_entry.add_to_hass(hass)
@@ -1179,7 +1179,7 @@ async def test_yesterday_is_refetched_after_midnight_with_a_long_interval(
     180-minute interval.
     """
     entry = MockConfigEntry(
-        domain="aquarea",
+        domain="aquarea_smart_cloud",
         title="user",
         unique_id="user",
         data={"username": "user", "password": "not-a-real-password"},
@@ -1231,7 +1231,7 @@ async def test_today_is_corrected_when_only_today_was_fetched(
 
     mock_aquarea_client.get_device_consumption.side_effect = consumption
     with patch(
-        "custom_components.aquarea.sensor.async_redistribute_hourly_statistics",
+        "custom_components.aquarea_smart_cloud.sensor.async_redistribute_hourly_statistics",
         AsyncMock(return_value=0),
     ) as redistribute:
         mock_config_entry.add_to_hass(hass)
@@ -1273,7 +1273,7 @@ async def test_a_transient_auth_error_in_the_hourly_fetch_only_warns(
     await hass.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
-    assert not hass.config_entries.flow.async_progress_by_handler("aquarea")
+    assert not hass.config_entries.flow.async_progress_by_handler("aquarea_smart_cloud")
     coordinator = next(iter(mock_config_entry.runtime_data.values()))
     assert [r.data_time for r in coordinator.hourly_consumption] == ["20261005 04"]
 
@@ -1304,7 +1304,9 @@ async def test_invalid_credentials_in_the_hourly_fetch_start_reauth(
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
     assert any(
         flow["context"]["source"] == SOURCE_REAUTH
-        for flow in hass.config_entries.flow.async_progress_by_handler("aquarea")
+        for flow in hass.config_entries.flow.async_progress_by_handler(
+            "aquarea_smart_cloud"
+        )
     )
 
 

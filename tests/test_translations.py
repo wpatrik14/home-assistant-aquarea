@@ -32,7 +32,9 @@ import os
 import re
 import sys
 
-BASE = os.path.join(os.path.dirname(__file__), "..", "custom_components", "aquarea")
+BASE = os.path.join(
+    os.path.dirname(__file__), "..", "custom_components", "aquarea_smart_cloud"
+)
 SECTIONS = ("abort", "error")
 FLOWS = ("config", "options")
 

@@ -22,7 +22,7 @@ CI (`.github/workflows/`) runs the following, so run them before opening a PR:
 ```bash
 ruff check .
 ruff format --check .          # `ruff format .` fixes it
-mypy custom_components/aquarea
+mypy custom_components/aquarea_smart_cloud
 pytest                          # tests/ha/, needs 100% coverage of config_flow.py
 for t in tests/test_*.py; do python "$t" || echo "FAILED: $t"; done   # stdlib scripts
 ```

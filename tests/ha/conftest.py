@@ -20,9 +20,9 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.aquarea import lifetime
-from custom_components.aquarea.config_flow import AquareaConfigFlow
-from custom_components.aquarea.const import DOMAIN
+from custom_components.aquarea_smart_cloud import lifetime
+from custom_components.aquarea_smart_cloud.config_flow import AquareaConfigFlow
+from custom_components.aquarea_smart_cloud.const import DOMAIN
 
 USERNAME = "User@Example.com"
 PASSWORD = "not-a-real-password"

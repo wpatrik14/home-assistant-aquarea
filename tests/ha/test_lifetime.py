@@ -20,8 +20,8 @@ from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
 import pytest
 
-from custom_components.aquarea import lifetime
-from custom_components.aquarea.lifetime import (
+from custom_components.aquarea_smart_cloud import lifetime
+from custom_components.aquarea_smart_cloud.lifetime import (
     KINDS,
     LifetimeSyncError,
     LifetimeTracker,

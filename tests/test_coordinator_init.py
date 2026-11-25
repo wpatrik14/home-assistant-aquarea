@@ -27,7 +27,11 @@ import sys
 import types
 
 COORDINATOR = os.path.join(
-    os.path.dirname(__file__), "..", "custom_components", "aquarea", "coordinator.py"
+    os.path.dirname(__file__),
+    "..",
+    "custom_components",
+    "aquarea_smart_cloud",
+    "coordinator.py",
 )
 
 
@@ -75,7 +79,7 @@ def _load():
         "_LOGGER": LOGGER,
         "timedelta": timedelta,
         "LifetimeStore": _LifetimeStore,
-        "DOMAIN": "aquarea",
+        "DOMAIN": "aquarea_smart_cloud",
         "CONF_USERNAME": "username",
         "CONF_CONSUMPTION_INTERVAL": "consumption_interval",
         "DEFAULT_SCAN_INTERVAL": 60,

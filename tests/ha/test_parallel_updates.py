@@ -8,7 +8,7 @@ from importlib import import_module
 
 import pytest
 
-from custom_components.aquarea import PLATFORMS
+from custom_components.aquarea_smart_cloud import PLATFORMS
 
 EXPECTED = {
     "sensor": 0,
@@ -24,7 +24,7 @@ EXPECTED = {
 @pytest.mark.parametrize(("platform", "limit"), EXPECTED.items())
 def test_platform_declares_parallel_updates(platform: str, limit: int) -> None:
     """Each platform module has its PARALLEL_UPDATES constant."""
-    module = import_module(f"custom_components.aquarea.{platform}")
+    module = import_module(f"custom_components.aquarea_smart_cloud.{platform}")
     assert limit == module.PARALLEL_UPDATES
 
 

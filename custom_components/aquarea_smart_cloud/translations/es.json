@@ -68,6 +68,16 @@
                 "data_description": {
                     "code": "El código de 6 dígitos. También sirve un código de recuperación."
                 }
+            },
+            "legacy_menu": {
+                "description": "Se encontró una configuración anterior de esta integración (dominio \"aquarea\"). Muévela para conservar dispositivos, entidades e historial.",
+                "menu_options": {
+                    "legacy_import": "Mover la configuración existente",
+                    "account": "Añadir otra cuenta"
+                }
+            },
+            "legacy_import": {
+                "description": "Mover la configuración de {username} a esta integración. Se conservan sus dispositivos, entidades, historial y totales acumulados, y se elimina la entrada antigua."
             }
         }
     },

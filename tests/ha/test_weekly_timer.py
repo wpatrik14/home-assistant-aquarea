@@ -22,13 +22,13 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_time_changed,
 )
 
-from custom_components.aquarea.const import DOMAIN
+from custom_components.aquarea_smart_cloud.const import DOMAIN
 
 from .conftest import DEVICE_ID
 
 ENTITY_ID = "binary_sensor.heat_pump_weekly_schedule"
 OTHER_ENTITIES = ("climate.heat_pump_house", "switch.heat_pump_force_dhw")
-COORDINATOR_LOGGER = "custom_components.aquarea.coordinator"
+COORDINATOR_LOGGER = "custom_components.aquarea_smart_cloud.coordinator"
 
 _SLOT = {
     "startTime": "16:45",
