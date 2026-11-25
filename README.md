@@ -45,7 +45,7 @@ The *Lifetime consumption* sensors (total, heating, tank and cooling; the coolin
 
 How they work:
 * **First start only: the history is read once.** After the first setup the integration reads the past consumption from the Aquarea Smart Cloud in the background (one request per two years, 30 seconds after the start and then 5 seconds apart, at most 7 requests, so never more than 15 years back), and stops at the month your unit was registered in the cloud. It does not delay the setup. Until it has finished, the lifetime sensors are *unknown*; this is deliberate, because the Energy dashboard would otherwise show the whole history as one huge spike when the figure jumps from a partial to the full value.
-* **It is not read again** on a restart, a reload, a reconfiguration, an options change or an update of the integration, nor after a failed refresh. The finished months are kept in Home Assistant's storage (`.storage/aquarea_smart_cloud.lifetime.<entry id>`), kept when the entry is reloaded, and deleted only when you delete the integration. Only three things read the history again: no stored data exists (first install, or the file was deleted), the stored data is found corrupt, or you press the **Rebuild lifetime consumption** button (a configuration entity, disabled by default). The one other history request is a single extra request per device about 24 hours after each month end (and after Home Assistant was off over a month end), which looks the finished month up once more for hours Panasonic published late.
+* **It is not read again** on a restart, a reload, a reconfiguration, an options change or an update of the integration, nor after a failed refresh. The finished months are kept in Home Assistant's storage (`.storage/aquarea.lifetime.<entry id>`), kept when the entry is reloaded, and deleted only when you delete the integration. Only three things read the history again: no stored data exists (first install, or the file was deleted), the stored data is found corrupt, or you press the **Rebuild lifetime consumption** button (a configuration entity, disabled by default). The one other history request is a single extra request per device about 24 hours after each month end (and after Home Assistant was off over a month end), which looks the finished month up once more for hours Panasonic published late.
 * **An interrupted read resumes** where it stopped. If anything fails, the read is aborted and tried again hours later, doubling up to 12 hours. Only a refusal that looks like a block of your address (an HTTP 403, 429 or 5xx answer) waits 6 hours first and pauses the history reads of **all** devices at once, so the block is not made longer. Every other failure (an expired login, an account problem such as terms not yet accepted, a network error, no data, not logged in) waits 1 hour first and only concerns the device it hit. It never retries in a loop.
 * **If Panasonic ever stops answering with data** for the first window of a history that was partly read, an old aioaquarea-ng library (1.5.0 or older) cannot tell "no data" from a failure. The integration requires aioaquarea-ng 1.6.0 or newer, which raises on failures (`raise_on_error`) and so tells the two apart; the rule below only applies if an older library is still installed: five empty answers for the same window over at least 72 hours, after at least one window was read, are taken as the start of the history, so a multi-day Panasonic outage in the middle of the very first read could end it early, with a lower figure than the real one. The **Rebuild lifetime consumption** button reads it again (the value stays at its old level until the rebuilt figure exceeds it).
 * **It grows with every refresh.** The value is the finished months plus the current month as the cloud reports it at the latest consumption refresh, so new energy is added as soon as Panasonic publishes it, and a day that Panasonic revises later is replaced, not added twice.
@@ -63,7 +63,7 @@ For other periods (weekly, monthly, yearly, or a daily total that follows tariff
 3. Submit. The new sensor can be used in the Energy dashboard or on a dashboard card.
 
 ## Languages
-The integration is translated into English, Czech (`cs`), German (`de`), Spanish (`es`), Hungarian (`hu`), Italian (`it`), Lithuanian (`lt`), Dutch (`nl`), Polish (`pl`), Russian (`ru`) and Slovak (`sk`): the setup and options screens, entity names, repair messages and errors. Home Assistant picks the language from your profile settings; other languages fall back to English. Corrections and further languages are welcome as a PR (copy `custom_components/aquarea_smart_cloud/translations/en.json`).
+The integration is translated into English, Czech (`cs`), German (`de`), Spanish (`es`), Hungarian (`hu`), Italian (`it`), Lithuanian (`lt`), Dutch (`nl`), Polish (`pl`), Russian (`ru`) and Slovak (`sk`): the setup and options screens, entity names, repair messages and errors. Home Assistant picks the language from your profile settings; other languages fall back to English. Corrections and further languages are welcome as a PR (copy `custom_components/aquarea/translations/en.json`).
 
 ## Options
 After setup, **Configure** on the integration offers one option: the *consumption refresh interval* (minutes, at least 15, default 15), which sets how often the energy consumption is read from the Panasonic cloud. The device state is polled every 60 seconds and that is not configurable. Saving the option reloads the integration.
@@ -101,38 +101,28 @@ The minimum supported version of Home Assistant is **2026.3**. Older versions ca
 
 2. Restart Home Assistant
 3. Add integration via (one of them):
-   - [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=aquarea_smart_cloud)
+   - [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=aquarea)
    - Go to "Settings" >> "Devices & Services", click "+ ADD INTEGRATION" and select "Aquarea Smart Cloud"
 4. Follow the configuration steps. You'll need to provide your Panasonic ID and your password. The integration will discover the devices associated to your Panasonic ID. 
 
 ### Manual installation
-1. Copy the folder named `aquarea_smart_cloud` from the [latest release](https://github.com/wpatrik14/home-assistant-aquarea/releases/latest) to the `custom_components` folder in your config folder.
+1. Copy the folder named `aquarea` from the [latest release](https://github.com/wpatrik14/home-assistant-aquarea/releases/latest) to the `custom_components` folder in your config folder.
 2. Restart Home Assistant
 3. Add integration via (one of them):
-   - [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=aquarea_smart_cloud)
+   - [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=aquarea)
    - Go to "Settings" >> "Devices & Services", click "+ ADD INTEGRATION" and select "Aquarea Smart Cloud"
 4. Follow the configuration steps. You'll need to provide your Panasonic ID and your password. The integration will discover the devices associated to your Panasonic ID.
-
-## Upgrading from 2.x (the `aquarea` domain)
-
-Version 3.0.0 renames the integration's domain from `aquarea` to `aquarea_smart_cloud`, because the old name clashed with the heishamon integration (whichever was installed second overwrote the other). Your setup moves over without losing anything:
-
-1. Update through HACS (or copy the new folder) and **restart Home Assistant**. If `custom_components/aquarea` still exists afterwards, delete that folder; it is the old copy.
-2. Go to **Settings** > **Devices & services** > **+ ADD INTEGRATION** > **Aquarea Smart Cloud**. It finds your existing setup and offers **Move the existing setup**.
-3. Confirm. The account, devices, entities (same entity ids, history and customisations), and the stored lifetime totals are moved to the new entry, and the old entry is removed. Automations and dashboards keep working.
-
-Choose **Add another account** instead only if you want a separate, new account (the integration still supports one Panasonic account per Home Assistant).
 
 ## Removing the integration
 
 This integration follows standard integration removal; no extra steps are required in Home Assistant.
 
 1. Go to **Settings** > **Devices & services** and select **Aquarea Smart Cloud**.
-2. Next to the entry, select the three dots **⋮** menu, then **Delete**. This also deletes the stored consumption history of the lifetime sensors (`.storage/aquarea_smart_cloud.lifetime.<entry id>`); removing only the files does not.
+2. Next to the entry, select the three dots **⋮** menu, then **Delete**. This also deletes the stored consumption history of the lifetime sensors (`.storage/aquarea.lifetime.<entry id>`); removing only the files does not.
 
 To also remove the files:
 - **HACS:** open HACS, find **Aquarea Smart Cloud**, select the three dots **⋮** menu, then **Remove**, and restart Home Assistant.
-- **Manual installation:** delete the `custom_components/aquarea_smart_cloud` folder from your config folder and restart Home Assistant.
+- **Manual installation:** delete the `custom_components/aquarea` folder from your config folder and restart Home Assistant.
 
 If you created a second Panasonic account just for Home Assistant (see [Remarks](#remarks)), you can remove it from the `Users` -> `Userlist` of your main account once you no longer need it.
 

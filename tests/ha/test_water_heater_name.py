@@ -67,7 +67,7 @@ async def test_tank_existing_entity_keeps_its_entity_id(
     mock_config_entry.add_to_hass(hass)
     entity_registry.async_get_or_create(
         "water_heater",
-        "aquarea_smart_cloud",
+        "aquarea",
         f"{DEVICE_ID}_tank",
         config_entry=mock_config_entry,
         suggested_object_id="heat_pump_tank",

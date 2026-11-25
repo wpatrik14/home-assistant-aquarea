@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.aquarea_smart_cloud.const import DOMAIN
+from custom_components.aquarea.const import DOMAIN
 
 NEW_PASSWORD = "another-placeholder"
 

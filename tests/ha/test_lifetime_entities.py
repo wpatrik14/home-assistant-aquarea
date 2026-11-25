@@ -34,18 +34,10 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
     do_adhoc_statistics,
 )
 
-from custom_components.aquarea_smart_cloud import (
-    coordinator as coordinator_module,
-    lifetime,
-)
-from custom_components.aquarea_smart_cloud.const import (
-    CONF_CONSUMPTION_INTERVAL,
-    DOMAIN,
-)
-from custom_components.aquarea_smart_cloud.diagnostics import (
-    async_get_config_entry_diagnostics,
-)
-from custom_components.aquarea_smart_cloud.lifetime import add_months
+from custom_components.aquarea import coordinator as coordinator_module, lifetime
+from custom_components.aquarea.const import CONF_CONSUMPTION_INTERVAL, DOMAIN
+from custom_components.aquarea.diagnostics import async_get_config_entry_diagnostics
+from custom_components.aquarea.lifetime import add_months
 
 from .conftest import DEVICE_ID
 from .test_lifetime import Cloud, monthly
@@ -145,7 +137,7 @@ def world(mock_aquarea_client: AsyncMock) -> World:
 
 def store_key(entry: MockConfigEntry) -> str:
     """Return the storage key of an entry's lifetime state."""
-    return f"aquarea_smart_cloud.lifetime.{entry.entry_id}"
+    return f"aquarea.lifetime.{entry.entry_id}"
 
 
 async def setup_entry(
@@ -1086,7 +1078,7 @@ async def test_an_unreadable_storage_file_does_not_stop_the_setup(
 ) -> None:
     """A file Home Assistant cannot read counts as no stored data."""
     with patch(
-        "custom_components.aquarea_smart_cloud.lifetime.Store.async_load",
+        "custom_components.aquarea.lifetime.Store.async_load",
         side_effect=HomeAssistantError("corrupt"),
     ):
         await setup_entry(hass, mock_config_entry, freezer, NOW)

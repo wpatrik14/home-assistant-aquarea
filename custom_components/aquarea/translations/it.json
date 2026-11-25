@@ -68,16 +68,6 @@
         "data_description": {
           "code": "Il codice di 6 cifre. Funziona anche un codice di recupero."
         }
-      },
-      "legacy_menu": {
-        "description": "È stata trovata una configurazione precedente di questa integrazione (dominio \"aquarea\"). Spostala per mantenere dispositivi, entità e cronologia.",
-        "menu_options": {
-          "legacy_import": "Sposta la configurazione esistente",
-          "account": "Aggiungi un altro account"
-        }
-      },
-      "legacy_import": {
-        "description": "Sposta la configurazione di {username} in questa integrazione. Dispositivi, entità, cronologia e totali complessivi vengono mantenuti e la vecchia voce viene rimossa."
       }
     }
   },

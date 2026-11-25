@@ -28,11 +28,7 @@ import sys
 import types
 
 SENSOR = os.path.join(
-    os.path.dirname(__file__),
-    "..",
-    "custom_components",
-    "aquarea_smart_cloud",
-    "sensor.py",
+    os.path.dirname(__file__), "..", "custom_components", "aquarea", "sensor.py"
 )
 TZ = timezone(timedelta(hours=2))
 

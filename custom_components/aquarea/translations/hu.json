@@ -68,16 +68,6 @@
                 "data_description": {
                     "code": "A 6 számjegyű kód. Helyreállítási kód is megfelel."
                 }
-            },
-            "legacy_menu": {
-                "description": "Az integráció korábbi beállítása (\"aquarea\" domain) megtalálható. Helyezd át, hogy az eszközök, entitások és az előzmények megmaradjanak.",
-                "menu_options": {
-                    "legacy_import": "A meglévő beállítás áthelyezése",
-                    "account": "Másik fiók hozzáadása"
-                }
-            },
-            "legacy_import": {
-                "description": "{username} beállításának áthelyezése ebbe az integrációba. Az eszközök, entitások, előzmények és az élettartam-összegek megmaradnak, a régi bejegyzés törlődik."
             }
         }
     },

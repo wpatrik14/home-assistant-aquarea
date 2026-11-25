@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-DOMAIN = "aquarea_smart_cloud"
+DOMAIN = "aquarea"
 
 CONF_CONSUMPTION_INTERVAL = "consumption_interval"
 # The OAuth refresh token Panasonic returned at login (also after multi-factor
@@ -85,8 +85,3 @@ LIFETIME_RETRY_MAX = timedelta(hours=12)
 LIFETIME_HOURS_KEPT = timedelta(days=4)
 # Delay before a changed state is written to storage.
 LIFETIME_SAVE_DELAY = 30
-
-# The domain before 3.0.0 (it collided with heishamon's), and the marker an
-# entry created from an old entry carries until its setup has moved everything.
-LEGACY_DOMAIN = "aquarea"
-CONF_LEGACY_ENTRY = "legacy_entry_id"

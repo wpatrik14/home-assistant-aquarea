@@ -18,7 +18,7 @@ from pytest_homeassistant_custom_component.components.diagnostics import (
 )
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
-from custom_components.aquarea_smart_cloud.const import DOMAIN
+from custom_components.aquarea.const import DOMAIN
 
 from .conftest import DEVICE_ID, LONG_ID, PASSWORD, USERNAME
 
@@ -130,7 +130,7 @@ async def test_diagnostics_without_tank_fault_or_library(
     coordinator.last_exception = RuntimeError("boom with a secret")
 
     with patch(
-        "custom_components.aquarea_smart_cloud.diagnostics.package_version",
+        "custom_components.aquarea.diagnostics.package_version",
         side_effect=PackageNotFoundError,
     ):
         result = await get_diagnostics_for_config_entry(

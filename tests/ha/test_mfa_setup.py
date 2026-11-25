@@ -15,8 +15,8 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.aquarea_smart_cloud import _create_client
-from custom_components.aquarea_smart_cloud.const import CONF_REFRESH_TOKEN, DOMAIN
+from custom_components.aquarea import _create_client
+from custom_components.aquarea.const import CONF_REFRESH_TOKEN, DOMAIN
 
 from .conftest import PASSWORD, USERNAME
 

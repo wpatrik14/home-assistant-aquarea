@@ -21,4 +21,4 @@ jobs:
       - name: Install Home Assistant and mypy
         run: pip install -r requirements_typing.txt
       - name: Run mypy
-        run: mypy custom_components/aquarea_smart_cloud
+        run: mypy custom_components/aquarea

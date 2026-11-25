@@ -1,5 +1,5 @@
 {
-  "domain": "aquarea_smart_cloud",
+  "domain": "aquarea",
   "name": "Aquarea Smart Cloud",
   "codeowners": [
     "@wpatrik14"
@@ -17,5 +17,5 @@
   "requirements": [
     "aioaquarea-ng>=1.6.0"
   ],
-  "version": "3.0.0"
+  "version": "2.0.1"
 }

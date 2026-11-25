@@ -68,16 +68,6 @@
                 "data_description": {
                     "code": "De 6-cijferige code. Een herstelcode werkt ook."
                 }
-            },
-            "legacy_menu": {
-                "description": "Een eerdere installatie van deze integratie (domein \"aquarea\") is gevonden. Verplaats deze om apparaten, entiteiten en geschiedenis te behouden.",
-                "menu_options": {
-                    "legacy_import": "Bestaande installatie verplaatsen",
-                    "account": "Een ander account toevoegen"
-                }
-            },
-            "legacy_import": {
-                "description": "Verplaats de installatie van {username} naar deze integratie. Apparaten, entiteiten, geschiedenis en totalen blijven behouden en de oude invoer wordt verwijderd."
             }
         }
     },

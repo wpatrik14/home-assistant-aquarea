@@ -68,16 +68,6 @@
                 "data_description": {
                     "code": "6-cyfrowy kod. Kod odzyskiwania również działa."
                 }
-            },
-            "legacy_menu": {
-                "description": "Znaleziono wcześniejszą konfigurację tej integracji (domena \"aquarea\"). Przenieś ją, aby zachować urządzenia, encje i historię.",
-                "menu_options": {
-                    "legacy_import": "Przenieś istniejącą konfigurację",
-                    "account": "Dodaj inne konto"
-                }
-            },
-            "legacy_import": {
-                "description": "Przenieś konfigurację {username} do tej integracji. Urządzenia, encje, historia i sumy zużycia zostaną zachowane, a stary wpis zostanie usunięty."
             }
         }
     },

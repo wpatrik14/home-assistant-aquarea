@@ -119,12 +119,7 @@ def test_icons_json(
     icon_off: str,
 ) -> None:
     """icons.json gives the switch its on and off icon (the frontend shows them)."""
-    path = (
-        Path(__file__).parents[2]
-        / "custom_components"
-        / "aquarea_smart_cloud"
-        / "icons.json"
-    )
+    path = Path(__file__).parents[2] / "custom_components" / "aquarea" / "icons.json"
     icons = json.loads(path.read_text(encoding="utf-8"))["entity"]["switch"][attribute]
     assert (icons["state"]["on"], icons["default"]) == (icon_on, icon_off)
 

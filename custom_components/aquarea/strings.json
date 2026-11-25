@@ -51,16 +51,6 @@
         "data_description": {
           "code": "The 6-digit code. A recovery code works as well."
         }
-      },
-      "legacy_menu": {
-        "description": "An earlier setup of this integration (domain \"aquarea\") was found. Move it to keep its devices, entities and history.",
-        "menu_options": {
-          "legacy_import": "Move the existing setup",
-          "account": "Add another account"
-        }
-      },
-      "legacy_import": {
-        "description": "Move the setup of {username} to this integration. Its devices, entities, history and lifetime totals are kept, and the old entry is removed."
       }
     },
     "error": {

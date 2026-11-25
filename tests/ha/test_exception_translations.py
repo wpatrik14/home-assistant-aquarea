@@ -23,11 +23,11 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_time_changed,
 )
 
-from custom_components.aquarea_smart_cloud.const import DOMAIN
+from custom_components.aquarea.const import DOMAIN
 
 from .conftest import DEVICE_ID
 
-COMPONENT = Path(__file__).parents[2] / "custom_components" / "aquarea_smart_cloud"
+COMPONENT = Path(__file__).parents[2] / "custom_components" / "aquarea"
 KEYS = {
     "invalid_credentials",
     "mfa_required",

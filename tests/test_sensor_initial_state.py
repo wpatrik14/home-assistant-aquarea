@@ -28,11 +28,7 @@ import os
 import sys
 
 SENSOR = os.path.join(
-    os.path.dirname(__file__),
-    "..",
-    "custom_components",
-    "aquarea_smart_cloud",
-    "sensor.py",
+    os.path.dirname(__file__), "..", "custom_components", "aquarea", "sensor.py"
 )
 
 SENSORS = [
