@@ -401,7 +401,7 @@ def validate_state(raw: Any) -> dict[str, Any] | None:
 class LifetimeStore:
     """The persisted lifetime state of the devices of one config entry.
 
-    It lives in ``.storage/aquarea.lifetime.<entry id>``: it survives restarts,
+    It lives in ``.storage/aquarea_smart_cloud.lifetime.<entry id>``: it survives restarts,
     reloads and updates, and is removed with the config entry only.
     """
 

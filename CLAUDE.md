@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What This Is
 
 A Home Assistant custom integration for Panasonic Aquarea heat pumps. It consists of two parts:
-1. **`custom_components/aquarea/`** — the HA integration (editable)
+1. **`custom_components/aquarea_smart_cloud/`** — the HA integration (editable)
 2. **`aioaquarea/`** — the upstream library source that wraps the Panasonic Aquarea Smart Cloud API (**read-only** — do not modify; changes must go upstream)
 
 ## Documentation
@@ -21,7 +21,7 @@ The GitHub Actions workflows validate:
 - **hassfest** (`.github/workflows/hassfest.yaml`) — HA integration correctness
 - **HACS** (`.github/workflows/hacs.yaml`) — HACS compatibility
 - **mypy** (`.github/workflows/mypy.yaml`) — static type checking of
-  `custom_components/aquarea` against the Home Assistant version pinned in
+  `custom_components/aquarea_smart_cloud` against the Home Assistant version pinned in
   `requirements_typing.txt`
 - **tests** (`.github/workflows/tests.yaml`) — runs every `tests/test_*.py`,
   and in a second job the pytest suite in `tests/ha/`
@@ -31,7 +31,7 @@ The GitHub Actions workflows validate:
 
 ```bash
 pip install -r requirements_typing.txt
-mypy custom_components/aquarea
+mypy custom_components/aquarea_smart_cloud
 ```
 
 Known type errors are silenced with inline `# type: ignore[code]  # reason`
@@ -126,4 +126,4 @@ All entities extend HA base classes and `CoordinatorEntity`. After sending a com
 - **One Panasonic account per HA instance** — the API does not support concurrent sessions from multiple clients on the same account.
 - The auth flow in `aioaquarea/auth.py` scrapes HTML pages; it is fragile to Panasonic server changes and includes app version strings that may need updating.
 - Energy data from the API is often delayed or unstable; the coordinator handles this with tiered intervals and caching.
-- Translations live in `custom_components/aquarea/translations/` (cs, de, en, es, hu, it, lt, nl, pl, ru, sk).
+- Translations live in `custom_components/aquarea_smart_cloud/translations/` (cs, de, en, es, hu, it, lt, nl, pl, ru, sk).

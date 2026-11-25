@@ -20,11 +20,13 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_time_changed,
 )
 
-BINARY_SENSOR_LOGGER = "custom_components.aquarea.binary_sensor"
+BINARY_SENSOR_LOGGER = "custom_components.aquarea_smart_cloud.binary_sensor"
 ENTITY_ID = "binary_sensor.heat_pump_uncontrollable_adapter_flag"
 OTHER_ENTITIES = ("climate.heat_pump_house", "switch.heat_pump_force_dhw")
 
-from custom_components.aquarea.binary_sensor import _strict_flag_state  # noqa: E402
+from custom_components.aquarea_smart_cloud.binary_sensor import (  # noqa: E402
+    _strict_flag_state,
+)
 
 
 async def _setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:

@@ -68,6 +68,16 @@
                 "data_description": {
                     "code": "6 skaitmenų kodas. Tinka ir atkūrimo kodas."
                 }
+            },
+            "legacy_menu": {
+                "description": "Rasta ankstesnė šios integracijos sąranka (domenas \"aquarea\"). Perkelkite ją, kad išliktų įrenginiai, objektai ir istorija.",
+                "menu_options": {
+                    "legacy_import": "Perkelti esamą sąranką",
+                    "account": "Pridėti kitą paskyrą"
+                }
+            },
+            "legacy_import": {
+                "description": "Perkelti {username} sąranką į šią integraciją. Įrenginiai, objektai, istorija ir bendros sunaudojimo sumos išlieka, senas įrašas pašalinamas."
             }
         }
     },

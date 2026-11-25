@@ -38,8 +38,10 @@ import sys
 import types
 
 HERE = os.path.dirname(__file__)
-CONFIG_FLOW = os.path.join(HERE, "..", "custom_components", "aquarea", "config_flow.py")
-CONST = os.path.join(HERE, "..", "custom_components", "aquarea", "const.py")
+CONFIG_FLOW = os.path.join(
+    HERE, "..", "custom_components", "aquarea_smart_cloud", "config_flow.py"
+)
+CONST = os.path.join(HERE, "..", "custom_components", "aquarea_smart_cloud", "const.py")
 
 
 def _parse(path):

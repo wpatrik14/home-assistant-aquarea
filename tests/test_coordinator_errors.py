@@ -29,7 +29,11 @@ import sys
 import types
 
 COORDINATOR = os.path.join(
-    os.path.dirname(__file__), "..", "custom_components", "aquarea", "coordinator.py"
+    os.path.dirname(__file__),
+    "..",
+    "custom_components",
+    "aquarea_smart_cloud",
+    "coordinator.py",
 )
 
 
@@ -158,7 +162,7 @@ def _load():
     namespace = {
         "aioaquarea": aioaquarea,
         "APP_VERSION_REJECTED": "APP_VERSION_REJECTED",
-        "DOMAIN": "aquarea",
+        "DOMAIN": "aquarea_smart_cloud",
         "async_clear_agreement_issue": lambda *_: None,
         "async_create_agreement_issue": lambda *_: None,
         "async_clear_app_version_issue": lambda *_: None,

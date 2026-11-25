@@ -68,6 +68,16 @@
                 "data_description": {
                     "code": "Der 6-stellige Code. Ein Wiederherstellungscode funktioniert ebenfalls."
                 }
+            },
+            "legacy_menu": {
+                "description": "Eine frühere Einrichtung dieser Integration (Domain \"aquarea\") wurde gefunden. Verschiebe sie, um Geräte, Entitäten und Verlauf zu behalten.",
+                "menu_options": {
+                    "legacy_import": "Bestehende Einrichtung verschieben",
+                    "account": "Weiteres Konto hinzufügen"
+                }
+            },
+            "legacy_import": {
+                "description": "Die Einrichtung von {username} in diese Integration verschieben. Geräte, Entitäten, Verlauf und Gesamtverbräuche bleiben erhalten, der alte Eintrag wird entfernt."
             }
         }
     },

@@ -23,9 +23,9 @@ from homeassistant.helpers import (
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.aquarea import async_migrate_entry
-from custom_components.aquarea.config_flow import AquareaConfigFlow
-from custom_components.aquarea.const import DOMAIN
+from custom_components.aquarea_smart_cloud import async_migrate_entry
+from custom_components.aquarea_smart_cloud.config_flow import AquareaConfigFlow
+from custom_components.aquarea_smart_cloud.const import DOMAIN
 
 from .conftest import DEVICE_ID
 
@@ -88,7 +88,7 @@ async def test_newer_version_without_credentials_fails(
     hass: HomeAssistant, caplog: pytest.LogCaptureFixture
 ) -> None:
     """A newer entry without a username is refused."""
-    entry = MockConfigEntry(domain="aquarea", data={}, version=2)
+    entry = MockConfigEntry(domain="aquarea_smart_cloud", data={}, version=2)
     entry.add_to_hass(hass)
 
     assert not await async_migrate_entry(hass, entry)

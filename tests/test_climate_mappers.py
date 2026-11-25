@@ -40,7 +40,11 @@ import sys
 import types
 
 CLIMATE = os.path.join(
-    os.path.dirname(__file__), "..", "custom_components", "aquarea", "climate.py"
+    os.path.dirname(__file__),
+    "..",
+    "custom_components",
+    "aquarea_smart_cloud",
+    "climate.py",
 )
 
 

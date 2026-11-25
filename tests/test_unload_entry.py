@@ -25,9 +25,13 @@ import sys
 import types
 
 INIT = os.path.join(
-    os.path.dirname(__file__), "..", "custom_components", "aquarea", "__init__.py"
+    os.path.dirname(__file__),
+    "..",
+    "custom_components",
+    "aquarea_smart_cloud",
+    "__init__.py",
 )
-DOMAIN = "aquarea"
+DOMAIN = "aquarea_smart_cloud"
 PLATFORMS = ["button", "sensor", "climate"]
 
 

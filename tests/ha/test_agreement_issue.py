@@ -19,8 +19,8 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_time_changed,
 )
 
-from custom_components.aquarea.const import DOMAIN
-from custom_components.aquarea.issues import ISSUES_URL
+from custom_components.aquarea_smart_cloud.const import DOMAIN
+from custom_components.aquarea_smart_cloud.issues import ISSUES_URL
 
 
 def _issue(hass: HomeAssistant, entry: MockConfigEntry) -> ir.IssueEntry | None:

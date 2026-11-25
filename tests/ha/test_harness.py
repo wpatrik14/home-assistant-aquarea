@@ -6,7 +6,7 @@ import aioaquarea
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
-from custom_components.aquarea.const import DOMAIN
+from custom_components.aquarea_smart_cloud.const import DOMAIN
 
 
 async def test_integration_loads_from_repo(hass: HomeAssistant) -> None:

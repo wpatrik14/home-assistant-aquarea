@@ -37,12 +37,12 @@ WATER_HEATER = os.path.join(
     os.path.dirname(__file__),
     "..",
     "custom_components",
-    "aquarea",
+    "aquarea_smart_cloud",
     "water_heater.py",
 )
 
 STATE_OFF = "off"  # matches homeassistant.const.STATE_OFF
-HEATING = "heating"  # matches custom_components/aquarea/const.py
+HEATING = "heating"  # matches custom_components/aquarea_smart_cloud/const.py
 IDLE = "idle"
 
 POISON = "SHOULD_NEVER_BE_READ"

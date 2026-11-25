@@ -27,7 +27,11 @@ import sys
 import types
 
 COORDINATOR = os.path.join(
-    os.path.dirname(__file__), "..", "custom_components", "aquarea", "coordinator.py"
+    os.path.dirname(__file__),
+    "..",
+    "custom_components",
+    "aquarea_smart_cloud",
+    "coordinator.py",
 )
 
 
@@ -75,7 +79,7 @@ def _load():
         "_LOGGER": LOGGER,
         "timedelta": timedelta,
         "LifetimeStore": _LifetimeStore,
-        "DOMAIN": "aquarea",
+        "DOMAIN": "aquarea_smart_cloud",
         "CONF_USERNAME": "username",
         "CONF_CONSUMPTION_INTERVAL": "consumption_interval",
         "DEFAULT_SCAN_INTERVAL": 60,
@@ -124,7 +128,7 @@ def main():
     )
     check(
         "name and update interval unchanged",
-        obj.base_kwargs.get("name") == "aquarea-dev1"
+        obj.base_kwargs.get("name") == "aquarea_smart_cloud-dev1"
         and obj.base_kwargs.get("update_interval") == timedelta(seconds=60),
         f"kwargs={obj.base_kwargs}",
     )

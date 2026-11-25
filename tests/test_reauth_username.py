@@ -42,7 +42,7 @@ CONFIG_FLOW = os.path.join(
     os.path.dirname(__file__),
     "..",
     "custom_components",
-    "aquarea",
+    "aquarea_smart_cloud",
     "config_flow.py",
 )
 

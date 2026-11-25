@@ -47,7 +47,10 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
     do_adhoc_statistics,
 )
 
-from custom_components.aquarea.const import CONF_CONSUMPTION_INTERVAL, DOMAIN
+from custom_components.aquarea_smart_cloud.const import (
+    CONF_CONSUMPTION_INTERVAL,
+    DOMAIN,
+)
 
 from .conftest import DEVICE_ID
 
